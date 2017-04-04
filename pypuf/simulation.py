@@ -1,4 +1,4 @@
-from numpy import prod, shape, random, sign, dot, concatenate, array
+from numpy import prod, shape, random, sign, dot, concatenate, array, full, tile, transpose
 
 
 class LTFArray():
@@ -16,12 +16,33 @@ class LTFArray():
         return prod(r, 1)
 
     @staticmethod
-    def transform_id(c, l):
+    def transform_id(cs, k):
         """
         Input transformation that does nothing.
         :return:
         """
-        return c
+        return array([
+                tile(c, (k, 1))  # same unmodified challenge for all k LTFs
+                for c in cs
+            ])
+
+    @staticmethod
+    def transform_atf(cs, k):
+        """
+        Input transformation that simulations an Arbiter PUF
+        :return:
+        """
+
+        # Transform with ATF monomials
+        cs = transpose(
+            array([
+                prod(cs[:,i:], 1)
+                for i in range(len(cs[0]))
+            ])
+        )
+
+        # Same challenge for all k Arbiters
+        return __class__.transform_id(cs, k)
 
     @staticmethod
     def normal_weights(n, k, mu=0, sigma=1):
@@ -48,19 +69,18 @@ class LTFArray():
         return sign(self.val(inputs))
 
     def val(self, inputs):
-        return self.combiner(self.ltf_eval(inputs)) # TODO input transform
+        return self.combiner(self.ltf_eval(self.transform(inputs, self.k)))
 
     def ltf_eval(self, inputs):
         """
         :return: array
         """
-        return array([
-            [
+        return transpose(
+            array([
                 dot(
-                    x,
+                    inputs[:,l],
                     self.weight_array[l]
                 )
                 for l in range(self.k)
-            ]
-            for x in inputs
-        ])
+            ])
+        )
