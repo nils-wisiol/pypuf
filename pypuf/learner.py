@@ -124,6 +124,7 @@ class LogisticRegression():
 
         converged = False
         distance = 1
+        self.iteration_count = 0
         while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
 
