@@ -1,27 +1,60 @@
 from numpy import random, amin, amax, mean, array, append
 from pypuf import simulation, learner, tools
 import time
-import sys
+from sys import argv, stdout, stderr
 
+if len(argv) != 8:
+    stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
+    stderr.write('Usage:\n')
+    stderr.write('sim_learn.py n k transformation combiner N restarts random_seed\n')
+    stderr.write('               n: number of bits per Arbiter chain\n')
+    stderr.write('               k: number of Arbiter chains\n')
+    stderr.write('  transformation: used to transform input before it is used in LTFs\n')
+    stderr.write('                  currently available:\n')
+    stderr.write('                  - id  -- does nothing at all\n')
+    stderr.write('                  - atf -- convert according to "natural" Arbiter chain\n')
+    stderr.write('                  -        implementation\n')
+    stderr.write('                  - mm  -- designed to achieve maximum PTF expansion length\n')
+    stderr.write('                          only implemented for k=2 n=64\n')
+    stderr.write('        combiner: used to combine the output bits to a single bit\n')
+    stderr.write('                  currently available:\n')
+    stderr.write('                  - xor -- output the parity of all output bits\n')
+    stderr.write('               N: number of challenge response pairs in the training set\n')
+    stderr.write('        restarts: number of repeated initializations of simulation and learner\n')
+    stderr.write('     random_seed: random seed used for reproducible results given in hex digits\n')
+    quit(1)
 
-n = 64
-k = 2
-N = 6000
-restarts = 10
-random_seed = 0xbeef
+n = int(argv[1])
+k = int(argv[2])
+transformation_name = argv[3]
+combiner_name = argv[4]
+N = int(argv[5])
+restarts = int(argv[6])
+random_seed = int(argv[7], 16)
 
-random.seed(random_seed) # reproduce 'random' numbers, remove to obtain different results
+random.seed(random_seed) # reproduce 'random' numbers
 
-transformation = simulation.LTFArray.transform_id
-combiner = simulation.LTFArray.combiner_xor
+transformation = None
+combiner = None
 
-print('Learning %s-bit %s XOR Arbiter PUF with %s CRPs and %s restarts.\n' % (n, k, N, restarts))
-print('Using')
-print('  transformation: %s' % transformation)
-print('  combiner:       %s' % combiner)
-print('  random seed:    0x%x' % random_seed)
-print('\n')
+try:
+    transformation = getattr(simulation.LTFArray, 'transform_%s' % transformation_name)
+except AttributeError:
+    stderr.write('Transformation %s unknown or currently not implemented\n' % transformation_name)
+    quit()
 
+try:
+    combiner = getattr(simulation.LTFArray, 'combiner_%s' % combiner_name)
+except AttributeError:
+    stderr.write('Combiner %s unknown or currently not implemented\n' % combiner_name)
+    quit()
+
+stderr.write('Learning %s-bit %s XOR Arbiter PUF with %s CRPs and %s restarts.\n\n' % (n, k, N, restarts))
+stderr.write('Using\n')
+stderr.write('  transformation: %s\n' % transformation)
+stderr.write('  combiner:       %s\n' % combiner)
+stderr.write('  random seed:    0x%x\n' % random_seed)
+stderr.write('\n')
 
 instance = simulation.LTFArray(
     weight_array=simulation.LTFArray.normal_weights(n, k),
@@ -39,20 +72,43 @@ lr_learner = learner.LogisticRegression(
 
 accuracy = array([])
 training_times = array([])
+iterations = array([])
 
 for i in range(restarts):
-    sys.stderr.write('\r%i/%i                 ' % (i+1, restarts))
+    stderr.write('\r%5i/%5i         ' % (i+1, restarts))
     start = time.time()
     model = lr_learner.learn()
     end = time.time()
     training_times = append(training_times, end - start)
     dist = tools.approx_dist(instance, model, min(1000, 2 ** n))
-    accuracy = append(accuracy, dist)
-    #print('training time:                % 5.3fs' % (end - start))
-    #print('min training distance:        % 5.3f' % lr_learner.min_distance)
-    #print('test distance (1000 samples): % 5.3f\n' % dist)
+    accuracy = append(accuracy, 1 - dist)
+    iterations = append(iterations, lr_learner.iteration_count)
+    # output test result in machine-friendly format
+    # seed idx_restart n k transformation combiner iteration_count time accuracy
+    stdout.write(' '.join(
+        [
+            '0x%x' % random_seed,
+            '%5d' % i,
+            '%3d' % n,
+            '%2d' % k,
+            '%s' % transformation_name,
+            '%s' % combiner_name,
+            '%4d' % lr_learner.iteration_count,
+            '%9.3f' % (end - start),
+            '%1.5f' % (1 - dist),
+        ]
+    ) + '\n')
+    #stderr.write('training time:                % 5.3fs' % (end - start))
+    #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
+    #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
 
-print('\r              \r')
-print('min/avg/max training time: % 5.3fs/% 5.3fs/% 5.3fs' % (amin(training_times), mean(training_times), amax(training_times)))
-print('min/avg/max test accuracy: % 5.3f /% 5.3f /% 5.3f ' % (amin(1 - accuracy), mean(1 - accuracy), amax(1 - accuracy)))
-print()
+stderr.write('\r              \r')
+stderr.write('\n\n')
+stderr.write('training times: %s\n' % training_times)
+stderr.write('iterations: %s\n' % iterations)
+stderr.write('test accuracy: %s\n' % accuracy)
+stderr.write('\n\n')
+stderr.write('min/avg/max training time  : % 9.3fs /% 9.3fs /% 9.3fs\n' % (amin(training_times), mean(training_times), amax(training_times)))
+stderr.write('min/avg/max iteration count: % 9.3f  /% 9.3f  /% 9.3f \n' % (amin(iterations), mean(iterations), amax(iterations)))
+stderr.write('min/avg/max test accuracy  : % 9.3f  /% 9.3f  /% 9.3f \n' % (amin(accuracy), mean(accuracy), amax(accuracy)))
+stderr.write('\n\n')
