@@ -1,4 +1,4 @@
-from numpy import prod, shape, random, sign, dot, concatenate, array, full, tile, transpose
+from numpy import prod, shape, random, sign, dot, concatenate, array, full, tile, transpose, concatenate, dstack, swapaxes
 
 
 class LTFArray():
@@ -43,6 +43,28 @@ class LTFArray():
 
         # Same challenge for all k Arbiters
         return __class__.transform_id(cs, k)
+
+    @staticmethod
+    def transform_mm(cs, k):
+        N = len(cs)
+        n = len(cs[0])
+        assert k == 2, 'MM transform currently only implemented for k=2. Sorry!'
+        assert n == 64, 'MM transform currently only implemented for n=64. Sorry!'
+
+        cs_1 = cs
+        cs_2 = transpose(
+                concatenate(
+                (
+                    [ cs[:,0] ],
+                    [ cs[:,i] * cs[:,i+1] for i in range(0, n, 2) ],
+                    [ cs[:,i] * cs[:,i+1] * cs[:,i+2] for i in range(0, n-2, 2) ]
+                )
+            )
+        )
+
+        result = swapaxes(dstack((cs_1, cs_2)), 1, 2)
+        assert result.shape == (N, 2, n)
+        return result
 
     @staticmethod
     def normal_weights(n, k, mu=0, sigma=1):

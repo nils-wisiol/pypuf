@@ -60,12 +60,13 @@ class LogisticRegression():
             return self.step
 
     def __init__(self, training_set, n, k, transformation=simulation.LTFArray.transform_id, combiner=simulation.LTFArray.combiner_xor, mu=0, sigma=1):
+        self.iteration_count = 0
         self.set = training_set
         self.n = n
         self.k = k
         self.mu = 0
         self.sigma = 1
-        self.iteration_limit = 100
+        self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
         self.derivative = full(self.set.N, None)
@@ -121,11 +122,10 @@ class LogisticRegression():
 
         updater = self.RPropModelUpdate(model)
 
-        i = 0
         converged = False
         distance = 1
-        while not converged and distance > .01 and i < self.iteration_limit:
-            i += 1
+        while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
+            self.iteration_count += 1
 
             # compute gradient & update model
             gradient = self.gradient(model)
