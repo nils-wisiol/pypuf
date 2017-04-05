@@ -1,4 +1,4 @@
-from numpy import random, count_nonzero
+from numpy import random, count_nonzero, array
 import itertools
 
 
@@ -42,13 +42,13 @@ def approx_dist(a, b, num):
     """
     assert a.n == b.n
     d = 0
-    inputs = list(random_inputs(a.n, num))
+    inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
 
 class TrainingSet():
 
     def __init__(self, instance, N):
-        self.challenges = list(sample_inputs(instance.n, N))
+        self.challenges = array(list(sample_inputs(instance.n, N)))
         self.responses = instance.eval(self.challenges)
         self.N = N

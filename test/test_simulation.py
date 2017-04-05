@@ -1,7 +1,7 @@
 import unittest
 from pypuf import simulation
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, random, prod
+from numpy import shape, dot, random, full, tile, array, transpose
 
 
 class TestCombiner(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestCombiner(unittest.TestCase):
 class TestInputTransformation(unittest.TestCase):
 
     def test_id(self):
-        test_array = [
+        test_cs = [
             [
                 [-1,  1,  1, -1, -1],
                 [-1, -1, -1, -1, -1],
@@ -43,11 +43,75 @@ class TestInputTransformation(unittest.TestCase):
                 [-1,  1, -1, -1, -1],
             ]
         ]
-        for l in range(5):
+        for cs in test_cs:
             assert_array_equal(
-                simulation.LTFArray.transform_id(test_array, l),
-                test_array
+                simulation.LTFArray.transform_id(cs, k=4),
+                [
+                    [
+                        cs[0],
+                        cs[0],
+                        cs[0],
+                        cs[0]
+                    ],
+                    [
+                        cs[1],
+                        cs[1],
+                        cs[1],
+                        cs[1]
+                    ],
+                    [
+                        cs[2],
+                        cs[2],
+                        cs[2],
+                        cs[2]
+                    ]
+                ]
             )
+
+    def test_atf(self):
+        test_array = array([
+                [-1,  1,  1, -1, -1],
+                [-1, -1, -1, -1, -1],
+                [ 1,  1, -1, -1, -1],
+                [ 1,  1,  1, -1, -1],
+                [-1, -1, -1, -1, -1],
+                [-1,  1, -1, -1, -1],
+        ])
+        assert_array_equal(
+            simulation.LTFArray.transform_atf(test_array, k=3),
+            [
+                [
+                    [-1,  1,  1,  1, -1],
+                    [-1,  1,  1,  1, -1],
+                    [-1,  1,  1,  1, -1],
+                ],
+                [
+                    [-1,  1, -1,  1, -1],
+                    [-1,  1, -1,  1, -1],
+                    [-1,  1, -1,  1, -1],
+                ],
+                [
+                    [-1, -1, -1,  1, -1],
+                    [-1, -1, -1,  1, -1],
+                    [-1, -1, -1,  1, -1],
+                ],
+                [
+                    [ 1,  1,  1,  1, -1],
+                    [ 1,  1,  1,  1, -1],
+                    [ 1,  1,  1,  1, -1],
+                ],
+                [
+                    [-1,  1, -1,  1, -1],
+                    [-1,  1, -1,  1, -1],
+                    [-1,  1, -1,  1, -1],
+                ],
+                [
+                    [ 1, -1, -1,  1, -1],
+                    [ 1, -1, -1,  1, -1],
+                    [ 1, -1, -1,  1, -1],
+                ]
+            ]
+        )
 
 
 class TestLTFArray(unittest.TestCase):
@@ -96,11 +160,11 @@ class TestLTFArray(unittest.TestCase):
                 combiner=simulation.LTFArray.combiner_xor,
             )
 
-            fast_evaluation_result = ltf_array.ltf_eval(inputs)
+            fast_evaluation_result = ltf_array.ltf_eval(simulation.LTFArray.transform_id(inputs, k))
             slow_evaluation_result = []
-            for x in inputs:
+            for c in inputs:
                 slow_evaluation_result.append(
-                    [ ltf_eval_slow(x, ltf_array.weight_array[l]) for l in range(k) ]
+                    [ ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k) ]
                 )
 
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))

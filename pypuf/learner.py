@@ -59,23 +59,27 @@ class LogisticRegression():
 
             return self.step
 
-    def __init__(self, training_set, n, k, mu=0, sigma=1):
+    def __init__(self, training_set, n, k, transformation=simulation.LTFArray.transform_id, combiner=simulation.LTFArray.combiner_xor, mu=0, sigma=1):
+        self.iteration_count = 0
         self.set = training_set
         self.n = n
         self.k = k
         self.mu = 0
         self.sigma = 1
-        self.iteration_limit = 100
+        self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
         self.derivative = full(self.set.N, None)
         self.min_distance = 1
+        self.transformation = transformation
+        self.combiner = combiner
+        self.transformed_challenges = self.transformation(self.set.challenges, k)
 
         assert self.n == len(training_set.challenges[0])
 
     def gradient(self, model):
         # compute model responses
-        model_responses = model.ltf_eval(self.set.challenges)
+        model_responses = model.ltf_eval(self.transformed_challenges)
         combined_model_responses = model.combiner_xor(model_responses)
         self.sign_combined_model_responses = sign(combined_model_responses)
 
@@ -87,7 +91,7 @@ class LogisticRegression():
                                        abs(combined_model_responses)
                                    )
 
-        # compute the class probability(?) from
+        # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
         self.derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.set.responses)
@@ -99,30 +103,30 @@ class LogisticRegression():
                 # estimated responses of the l-th LTF, derived from the real total value
                 # and the (k-1) modelled values
                 combined_model_responses / model_responses[:,l],
-                self.set.challenges
+                self.transformed_challenges[:,l]  # all challenges to the l-th Arbiter chain
             )
             for l in range(self.k)
         ])
         return ret
 
     def learn(self):
-        # let numpy raise excpetions
+        # let numpy raise exceptions
         seterr(all='raise')
 
         # we start with a random model
         model = simulation.LTFArray(
             weight_array=simulation.LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma),
-            transform=simulation.LTFArray.transform_id,
-            combiner=simulation.LTFArray.combiner_xor,
+            transform=self.transformation,
+            combiner=self.combiner,
         )
 
         updater = self.RPropModelUpdate(model)
 
-        i = 0
         converged = False
         distance = 1
-        while not converged and distance > .01 and i < self.iteration_limit:
-            i += 1
+        self.iteration_count = 0
+        while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
+            self.iteration_count += 1
 
             # compute gradient & update model
             gradient = self.gradient(model)
