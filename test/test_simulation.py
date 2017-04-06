@@ -113,6 +113,67 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_shift(self):
+        test_array = array([
+                [-1,  1,  1, -1, -1],
+                [-1, -1, -1, -1, -1],
+                [ 1,  1, -1, -1, -1],
+                [ 1,  1, -1, -1, -1],
+                [ 1,  2,  3,  4,  5],
+        ])
+        assert_array_equal(
+            simulation.LTFArray.transform_shift(test_array, k=3),
+            [
+                [
+                    [-1,  1,  1, -1, -1],
+                    [ 1,  1, -1, -1, -1],
+                    [ 1, -1, -1, -1,  1],
+                ],
+                [
+                    [-1, -1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1],
+                ],
+                [
+                    [ 1,  1, -1, -1, -1],
+                    [ 1, -1, -1, -1,  1],
+                    [-1, -1, -1,  1,  1],
+                ],
+                [
+                    [ 1,  1, -1, -1, -1],
+                    [ 1, -1, -1, -1,  1],
+                    [-1, -1, -1,  1,  1],
+                ],
+                [
+                    [1, 2, 3, 4, 5],
+                    [2, 3, 4, 5, 1],
+                    [3, 4, 5, 1, 2],
+                ]
+            ]
+        )
+
+    def test_secure_lightweight(self):
+        test_array = array([
+            [ 1, -1, -1,  1, -1,  1],
+            [-1,  1,  1, -1, -1,  1],
+        ])
+        assert_array_equal(
+            simulation.LTFArray.transform_secure_lightweight(test_array, k=3),
+            [
+                [
+                    [-1, -1, -1,  1,  1, -1],
+                    [-1, -1,  1,  1, -1, -1],
+                    [-1,  1,  1, -1, -1, -1],
+                ],
+                [
+                    [-1, -1, -1, -1,  1,  1],
+                    [-1, -1, -1,  1,  1, -1],
+                    [-1, -1,  1,  1, -1, -1],
+                ],
+            ]
+        )
+
+
 
 class TestLTFArray(unittest.TestCase):
 
