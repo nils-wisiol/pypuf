@@ -76,9 +76,9 @@ class LTFArray():
         cs = transpose(
                 concatenate(
                 (
-                    [ cs[:,i] * cs[:,i+1] for i in range(0, n, 2) ],  # ( x1x2, x3x4, ... xn-1xn )
-                    [ cs[:,0] ],                                      # ( x1 )
-                    [ cs[:,i] * cs[:,i+1] for i in range(1, n-2, 2) ],  # ( x2x3, x4x5, ... x-n2x-n1 )
+                    [ cs[:,i] * cs[:,i+1] for i in range(0, n, 2) ],    # ( x1x2, x3x4, ... xn-1xn )
+                    [ cs[:,0] ],                                        # ( x1 )
+                    [ cs[:,i] * cs[:,i+1] for i in range(1, n-2, 2) ],  # ( x2x3, x4x5, ... xn-2xn-1 )
                 )
             )
         )
