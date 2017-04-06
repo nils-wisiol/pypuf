@@ -68,6 +68,41 @@ class LTFArray():
         return result
 
     @staticmethod
+    def transform_lightweight_secure(cs, k):
+        N = len(cs)
+        n = len(cs[0])
+        assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n. Sorry!'
+
+        cs = transpose(
+                concatenate(
+                (
+                    [ cs[:,i] * cs[:,i+1] for i in range(0, n, 2) ],    # ( x1x2, x3x4, ... xn-1xn )
+                    [ cs[:,0] ],                                        # ( x1 )
+                    [ cs[:,i] * cs[:,i+1] for i in range(1, n-2, 2) ],  # ( x2x3, x4x5, ... xn-2xn-1 )
+                )
+            )
+        )
+
+        assert cs.shape == (N, n)
+
+        return __class__.transform_shift(cs, k)
+
+    @staticmethod
+    def transform_shift(cs, k):
+
+        N = len(cs)
+        n = len(cs[0])
+
+        result = swapaxes(array([
+            concatenate((cs[:,l:], cs[:,:l]), axis=1)
+            for l in range(k)
+        ]), 0, 1)
+
+        assert result.shape == (N, k, n)
+
+        return result
+
+    @staticmethod
     def normal_weights(n, k, mu=0, sigma=1):
         """
         Returns weights for an array of k LTFs of size n each.
