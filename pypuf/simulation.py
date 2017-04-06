@@ -50,7 +50,7 @@ class LTFArray():
         N = len(cs)
         n = len(cs[0])
         assert k == 2, 'MM transform currently only implemented for k=2. Sorry!'
-        assert n == 64, 'MM transform currently only implemented for n=64. Sorry!'
+        assert n % 2 == 0, 'MM transform only defined for even n. Sorry!'
 
         cs_1 = cs
         cs_2 = transpose(
