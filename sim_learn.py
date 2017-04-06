@@ -84,13 +84,14 @@ for i in range(restarts):
     accuracy = append(accuracy, 1 - dist)
     iterations = append(iterations, lr_learner.iteration_count)
     # output test result in machine-friendly format
-    # seed idx_restart n k transformation combiner iteration_count time accuracy
+    # seed idx_restart n k N transformation combiner iteration_count time accuracy
     stdout.write(' '.join(
         [
             '0x%x' % random_seed,
             '%5d' % i,
             '%3d' % n,
             '%2d' % k,
+            '%6d' % N,
             '%s' % transformation_name,
             '%s' % combiner_name,
             '%4d' % lr_learner.iteration_count,
