@@ -87,7 +87,7 @@ for i in range(restarts):
     model = lr_learner.learn()
     end = time.time()
     training_times = append(training_times, end - start)
-    dist = tools.approx_dist(instance, model, min(1000, 2 ** n))
+    dist = tools.approx_dist(instance, model, min(10000, 2 ** n))
     accuracy = append(accuracy, 1 - dist)
     iterations = append(iterations, lr_learner.iteration_count)
     # output test result in machine-friendly format
