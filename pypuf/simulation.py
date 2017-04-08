@@ -68,7 +68,7 @@ class LTFArray():
         return result
 
     @staticmethod
-    def transform_secure_lightweight(cs, k):
+    def transform_lightweight_secure(cs, k):
         N = len(cs)
         n = len(cs[0])
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n. Sorry!'

@@ -158,7 +158,7 @@ class TestInputTransformation(unittest.TestCase):
             [-1,  1,  1, -1, -1,  1],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_secure_lightweight(test_array, k=3),
+            simulation.LTFArray.transform_lightweight_secure(test_array, k=3),
             [
                 [
                     [-1, -1, -1,  1,  1, -1],

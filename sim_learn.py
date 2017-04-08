@@ -16,6 +16,8 @@ if len(argv) != 8:
     stderr.write('                  -        implementation\n')
     stderr.write('                  - mm  -- designed to achieve maximum PTF expansion length\n')
     stderr.write('                          only implemented for k=2 n=64\n')
+    stderr.write('                  - lightweight_secure -- design by Majzoobi et al. 2008\n')
+    stderr.write('                                          only implemented for even n\n')
     stderr.write('        combiner: used to combine the output bits to a single bit\n')
     stderr.write('                  currently available:\n')
     stderr.write('                  - xor -- output the parity of all output bits\n')
