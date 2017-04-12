@@ -23,6 +23,7 @@ if len(argv) != 9:
     stderr.write('                  - xor -- output the parity of all output bits\n')
     stderr.write('               N: number of challenge response pairs in the training set\n')
     stderr.write('        restarts: number of repeated initializations the learner\n')
+    stderr.write('                  use float number x, 0<x<1 to repeat until given accuracy\n')
     stderr.write('        seed_ltf: random seed used for LTF array instance\n')
     stderr.write('      seed_model: random seed used for the model in first learning attempt\n')
     quit(1)
@@ -32,7 +33,14 @@ k = int(argv[2])
 transformation_name = argv[3]
 combiner_name = argv[4]
 N = int(argv[5])
-restarts = int(argv[6])
+
+if float(argv[6]) < 1:
+    restarts = float('inf')
+    convergence = float(argv[6])
+else:
+    restarts = int(argv[6])
+    convergence = 1.1
+
 seed_ltf = int(argv[7], 16)
 seed_model = int(argv[8], 16)
 
@@ -81,8 +89,11 @@ iterations = array([])
 
 random.seed(seed_model)
 
-for i in range(restarts):
-    stderr.write('\r%5i/%5i         ' % (i+1, restarts))
+i = 0
+dist = 1
+
+while i < restarts and 1 - dist < convergence:
+    stderr.write('\r%5i/%5i         ' % (i+1, restarts if restarts < float('inf') else 0))
     start = time.time()
     model = lr_learner.learn()
     end = time.time()
@@ -110,6 +121,7 @@ for i in range(restarts):
     #stderr.write('training time:                % 5.3fs' % (end - start))
     #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
     #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
+    i += 1
 
 stderr.write('\r              \r')
 stderr.write('\n\n')
