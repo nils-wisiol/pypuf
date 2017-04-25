@@ -3,7 +3,7 @@ from pypuf import simulation, learner, tools
 import time
 from sys import argv, stdout, stderr
 
-if len(argv) != 9:
+if len(argv) != 10:
     stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
     stderr.write('Usage:\n')
     stderr.write('sim_learn.py n k transformation combiner N restarts seed_ltf seed_model\n')
@@ -24,6 +24,8 @@ if len(argv) != 9:
     stderr.write('               N: number of challenge response pairs in the training set\n')
     stderr.write('        restarts: number of repeated initializations the learner\n')
     stderr.write('                  use float number x, 0<x<1 to repeat until given accuracy\n')
+    stderr.write('       instances: number of repeated initializations the instance\n')
+    stderr.write('                  The number total learning attempts is restarts*instances.\n')
     stderr.write('        seed_ltf: random seed used for LTF array instance\n')
     stderr.write('      seed_model: random seed used for the model in first learning attempt\n')
     quit(1)
@@ -41,8 +43,10 @@ else:
     restarts = int(argv[6])
     convergence = 1.1
 
-seed_ltf = int(argv[7], 16)
-seed_model = int(argv[8], 16)
+instances = int(argv[7])
+
+seed_ltf = int(argv[8], 16)
+seed_model = int(argv[9], 16)
 
 random.seed(seed_ltf) # reproduce 'random' numbers
 
@@ -69,59 +73,63 @@ stderr.write('  ltf random seed:   0x%x\n' % seed_ltf)
 stderr.write('  model random seed: 0x%x\n' % seed_model)
 stderr.write('\n')
 
-instance = simulation.LTFArray(
-    weight_array=simulation.LTFArray.normal_weights(n, k),
-    transform=transformation,
-    combiner=combiner,
-)
-
-lr_learner = learner.LogisticRegression(
-    tools.TrainingSet(instance=instance, N=N),
-    n,
-    k,
-    transformation=transformation,
-    combiner=combiner,
-)
-
 accuracy = array([])
 training_times = array([])
 iterations = array([])
 
 random.seed(seed_model)
 
-i = 0
-dist = 1
+for j in range(instances):
 
-while i < restarts and 1 - dist < convergence:
-    stderr.write('\r%5i/%5i         ' % (i+1, restarts if restarts < float('inf') else 0))
-    start = time.time()
-    model = lr_learner.learn()
-    end = time.time()
-    training_times = append(training_times, end - start)
-    dist = tools.approx_dist(instance, model, min(10000, 2 ** n))
-    accuracy = append(accuracy, 1 - dist)
-    iterations = append(iterations, lr_learner.iteration_count)
-    # output test result in machine-friendly format
-    # seed_ltf seed_model idx_restart n k N transformation combiner iteration_count time accuracy
-    stdout.write(' '.join(
-        [
-            '0x%x' % seed_ltf,
-            '0x%x' % seed_model,
-            '%5d' % i,
-            '%3d' % n,
-            '%2d' % k,
-            '%6d' % N,
-            '%s' % transformation_name,
-            '%s' % combiner_name,
-            '%4d' % lr_learner.iteration_count,
-            '%9.3f' % (end - start),
-            '%1.5f' % (1 - dist),
-        ]
-    ) + '\n')
-    #stderr.write('training time:                % 5.3fs' % (end - start))
-    #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
-    #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
-    i += 1
+    stderr.write('----------- Choosing new instance. ---------\n')
+
+    instance = simulation.LTFArray(
+        weight_array=simulation.LTFArray.normal_weights(n, k),
+        transform=transformation,
+        combiner=combiner,
+    )
+
+    lr_learner = learner.LogisticRegression(
+        tools.TrainingSet(instance=instance, N=N),
+        n,
+        k,
+        transformation=transformation,
+        combiner=combiner,
+    )
+
+    i = 0
+    dist = 1
+
+    while i < restarts and 1 - dist < convergence:
+        stderr.write('\r%5i/%5i         ' % (i+1, restarts if restarts < float('inf') else 0))
+        start = time.time()
+        model = lr_learner.learn()
+        end = time.time()
+        training_times = append(training_times, end - start)
+        dist = tools.approx_dist(instance, model, min(10000, 2 ** n))
+        accuracy = append(accuracy, 1 - dist)
+        iterations = append(iterations, lr_learner.iteration_count)
+        # output test result in machine-friendly format
+        # seed_ltf seed_model idx_restart n k N transformation combiner iteration_count time accuracy
+        stdout.write(' '.join(
+            [
+                '0x%x' % seed_ltf,
+                '0x%x' % seed_model,
+                '%5d' % i,
+                '%3d' % n,
+                '%2d' % k,
+                '%6d' % N,
+                '%s' % transformation_name,
+                '%s' % combiner_name,
+                '%4d' % lr_learner.iteration_count,
+                '%9.3f' % (end - start),
+                '%1.5f' % (1 - dist),
+            ]
+        ) + '\n')
+        #stderr.write('training time:                % 5.3fs' % (end - start))
+        #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
+        #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
+        i += 1
 
 stderr.write('\r              \r')
 stderr.write('\n\n')
