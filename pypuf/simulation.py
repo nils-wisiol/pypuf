@@ -121,6 +121,70 @@ class LTFArray():
         return result
 
     @staticmethod
+    def transform_1_n_bent(cs, k):
+        """
+        For one LTF, we compute the input as follows: the i-th input bit will be the result
+        of the challenge shifted by i bits to the left, then input into inner product mod 2
+        function.
+        The other LTF get the original input.
+        """
+        N = len(cs)
+        n = len(cs[0])
+        assert k >= 2, '1-n bent transform currently only implemented for k>=2. Sorry!'
+        assert n % 2 == 0, '1-n bent transform only defined for even n. Sorry!'
+
+        shift_challenges = __class__.transform_shift(cs, n)
+        assert shift_challenges.shape == (N, n, n)
+
+        bent_challenges = transpose(
+            array(
+                [
+                    __class__.combiner_ip_mod2(shift_challenges[:,i,:])
+                    for i in range(n)
+                ]
+            )
+        )
+        assert bent_challenges.shape == (N, n)
+
+        return array([
+                concatenate(
+                    (
+                        [bent_challenges[j]],    # 'bent' challenge as generated above
+                        tile(cs[j], (k - 1, 1))  # unmodified challenge for k-1 LTFs
+                    ),
+                    axis=0
+                )
+                for j in range(N)
+            ])
+
+    @staticmethod
+    def transform_1_1_bent(cs, k):
+        """
+        For one LTF, we compute the input as follows: the first input bit will be
+        the result of IPmod2 of the original challenge, all other input bits will
+        remain the same.
+        The other LTF get the original input.
+        """
+        N = len(cs)
+        n = len(cs[0])
+        assert k >= 2, '1-n bent transform currently only implemented for k>=2. Sorry!'
+        assert n % 2 == 0, '1-n bent transform only defined for even n. Sorry!'
+
+        bent_challenge_bits = __class__.combiner_ip_mod2(cs)
+        assert bent_challenge_bits.shape == (N, )
+
+        return array([
+                concatenate(
+                    (
+                        [concatenate(([[bent_challenge_bits[j]], cs[j][1:]]))],  # 'bent' challenge bit plus remainder unchanged
+                        tile(cs[j], (k - 1, 1))                  # unmodified challenge for k-1 LTFs
+                    ),
+                    axis=0
+                )
+                for j in range(N)
+            ])
+
+    @staticmethod
     def normal_weights(n, k, mu=0, sigma=1):
         """
         Returns weights for an array of k LTFs of size n each.

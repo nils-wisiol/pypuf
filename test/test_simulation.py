@@ -203,6 +203,47 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_1_n_bent(self):
+        test_array = array([
+            [ 1, -1, -1,  1, -1,  1],
+            [-1,  1,  1, -1, -1,  1],
+        ])
+        assert_array_equal(
+            simulation.LTFArray.transform_1_n_bent(test_array, k=3),
+            [
+                [
+                    [ 1, -1,  1, -1,  1, -1],
+                    [ 1, -1, -1,  1, -1,  1],
+                    [ 1, -1, -1,  1, -1,  1],
+                ],
+                [
+                    [ 1, -1,  1, -1,  1, -1],
+                    [-1,  1,  1, -1, -1,  1],
+                    [-1,  1,  1, -1, -1,  1],
+                ],
+            ]
+        )
+
+    def test_1_1_bent(self):
+        test_array = array([
+            [ 1, -1, -1,  1, -1,  1],
+            [-1,  1,  1, -1, -1,  1],
+        ])
+        assert_array_equal(
+            simulation.LTFArray.transform_1_1_bent(test_array, k=3),
+            [
+                [
+                    [ 1, -1, -1,  1, -1,  1],
+                    [ 1, -1, -1,  1, -1,  1],
+                    [ 1, -1, -1,  1, -1,  1],
+                ],
+                [
+                    [ 1,  1,  1, -1, -1,  1],
+                    [-1,  1,  1, -1, -1,  1],
+                    [-1,  1,  1, -1, -1,  1],
+                ],
+            ]
+        )
 
 
 class TestLTFArray(unittest.TestCase):
