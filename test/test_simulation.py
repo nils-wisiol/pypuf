@@ -22,6 +22,36 @@ class TestCombiner(unittest.TestCase):
             ]
         )
 
+    def test_combine_ip_mod2(self):
+        assert_array_equal(
+            simulation.LTFArray.combiner_ip_mod2(
+                array([
+                    [1, 1, -3, 1],
+                    [-1, -1, -1, 1],
+                    [-2, -2, 2, 1]
+                ])
+            ),
+            [
+                1,
+                -1,
+                -4
+            ]
+        )
+        assert_array_equal(
+            simulation.LTFArray.combiner_ip_mod2(
+                array([
+                    [1, 1, 1, 1, 1, 1],
+                    [-1, -1, -1, 1, -1, -1],
+                    [-2, -2, 2, 1, 10, 10]
+                ])
+            ),
+            [
+                1,
+                1,
+                -40
+            ]
+        )
+
 
 class TestInputTransformation(unittest.TestCase):
 
