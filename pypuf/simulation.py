@@ -1,5 +1,6 @@
-from numpy import prod, shape, random, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, append
+from numpy import prod, shape, random, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax
 from pypuf import tools
+
 
 class LTFArray():
     """
@@ -15,6 +16,23 @@ class LTFArray():
         :return: a list of full results, one for each
         """
         return prod(r, 1)
+
+    @staticmethod
+    def combiner_ip_mod2(r):
+        """
+        combines output responses with the inner product mod 2 operation
+        :param r: a list with a number of vectors of single LTF results
+        :return: a list of full results, one for each
+        """
+        n = len(r[0])
+        assert n % 2 == 0, 'IP mod 2 is only defined for even n. Sorry!'
+        return prod(
+            transpose(
+                [
+                    amax((r[:,i], r[:,i+1]), 0)
+                    for i in range(0, n, 2)
+                ])
+            , 1)
 
     @staticmethod
     def transform_id(cs, k):
