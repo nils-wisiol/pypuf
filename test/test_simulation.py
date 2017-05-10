@@ -1,5 +1,5 @@
 import unittest
-from pypuf import simulation
+from pypuf import simulation, tools
 from numpy.testing import assert_array_equal
 from numpy import shape, dot, random, full, tile, array, transpose
 
@@ -117,11 +117,50 @@ class TestInputTransformation(unittest.TestCase):
 class TestLTFArray(unittest.TestCase):
 
     test_set = [
-        # n, k, mu, sigma
-        (64, 4, 0, 1),
-        (4, 16, 0, 1),
-        (16, 4, 10, .5),
+        # n, k, mu, sigma, bias
+        (64, 4, 0, 1, False),
+        (4, 16, 0, 1, False),
+        (16, 4, 10, .5, False),
+        (64, 4, 0, 1, True),
+        (4, 16, 0, 1, True),
+        (16, 4, 10, .5, True),
     ]
+
+    def test_bias(self):
+        """
+        Probabilistic test for checking the bias feature in eval.
+        """
+        N = 100
+
+        for test_parameters in self.test_set:
+            n = test_parameters[0]
+            k = test_parameters[1]
+            mu = test_parameters[2]
+            sigma = test_parameters[3]
+            bias = test_parameters[4]
+            weight_array = simulation.LTFArray.normal_weights(n, k, mu, sigma)
+
+            input_len = n-1 if bias else n
+            inputs = random.choice([-1,+1], (N, input_len))
+
+            biased_ltf_array = simulation.LTFArray(
+                weight_array = weight_array,
+                transform = simulation.LTFArray.transform_id,
+                combiner = simulation.LTFArray.combiner_xor,
+                bias = bias,
+            )
+            ltf_array = simulation.LTFArray(
+                weight_array = weight_array,
+                transform = simulation.LTFArray.transform_id,
+                combiner = simulation.LTFArray.combiner_xor,
+                bias = False,
+            )
+            biased_eval = biased_ltf_array.eval(inputs)
+            inputs = tools.iter_append_last(inputs, 1)\
+                if biased_ltf_array.bias else inputs
+            eval = ltf_array.eval(inputs)
+
+            assert_array_equal(biased_eval, eval)
 
     def test_random_weights(self):
         for test_parameters in self.test_set:

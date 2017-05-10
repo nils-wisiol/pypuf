@@ -1,4 +1,4 @@
-from numpy import random, count_nonzero, array
+from numpy import random, count_nonzero, array, append
 import itertools
 
 
@@ -33,6 +33,12 @@ def sample_inputs(n, num):
     """
     return random_inputs(n, num) if num < 2**n else all_inputs(n)
 
+def iter_append_last(array_iterator, x):
+    """
+    returns an iterator for a given iterator of arrays to which element x will be appended
+    """
+    for array in array_iterator:
+        yield append(array, x)
 
 def approx_dist(a, b, num):
     """

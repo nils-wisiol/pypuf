@@ -1,9 +1,10 @@
-from numpy import prod, shape, random, sign, dot, concatenate, array, full, tile, transpose, concatenate, dstack, swapaxes
-
+from numpy import prod, shape, random, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, append
+from pypuf import tools
 
 class LTFArray():
     """
-    Class that simulates k LTFs with n bits and a constant term each.
+    Class that simulates k LTFs with n bits and a constant term each
+    and constant bias added.
     """
 
     @staticmethod
@@ -29,7 +30,7 @@ class LTFArray():
     @staticmethod
     def transform_atf(cs, k):
         """
-        Input transformation that simulations an Arbiter PUF
+        Input transformation that simulates an Arbiter PUF
         :return:
         """
 
@@ -76,18 +77,28 @@ class LTFArray():
         """
         return random.normal(loc=mu, scale=sigma, size=(k, n))
 
-    def __init__(self, weight_array, transform, combiner):
+    def __init__(self, weight_array, transform, combiner, bias=False):
+        """
+        Initializes an LTFArray based on given weight_array and
+        combiner function with appropriate transformation of challenges.
+        The bias is committed through the (n+1)th value in weight_array.
+        So the parameter bias only states if the given weight_array has
+        n+1 values (or not) while the challenges still has length n.
+        """
         (self.k, self.n) = shape(weight_array)
         self.weight_array = weight_array
         self.transform = transform
         self.combiner = combiner
+        self.bias = bias
 
     def eval(self, inputs):
         """
-        evaluates a given list of challenges
+        evaluates a given list of challenges regarding bias
         :param x: list of challenges
         :return: list of responses
         """
+        if self.bias:
+            inputs = tools.iter_append_last(inputs, 1)
         return sign(self.val(inputs))
 
     def val(self, inputs):
@@ -106,3 +117,39 @@ class LTFArray():
                 for l in range(self.k)
             ])
         )
+
+
+class NoisyLTFArray(LTFArray):
+    """
+    Class that simulates k LTFs with n bits and a constant term each 
+    with noise effect and constant bias added.
+    """
+
+    @staticmethod
+    def sigma_noise_from_random_weights(n, sigma_weight, noisiness=0.1):
+        """
+        returns sd of noise (sigma_noise) out of n stages with
+        sd of weight differences (sigma_weight) and noisiness factor
+        """
+        return sqrt(n) * sigma_weight * noisiness
+
+    def __init__(self, weight_array, transform, combiner, sigma_noise,
+                 noise_seed=None, bias=False):
+        """
+        Initializes LTF array like in LTFArray with the sd of a random
+        noise effect added.
+        """
+        super().__init__(weight_array, transform, combiner, bias)
+        self.sigma_noise = sigma_noise
+        if noise_seed is not None:
+            random.seed(noise_seed)
+
+    def ltf_eval(self, inputs):
+        """
+        Calculates weight_array with given set of challenges including noise.
+        The noise effect is a normal distributed random variable with mu=0,
+        sigma=sigma_noise.
+        It can be seeded optionally by an integer out of [0, 2^32 -1].
+        """
+        noise = random.normal(loc=0, scale=self.sigma_noise, size=(1,self.k))
+        return super().ltf_eval(self, inputs) + noise
