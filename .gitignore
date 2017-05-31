@@ -98,6 +98,8 @@ ENV/
 
 # IDE
 .idea
+.project
+.pydevproject
 
 # Conda
 /pypuf/bin/*
