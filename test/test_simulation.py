@@ -271,21 +271,21 @@ class TestLTFArray(unittest.TestCase):
             mu = test_parameters[2]
             sigma = test_parameters[3]
             bias = test_parameters[4]
-            weight_array = simulation.LTFArray.normal_weights(n, k, mu, sigma)
+            weight_array = LTFArray.normal_weights(n, k, mu, sigma)
 
             input_len = n-1 if bias else n
             inputs = random.choice([-1,+1], (N, input_len))
 
-            biased_ltf_array = simulation.LTFArray(
+            biased_ltf_array = LTFArray(
                 weight_array = weight_array,
-                transform = simulation.LTFArray.transform_id,
-                combiner = simulation.LTFArray.combiner_xor,
+                transform = LTFArray.transform_id,
+                combiner = LTFArray.combiner_xor,
                 bias = bias,
             )
-            ltf_array = simulation.LTFArray(
+            ltf_array = LTFArray(
                 weight_array = weight_array,
-                transform = simulation.LTFArray.transform_id,
-                combiner = simulation.LTFArray.combiner_xor,
+                transform = LTFArray.transform_id,
+                combiner = LTFArray.combiner_xor,
                 bias = False,
             )
             biased_eval = biased_ltf_array.eval(inputs)
