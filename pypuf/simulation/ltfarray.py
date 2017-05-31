@@ -2,7 +2,6 @@ from numpy import prod, shape, random, sign, dot, concatenate, array, full, tile
 from pypuf import tools
 from pypuf.simulation.base import Simulation
 
-
 class LTFArray(Simulation):
     """
     Class that simulates k LTFs with n bits and a constant term each
