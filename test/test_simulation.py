@@ -1,14 +1,15 @@
 import unittest
-from pypuf import simulation, tools
+from pypuf import tools
+from pypuf.simulation.ltfarray import LTFArray
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, random, full, tile, array, transpose
+from numpy import shape, dot, random, full, tile, array, transpose, abs, around
 
 
 class TestCombiner(unittest.TestCase):
 
     def test_combine_xor(self):
         assert_array_equal(
-            simulation.LTFArray.combiner_xor(
+            LTFArray.combiner_xor(
                 [
                     [ 1,  1, -3,  1],
                     [-1, -1, -1,  1],
@@ -24,7 +25,7 @@ class TestCombiner(unittest.TestCase):
 
     def test_combine_ip_mod2(self):
         assert_array_equal(
-            simulation.LTFArray.combiner_ip_mod2(
+            LTFArray.combiner_ip_mod2(
                 array([
                     [1, 1, -3, 1],
                     [-1, -1, -1, 1],
@@ -38,7 +39,7 @@ class TestCombiner(unittest.TestCase):
             ]
         )
         assert_array_equal(
-            simulation.LTFArray.combiner_ip_mod2(
+            LTFArray.combiner_ip_mod2(
                 array([
                     [1, 1, 1, 1, 1, 1],
                     [-1, -1, -1, 1, -1, -1],
@@ -75,7 +76,7 @@ class TestInputTransformation(unittest.TestCase):
         ]
         for cs in test_cs:
             assert_array_equal(
-                simulation.LTFArray.transform_id(cs, k=4),
+                LTFArray.transform_id(cs, k=4),
                 [
                     [
                         cs[0],
@@ -108,7 +109,7 @@ class TestInputTransformation(unittest.TestCase):
                 [-1,  1, -1, -1, -1],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_atf(test_array, k=3),
+            LTFArray.transform_atf(test_array, k=3),
             [
                 [
                     [-1,  1,  1,  1, -1],
@@ -152,7 +153,7 @@ class TestInputTransformation(unittest.TestCase):
                 [ 1,  2,  3,  4,  5],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_shift(test_array, k=3),
+            LTFArray.transform_shift(test_array, k=3),
             [
                 [
                     [-1,  1,  1, -1, -1],
@@ -188,7 +189,7 @@ class TestInputTransformation(unittest.TestCase):
             [-1,  1,  1, -1, -1,  1],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_lightweight_secure(test_array, k=3),
+            LTFArray.transform_lightweight_secure(test_array, k=3),
             [
                 [
                     [-1, -1, -1,  1,  1, -1],
@@ -209,7 +210,7 @@ class TestInputTransformation(unittest.TestCase):
             [-1,  1,  1, -1, -1,  1],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_1_n_bent(test_array, k=3),
+            LTFArray.transform_1_n_bent(test_array, k=3),
             [
                 [
                     [ 1, -1,  1, -1,  1, -1],
@@ -230,7 +231,7 @@ class TestInputTransformation(unittest.TestCase):
             [-1,  1,  1, -1, -1,  1],
         ])
         assert_array_equal(
-            simulation.LTFArray.transform_1_1_bent(test_array, k=3),
+            LTFArray.transform_1_1_bent(test_array, k=3),
             [
                 [
                     [ 1, -1, -1,  1, -1,  1],
@@ -300,7 +301,7 @@ class TestLTFArray(unittest.TestCase):
             k = test_parameters[1]
             mu = test_parameters[2]
             sigma = test_parameters[3]
-            self.assertTupleEqual(shape(simulation.LTFArray.normal_weights(n, k, mu, sigma)), (k, n))
+            self.assertTupleEqual(shape(LTFArray.normal_weights(n, k, mu, sigma)), (k, n))
 
     def test_ltf_eval(self):
         """
@@ -322,22 +323,22 @@ class TestLTFArray(unittest.TestCase):
             k = test_parameters[1]
             mu = test_parameters[2]
             sigma = test_parameters[3]
-
+            random.seed(0xfabfab)
             inputs = random.choice([-1,+1], (N, n))
 
-            ltf_array = simulation.LTFArray(
-                weight_array=simulation.LTFArray.normal_weights(n, k, mu, sigma),
-                transform=simulation.LTFArray.transform_id,
-                combiner=simulation.LTFArray.combiner_xor,
+            ltf_array = LTFArray(
+                weight_array=LTFArray.normal_weights(n, k, mu, sigma),
+                transform=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
             )
 
-            fast_evaluation_result = ltf_array.ltf_eval(simulation.LTFArray.transform_id(inputs, k))
+            fast_evaluation_result = around(ltf_array.ltf_eval(LTFArray.transform_id(inputs, k)), decimals=10)
             slow_evaluation_result = []
             for c in inputs:
                 slow_evaluation_result.append(
                     [ ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k) ]
                 )
-
+            slow_evaluation_result = around(slow_evaluation_result, decimals=10)
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))
             self.assertTupleEqual(shape(fast_evaluation_result), (N, k))
             assert_array_equal(slow_evaluation_result, fast_evaluation_result)
