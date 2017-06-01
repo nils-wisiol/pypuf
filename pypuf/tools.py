@@ -51,6 +51,19 @@ def approx_dist(a, b, num):
     inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
+def compare_functions(x, y):
+    """
+    compares two function on bytecode layer
+    :param x: function object
+    :param y: function object
+    :return: bool
+    """
+    xc = x.__code__
+    yc = y.__code__
+    b = xc.co_code == yc.co_code
+    # The bytcode maybe differ from each other https://stackoverflow.com/a/20059029
+    b &= xc.co_name == yc.co_name
+    return b and xc.co_filename == yc.co_filename
 
 class TrainingSet():
 
