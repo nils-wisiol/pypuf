@@ -309,7 +309,7 @@ class TestLTFArray(unittest.TestCase):
         This is a probabilistic test, relying on random input.
         """
 
-        N = 100 # number of random inputs per test set
+        N = 100  # number of random inputs per test set
 
         def ltf_eval_slow(x, w):
             """
@@ -324,7 +324,7 @@ class TestLTFArray(unittest.TestCase):
             mu = test_parameters[2]
             sigma = test_parameters[3]
 
-            inputs = random.choice([-1,+1], (N, n))
+            inputs = random.choice([-1, +1], (N, n))
 
             ltf_array = LTFArray(
                 weight_array=LTFArray.normal_weights(n, k, mu, sigma),
@@ -336,7 +336,7 @@ class TestLTFArray(unittest.TestCase):
             slow_evaluation_result = []
             for c in inputs:
                 slow_evaluation_result.append(
-                    [ ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k) ]
+                    [ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k)]
                 )
 
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))
