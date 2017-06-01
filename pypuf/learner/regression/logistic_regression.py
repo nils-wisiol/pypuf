@@ -1,11 +1,13 @@
-from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, ones, zeros, amin, amax, double
-from pypuf import simulation
 from sys import stderr
+from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
+from pypuf.learner.base import Learner
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.tools import compare_functions
 
 
-class LogisticRegression():
+class LogisticRegression(Learner):
 
-    class ModelUpdate():
+    class ModelUpdate(object):
 
         def __init__(self, model):
             self.model = model
@@ -67,9 +69,9 @@ class LogisticRegression():
 
             return self.step
 
-    def __init__(self, training_set, n, k, transformation=simulation.LTFArray.transform_id, combiner=simulation.LTFArray.combiner_xor, mu=0, sigma=1):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, mu=0, sigma=1):
         self.iteration_count = 0
-        self.set = training_set
+        self.training_set = t_set
         self.n = n
         self.k = k
         self.mu = 0
@@ -77,13 +79,21 @@ class LogisticRegression():
         self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
-        self.sigmoid_derivative = full(self.set.N, None, double)
+        self.sigmoid_derivative = full(self.training_set.N, None, double)
         self.min_distance = 1
         self.transformation = transformation
         self.combiner = combiner
-        self.transformed_challenges = self.transformation(self.set.challenges, k)
+        self.transformed_challenges = self.transformation(self.training_set.challenges, k)
 
-        assert self.n == len(training_set.challenges[0])
+        assert self.n == len(self.training_set.challenges[0])
+
+    @property
+    def training_set(self):
+        return self.__training_set
+
+    @training_set.setter
+    def training_set(self, val):
+        self.__training_set = val
 
     def gradient(self, model):
         # compute model responses
@@ -102,7 +112,7 @@ class LogisticRegression():
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
-        self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.set.responses)
+        self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
                                   # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
         def model_gradient_xor(l):
@@ -121,12 +131,12 @@ class LogisticRegression():
                 0
                 if max[i] == neighbor[i] else
                 combined_model_responses[i] / max[i]
-                for i in range(self.set.N)
+                for i in range(self.training_set.N)
             ])
-
-        if self.combiner == simulation.LTFArray.combiner_xor:
+        # in a multiprocessing scenario the object references would not be the same!
+        if compare_functions(self.combiner, LTFArray.combiner_xor):
             model_gradient = model_gradient_xor
-        elif self.combiner == simulation.LTFArray.combiner_ip_mod2:
+        elif compare_functions(self.combiner == LTFArray.combiner_ip_mod2):
             model_gradient = model_gradient_ip_mod2
         else:
             raise Exception('No gradient function known for combiner %s' % self.combiner)
@@ -146,8 +156,8 @@ class LogisticRegression():
         seterr(all='raise')
 
         # we start with a random model
-        model = simulation.LTFArray(
-            weight_array=simulation.LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma),
+        model = LTFArray(
+            weight_array=LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma),
             transform=self.transformation,
             combiner=self.combiner,
         )
@@ -173,7 +183,7 @@ class LogisticRegression():
             ).all()
 
             # check accuracy
-            distance = (self.set.N - count_nonzero(self.set.responses == self.sign_combined_model_responses)) / self.set.N
+            distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
 
         if not converged and distance > .01:
@@ -196,4 +206,3 @@ class LogisticRegression():
                   str(gradient) +
                   '\n'
                   )
-

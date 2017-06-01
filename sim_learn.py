@@ -1,6 +1,7 @@
 from numpy import random, amin, amax, mean, array, append
+from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf import learner, tools
+from pypuf import tools
 import time
 from sys import argv, stdout, stderr
 
@@ -96,7 +97,7 @@ for j in range(instances):
         combiner=combiner,
     )
 
-    lr_learner = learner.LogisticRegression(
+    lr_learner = LogisticRegression(
         tools.TrainingSet(instance=instance, N=N),
         n,
         k,
