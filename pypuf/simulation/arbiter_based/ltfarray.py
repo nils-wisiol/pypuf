@@ -1,8 +1,9 @@
 from numpy import prod, shape, random, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax
 from pypuf import tools
+from pypuf.simulation.base import Simulation
 
 
-class LTFArray():
+class LTFArray(Simulation):
     """
     Class that simulates k LTFs with n bits and a constant term each
     and constant bias added.
