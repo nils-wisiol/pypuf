@@ -1,5 +1,6 @@
 from numpy import random, amin, amax, mean, array, append
-from pypuf import simulation, learner, tools
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf import learner, tools
 import time
 from sys import argv, stdout, stderr
 
@@ -60,13 +61,13 @@ transformation = None
 combiner = None
 
 try:
-    transformation = getattr(simulation.LTFArray, 'transform_%s' % transformation_name)
+    transformation = getattr(LTFArray, 'transform_%s' % transformation_name)
 except AttributeError:
     stderr.write('Transformation %s unknown or currently not implemented\n' % transformation_name)
     quit()
 
 try:
-    combiner = getattr(simulation.LTFArray, 'combiner_%s' % combiner_name)
+    combiner = getattr(LTFArray, 'combiner_%s' % combiner_name)
 except AttributeError:
     stderr.write('Combiner %s unknown or currently not implemented\n' % combiner_name)
     quit()
@@ -89,8 +90,8 @@ for j in range(instances):
 
     stderr.write('----------- Choosing new instance. ---------\n')
 
-    instance = simulation.LTFArray(
-        weight_array=simulation.LTFArray.normal_weights(n, k),
+    instance = LTFArray(
+        weight_array=LTFArray.normal_weights(n, k),
         transform=transformation,
         combiner=combiner,
     )
