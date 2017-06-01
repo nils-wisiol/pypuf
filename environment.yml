@@ -1,4 +1,0 @@
-name: pypuf
-dependencies:
-  - python=3.4.3
-  - numpy==1.8.2
