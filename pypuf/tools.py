@@ -52,9 +52,24 @@ def approx_dist(a, b, num):
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
 
+def compare_functions(x, y):
+    """
+    compares two function on bytecode layer
+    :param x: function object
+    :param y: function object
+    :return: bool
+    """
+    xc = x.__code__
+    yc = y.__code__
+    b = xc.co_code == yc.co_code
+    # The bytcode maybe differ from each other https://stackoverflow.com/a/20059029
+    b &= xc.co_name == yc.co_name
+    return b and xc.co_filename == yc.co_filename
+
 class TrainingSet():
 
     def __init__(self, instance, N):
+        self.instance = instance
         self.challenges = array(list(sample_inputs(instance.n, N)))
-        self.responses = instance.eval(self.challenges)
+        self.responses = self.instance.eval(self.challenges)
         self.N = N
