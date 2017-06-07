@@ -212,7 +212,6 @@ class LogisticRegression(Learner):
 
             # compute gradient & update model
             gradient = self.gradient(model)
-            self.print_status(model, gradient)
             model.weight_array += updater.update(gradient)
 
             # check convergence
@@ -229,19 +228,3 @@ class LogisticRegression(Learner):
             stderr.write('\rNOT CONVERGED                    ')
 
         return model
-
-    def print_status(self, model, gradient):
-        return # debug output disabled
-        print('\nLR Training Set vs. Model Responses vs. Class Probability\n----------------------------------------------------------')
-        for (idx,c) in enumerate(self.set.challenges):
-            print(' '.join(['%+1d' % ci for ci in c]) +
-                  ' => ' +
-                  ('+1' if self.set.responses[idx] == 1 else '-1') +
-                  '    ' +
-                  '  '.join([('%+ 7.2f' % mr) for mr in model.ltf_eval(model.transform(array([c]), self.k))[0]]) +
-                  '    ' +
-                  ('% 10.10f' % self.sigmoid_derivative[idx]) +
-                  '\n' +
-                  str(gradient) +
-                  '\n'
-                  )
