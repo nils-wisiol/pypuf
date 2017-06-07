@@ -2,7 +2,7 @@ import unittest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, random, full, tile, array, transpose
+from numpy import shape, dot, random, full, tile, array, transpose, around
 
 
 class TestCombiner(unittest.TestCase):
@@ -332,12 +332,13 @@ class TestLTFArray(unittest.TestCase):
                 combiner=LTFArray.combiner_xor,
             )
 
-            fast_evaluation_result = ltf_array.ltf_eval(LTFArray.transform_id(inputs, k))
+            fast_evaluation_result = around(ltf_array.ltf_eval(LTFArray.transform_id(inputs, k)), decimals=10)
             slow_evaluation_result = []
             for c in inputs:
                 slow_evaluation_result.append(
                     [ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k)]
                 )
+            slow_evaluation_result = around(slow_evaluation_result, decimals=10)
 
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))
             self.assertTupleEqual(shape(fast_evaluation_result), (N, k))
