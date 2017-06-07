@@ -66,6 +66,10 @@ def compare_functions(x, y):
     return b and xc.co_filename == yc.co_filename
 
 class TrainingSet():
+    """
+    Basic data structure to hold a collection of challenge response pairs.
+    Note that this is, strictly speaking, not a set.
+    """
 
     def __init__(self, instance, N):
         self.challenges = array(list(sample_inputs(instance.n, N)))

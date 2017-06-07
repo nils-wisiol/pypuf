@@ -6,16 +6,31 @@ from pypuf.tools import compare_functions
 
 
 class LogisticRegression(Learner):
+    """
+    Learn an LTF Array with Logistic Regression.
+
+    This class provides a Logistic Regression learner with automatically generated
+    models that fit the LTF Array as defined in the constructor.
+    """
 
     class ModelUpdate(object):
+        """
+        Model update according to the naive algorithm. Works, but is really slow to converge.
+        """
 
         def __init__(self, model):
             self.model = model
 
         def update(self, gradient):
+            """
+            Use the gradient scaled with a constant to determine the update step.
+            """
             return -.3 * gradient
 
     class RPropModelUpdate(ModelUpdate):
+        """
+        Model update according to the Resilient Backpropagation algorithm. For details, see update() method.
+        """
 
         def __init__(self, model, eta_minus=0.5, eta_plus=1.2):
 
@@ -69,13 +84,24 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, mu=0, sigma=1):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1):
+        """
+        Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
+
+        :param t_set: The training set, i.e. a data structure containing challenge response pairs
+        :param n: Input length
+        :param k: Number of parallel LTFs in the LTF Array
+        :param transformation: Input transformation used by the LTF Array
+        :param combiner: Combiner Function used by the LTF Array (Note that not all combiner functions are supported by this class.)
+        :param weights_mu: mean of the Gaussian that is used to choose the initial model
+        :param weights_sigma: standard deviation of the Gaussian that is used to choose the inital model
+        """
         self.iteration_count = 0
         self.training_set = t_set
         self.n = n
         self.k = k
-        self.mu = 0
-        self.sigma = 1
+        self.weights_mu = weights_mu
+        self.weights_sigma = weights_sigma
         self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
@@ -96,6 +122,13 @@ class LogisticRegression(Learner):
         self.__training_set = val
 
     def gradient(self, model):
+        """
+        Compute the gradient of the given model.
+
+        :param model:
+        :return:
+        """
+
         # compute model responses
         model_responses = model.ltf_eval(self.transformed_challenges)
         combined_model_responses = self.combiner(model_responses)
@@ -152,12 +185,18 @@ class LogisticRegression(Learner):
         return ret
 
     def learn(self):
+        """
+        Compute a model according to the given LTF Array parameters and training set.
+        Note that this function can take long to return.
+        :return: The computed model.
+        """
+
         # let numpy raise exceptions
         seterr(all='raise')
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma),
+            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma),
             transform=self.transformation,
             combiner=self.combiner,
         )
