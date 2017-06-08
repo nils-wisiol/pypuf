@@ -1,4 +1,4 @@
-from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, ones, zeros, amin, amax
+from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, ones, zeros, amin, amax, double
 from pypuf import simulation
 from sys import stderr
 
@@ -24,12 +24,12 @@ class LogisticRegression():
             self.eta_plus = eta_plus
             self.delta_min = 10**-4
             self.delta_max = 10**+1
-            self.last_gradient = full((k, n), 1)
-            self.last_step_size = full((k, n), 0)
-            self.step_size = full((k, n), 1)
-            self.step = full((k, n), 0)
-            self.step_size_max = full(self.n, self.delta_max)
-            self.step_size_min = full(self.n, self.delta_min)
+            self.last_gradient = full((k, n), 1.0)
+            self.last_step_size = full((k, n), 0.0)
+            self.step_size = full((k, n), 1.0)
+            self.step = full((k, n), 0.0)
+            self.step_size_max = full(self.n, self.delta_max, double)
+            self.step_size_min = full(self.n, self.delta_min, double)
 
             super().__init__(model)
 
@@ -77,7 +77,7 @@ class LogisticRegression():
         self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
-        self.sigmoid_derivative = full(self.set.N, None)
+        self.sigmoid_derivative = full(self.set.N, None, double)
         self.min_distance = 1
         self.transformation = transformation
         self.combiner = combiner
@@ -95,7 +95,7 @@ class LogisticRegression():
         MAX_RESPONSE_ABS_VALUE = 50
         combined_model_responses = sign(combined_model_responses) * \
                                    minimum(
-                                       full(len(combined_model_responses), MAX_RESPONSE_ABS_VALUE),
+                                       full(len(combined_model_responses), MAX_RESPONSE_ABS_VALUE, double),
                                        abs(combined_model_responses)
                                    )
 
