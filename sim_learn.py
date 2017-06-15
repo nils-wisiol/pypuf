@@ -98,7 +98,7 @@ for j in range(instances):
     )
 
     lr_learner = LogisticRegression(
-        tools.TrainingSet(instance=instance, N=N),
+        instance,
         n,
         k,
         transformation=transformation,

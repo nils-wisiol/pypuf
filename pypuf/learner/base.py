@@ -3,13 +3,13 @@ import abc
 
 class Learner(object, metaclass=abc.ABCMeta):
     @property
-    def training_set(self):
-        raise NotImplementedError('users must define training_set to use this base class')
+    def instance(self):
+        raise NotImplementedError('users must define instance to use this base class')
 
-    @training_set.setter
+    @instance.setter
     @abc.abstractmethod
-    def training_set(self, val):
-        raise NotImplementedError('users must define training_set to use this base class')
+    def instance(self, val):
+        raise NotImplementedError('users must define instance to use this base class')
 
     @abc.abstractmethod
     def learn(self):
