@@ -2,7 +2,7 @@ from sys import stderr
 from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import compare_functions
+from pypuf.tools import compare_functions, TrainingSet
 
 
 class LogisticRegression(Learner):
@@ -69,12 +69,14 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, mu=0, sigma=1):
+    def __init__(self, instance, n, k, N, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, mu=0, sigma=1):
         self.iteration_count = 0
-        self.training_set = t_set
+        self.instance = instance
         self.n = n
         self.k = k
+        self.N = N
         self.mu = 0
+        self.t_set = TrainingSet(instance=self.instance, N=self.N)
         self.sigma = 1
         self.iteration_limit = 10000
         self.convergence_decimals = 3
@@ -88,12 +90,11 @@ class LogisticRegression(Learner):
         assert self.n == len(self.training_set.challenges[0])
 
     @property
-    def training_set(self):
-        return self.__training_set
+    def instance(self):
+        return self.__instance
 
-    @training_set.setter
     def training_set(self, val):
-        self.__training_set = val
+        self.__instance = val
 
     def gradient(self, model):
         # compute model responses
