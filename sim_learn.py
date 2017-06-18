@@ -1,4 +1,5 @@
-from numpy import random, amin, amax, mean, array, append
+from numpy import amin, amax, mean, array, append
+from numpy.random import RandomState
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
@@ -53,10 +54,12 @@ else:
 
 instances = int(argv[7])
 
-seed_ltf = int(argv[8], 16)
+seed_instance = int(argv[8], 16)
 seed_model = int(argv[9], 16)
 
-random.seed(seed_ltf) # reproduce 'random' numbers
+# reproduce 'random' numbers and avoid interference with other random numbers drawn
+instance_prng = RandomState(seed=seed_instance)
+model_prng = RandomState(seed=seed_model)
 
 transformation = None
 combiner = None
@@ -75,24 +78,22 @@ except AttributeError:
 
 stderr.write('Learning %s-bit %s XOR Arbiter PUF with %s CRPs and %s restarts.\n\n' % (n, k, N, restarts))
 stderr.write('Using\n')
-stderr.write('  transformation:    %s\n' % transformation)
-stderr.write('  combiner:          %s\n' % combiner)
-stderr.write('  ltf random seed:   0x%x\n' % seed_ltf)
-stderr.write('  model random seed: 0x%x\n' % seed_model)
+stderr.write('  transformation:       %s\n' % transformation)
+stderr.write('  combiner:             %s\n' % combiner)
+stderr.write('  instance random seed: 0x%x\n' % seed_instance)
+stderr.write('  model random seed:    0x%x\n' % seed_model)
 stderr.write('\n')
 
 accuracy = array([])
 training_times = array([])
 iterations = array([])
 
-random.seed(seed_model)
-
 for j in range(instances):
 
     stderr.write('----------- Choosing new instance. ---------\n')
 
     instance = LTFArray(
-        weight_array=LTFArray.normal_weights(n, k),
+        weight_array=LTFArray.normal_weights(n, k, random_instance=instance_prng),
         transform=transformation,
         combiner=combiner,
     )
@@ -103,6 +104,7 @@ for j in range(instances):
         k,
         transformation=transformation,
         combiner=combiner,
+        weights_prng=model_prng,
     )
 
     i = 0
@@ -121,7 +123,7 @@ for j in range(instances):
         # seed_ltf seed_model idx_restart n k N transformation combiner iteration_count time accuracy
         stdout.write(' '.join(
             [
-                '0x%x' % seed_ltf,
+                '0x%x' % seed_instance,
                 '0x%x' % seed_model,
                 '%5d' % i,
                 '%3d' % n,
