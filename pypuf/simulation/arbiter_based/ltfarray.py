@@ -1,4 +1,5 @@
-from numpy import prod, shape, random, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax
+from numpy import prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax
+from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
 
@@ -186,14 +187,17 @@ class LTFArray(Simulation):
             ])
 
     @staticmethod
-    def normal_weights(n, k, mu=0, sigma=1):
+    def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
         """
         Returns weights for an array of k LTFs of size n each.
         The weights are drawn from a normal distribution with given
         mean and std. deviation, if parameters are omitted, the
         standard normal distribution is used.
+        The `normal` method of the optionally provided PRNG instance
+        is used to obtain the weights. If no PRNG instance provided,
+        a fresh `numpy.random.RandomState` instance is used.
         """
-        return random.normal(loc=mu, scale=sigma, size=(k, n))
+        return random_instance.normal(loc=mu, scale=sigma, size=(k, n))
 
     def __init__(self, weight_array, transform, combiner, bias=False):
         """
@@ -252,22 +256,23 @@ class NoisyLTFArray(LTFArray):
         return sqrt(n) * sigma_weight * noisiness
 
     def __init__(self, weight_array, transform, combiner, sigma_noise,
-                 noise_seed=None, bias=False):
+                 random_instance=RandomState(), bias=False):
         """
-        Initializes LTF array like in LTFArray with the sd of a random
-        noise effect added.
+        Initializes LTF array like in LTFArray and uses the provided
+        PRNG instance for drawing noise values. If no PRNG provided, a
+        fresh `numpy.random.RandomState` instance is used.
         """
         super().__init__(weight_array, transform, combiner, bias)
         self.sigma_noise = sigma_noise
-        if noise_seed is not None:
-            random.seed(noise_seed)
+        self.random = random_instance
 
     def ltf_eval(self, inputs):
         """
         Calculates weight_array with given set of challenges including noise.
         The noise effect is a normal distributed random variable with mu=0,
         sigma=sigma_noise.
-        It can be seeded optionally by an integer out of [0, 2^32 -1].
+        Random numbers are drawn from the PRNG instance generated when
+        initializing the NoisyLTFArray.
         """
-        noise = random.normal(loc=0, scale=self.sigma_noise, size=(1,self.k))
+        noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(1, self.k))
         return super().ltf_eval(self, inputs) + noise
