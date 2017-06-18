@@ -1,5 +1,5 @@
 import unittest
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
 from numpy import shape, dot, array, around
@@ -343,3 +343,50 @@ class TestLTFArray(unittest.TestCase):
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))
             self.assertTupleEqual(shape(fast_evaluation_result), (N, k))
             assert_array_equal(slow_evaluation_result, fast_evaluation_result)
+
+
+class TestNoisyLTFArray(TestLTFArray):
+
+    def test_ltf_eval(self):
+        """
+        Test ltf_eval for correct evaluation of LTFs.
+        """
+
+        #random.normal(loc=0, scale=self.sigma_noise, size=(1, self.k))
+
+        weight_prng_1 = RandomState(seed=0xBADA55)
+        weight_prng_2 = RandomState(seed=0xBADA55)
+        noise_prng_1 = RandomState(seed=0xC0FFEE)
+        noise_prng_2 = RandomState(seed=0xC0FFEE)
+
+        N = 100  # number of random inputs per test set
+
+        for test_parameters in self.test_set:
+            n = test_parameters[0]
+            k = test_parameters[1]
+            mu = test_parameters[2]
+            sigma = test_parameters[3]
+
+            transformed_inputs = LTFArray.transform_id(
+                RandomState(seed=0xBAADA555).choice([-1,+1], (N, n)),  # bad ass testing
+                k
+            )
+
+            ltf_array = LTFArray(
+                weight_array=LTFArray.normal_weights(n, k, mu, sigma, weight_prng_1),
+                transform=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+            )
+
+            noisy_ltf_array = NoisyLTFArray(
+                weight_array=LTFArray.normal_weights(n, k, mu, sigma, weight_prng_2),  # weight_prng_2 was seeded identically to weight_prng_1
+                transform=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+                sigma_noise=1,
+                random_instance=noise_prng_1,
+            )
+
+            assert_array_equal(
+                around(ltf_array.ltf_eval(transformed_inputs) + noise_prng_2.normal(size=(1, k)), decimals=10),
+                around(noisy_ltf_array.ltf_eval(transformed_inputs), decimals=10)
+            )
