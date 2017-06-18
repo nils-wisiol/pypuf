@@ -9,7 +9,7 @@ from sys import argv, stdout, stderr
 if len(argv) != 10:
     stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
     stderr.write('Usage:\n')
-    stderr.write('sim_learn.py n k transformation combiner N restarts seed_ltf seed_model\n')
+    stderr.write('sim_learn.py n k transformation combiner N restarts seed_instance seed_model\n')
     stderr.write('               n: number of bits per Arbiter chain\n')
     stderr.write('               k: number of Arbiter chains\n')
     stderr.write('  transformation: used to transform input before it is used in LTFs\n')
@@ -35,7 +35,7 @@ if len(argv) != 10:
     stderr.write('                  use float number x, 0<x<1 to repeat until given accuracy\n')
     stderr.write('       instances: number of repeated initializations the instance\n')
     stderr.write('                  The number total learning attempts is restarts*instances.\n')
-    stderr.write('        seed_ltf: random seed used for LTF array instance\n')
+    stderr.write('   seed_instance: random seed used for LTF array instance\n')
     stderr.write('      seed_model: random seed used for the model in first learning attempt\n')
     quit(1)
 
