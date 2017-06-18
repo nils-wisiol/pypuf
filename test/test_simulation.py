@@ -2,7 +2,8 @@ import unittest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, random, full, tile, array, transpose, around
+from numpy import shape, dot, array, around
+from numpy.random import RandomState
 
 
 class TestCombiner(unittest.TestCase):
@@ -274,7 +275,7 @@ class TestLTFArray(unittest.TestCase):
             weight_array = LTFArray.normal_weights(n, k, mu, sigma)
 
             input_len = n-1 if bias else n
-            inputs = random.choice([-1,+1], (N, input_len))
+            inputs = RandomState(seed=0xBAADA555).choice([-1,+1], (N, input_len))  # bad ass testing
 
             biased_ltf_array = LTFArray(
                 weight_array = weight_array,
@@ -306,7 +307,6 @@ class TestLTFArray(unittest.TestCase):
     def test_ltf_eval(self):
         """
         Test ltf_eval for correct evaluation of LTFs.
-        This is a probabilistic test, relying on random input.
         """
 
         N = 100  # number of random inputs per test set
@@ -324,7 +324,7 @@ class TestLTFArray(unittest.TestCase):
             mu = test_parameters[2]
             sigma = test_parameters[3]
 
-            inputs = random.choice([-1, +1], (N, n))
+            inputs = RandomState(seed=0xCAFED00D).choice([-1, +1], (N, n))
 
             ltf_array = LTFArray(
                 weight_array=LTFArray.normal_weights(n, k, mu, sigma),
