@@ -43,7 +43,7 @@ pypuf is primarily designed as an API. However, it provides a subset of its feat
 
 #### Example Usage
 
-Example usage of `sim_learn` that simulates a 64 bit 2-xor Arbiter PUF and learns it to approx. 98% from 12000 challenge response pairs: `python3 sim_learn.py 64 2 atf xor 12000 1 0xdead 0xbeef`
+Example usage of `sim_learn` that simulates a 64 bit 2-xor Arbiter PUF and learns it to approx. 98% from 12000 challenge response pairs: `python3 sim_learn.py 64 2 atf xor 12000 1 1 0xdead 0xbeef`
 
 ### API
 
