@@ -1,5 +1,6 @@
 from sys import stderr
 from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
+from numpy.random import RandomState
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import compare_functions
@@ -84,7 +85,7 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState()):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -94,7 +95,8 @@ class LogisticRegression(Learner):
         :param transformation: Input transformation used by the LTF Array
         :param combiner: Combiner Function used by the LTF Array (Note that not all combiner functions are supported by this class.)
         :param weights_mu: mean of the Gaussian that is used to choose the initial model
-        :param weights_sigma: standard deviation of the Gaussian that is used to choose the inital model
+        :param weights_sigma: standard deviation of the Gaussian that is used to choose the initial model
+        :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
         """
         self.iteration_count = 0
         self.training_set = t_set
@@ -102,6 +104,7 @@ class LogisticRegression(Learner):
         self.k = k
         self.weights_mu = weights_mu
         self.weights_sigma = weights_sigma
+        self.weights_prng = weights_prng
         self.iteration_limit = 10000
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
@@ -196,7 +199,7 @@ class LogisticRegression(Learner):
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma),
+            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weight_prng),
             transform=self.transformation,
             combiner=self.combiner,
         )
