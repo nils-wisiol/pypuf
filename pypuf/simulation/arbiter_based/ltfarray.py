@@ -275,4 +275,4 @@ class NoisyLTFArray(LTFArray):
         initializing the NoisyLTFArray.
         """
         noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(1, self.k))
-        return super().ltf_eval(self, inputs) + noise
+        return super().ltf_eval(inputs) + noise
