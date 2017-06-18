@@ -87,6 +87,14 @@ All contributions receive warm welcome! Please obey the coding standards within 
 
 If you're using pypuf in your research, please let us know so we can link to your work here.
 
+### Contribution quick check list
+
+ * Is your contribution GPLv3 compartible?
+ * Update README.md accordingly
+ * Document new code, update code comments for changed code
+ * Provide tests for your code
+ * Do not use `numpy.random` directly; always use an `numpy.random.RandomState` instance.
+
 ## Authors
 
 Significant contribution to this project are due to (in chronological order):
