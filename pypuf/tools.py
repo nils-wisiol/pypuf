@@ -1,3 +1,4 @@
+import logging
 from numpy import count_nonzero, array, append
 from numpy.random import RandomState
 import itertools
@@ -38,7 +39,8 @@ def sample_inputs(n, num):
     Note that we return only 2^n vectors even with `num` > 2^n.
     In other words, the output of this function is deterministic if and only if num >= 2^n.
     """
-    return random_inputs(n, num) if num < 2**n else all_inputs(n)
+    return random_inputs(n, num) if num < 2 ** n else all_inputs(n)
+
 
 def iter_append_last(array_iterator, x):
     """
@@ -46,6 +48,7 @@ def iter_append_last(array_iterator, x):
     """
     for array in array_iterator:
         yield append(array, x)
+
 
 def approx_dist(a, b, num):
     """
@@ -57,6 +60,7 @@ def approx_dist(a, b, num):
     d = 0
     inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
+
 
 def compare_functions(x, y):
     """
@@ -72,6 +76,7 @@ def compare_functions(x, y):
     b &= xc.co_name == yc.co_name
     return b and xc.co_filename == yc.co_filename
 
+
 class TrainingSet():
     """
     Basic data structure to hold a collection of challenge response pairs.
@@ -79,6 +84,31 @@ class TrainingSet():
     """
 
     def __init__(self, instance, N):
+        self.instance = instance
         self.challenges = array(list(sample_inputs(instance.n, N)))
         self.responses = instance.eval(self.challenges)
         self.N = N
+
+
+def setup_logger(logger_name, log_file="log", level=logging.INFO, write_file=True, write_console=True):
+    """
+        This function creates a logger, that can be used to log messages on stderr and/or a file.
+    :param logger_name: string name which should be used to get the  correct logger instance
+    :param log_file: file path to the log file
+    :param level: debug level default logging.INFO
+    :param write_file: if set to false the logger does not log to a file
+    :param write_console: if set to false the logger does not log to stderr
+    """
+    l = logging.getLogger(logger_name)
+    formatter = logging.Formatter('%(asctime)s : %(message)s')
+    if write_file:
+        file_handler = logging.FileHandler(log_file, mode='w')
+        file_handler.setFormatter(formatter)
+        l.addHandler(file_handler)
+
+    if write_console:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        l.addHandler(stream_handler)
+
+    l.setLevel(level)
