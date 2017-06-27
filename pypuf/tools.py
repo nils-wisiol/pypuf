@@ -1,6 +1,4 @@
-import logging
-from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack, mean, prod, ones
-from numpy.random import RandomState
+from numpy import random, count_nonzero, array, append
 import itertools
 
 
