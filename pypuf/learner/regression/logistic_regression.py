@@ -199,7 +199,7 @@ class LogisticRegression(Learner):
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weight_prng),
+            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng),
             transform=self.transformation,
             combiner=self.combiner,
         )
