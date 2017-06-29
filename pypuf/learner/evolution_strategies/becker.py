@@ -68,21 +68,23 @@ class reliability_based_CMA_ES():
         return path_cm
 
     @staticmethod
-    def cumulation_for_ss(path_ss, c_sigma, mu_w, parent):
+    def cumulation_for_ss(path_ss, c_sigma, mu_w, cov_matrix, parent):
         # returns cumulated evolution path of step-size
-        path_ss = (1-c_sigma) * path_ss + np.sqrt(1 - (1-c_sigma)**2)\
-                                          * np.sqrt(mu_w) * parent
-        return path_ss
+        return (1 - c_sigma) * path_ss + np.sqrt(1 - (1 - c_sigma)**2) \
+                * np.sqrt(mu_w) * cov_matrix**(1/2) * parent
 
     @staticmethod
-    def update_cm(cov_matrix, c_1, c_mu, path_cm, w_i, y_i):
+    def update_cm(cov_matrix, c_1, c_mu, path_cm, parent_product):
         # returns covariance matrix of a new population (pop_size, pop_size)
-        pass
+        return (1 - c_1 - c_mu) * cov_matrix + \
+                     c_1 * path_cm * path_cm.T + c_mu * parent_product
 
     @staticmethod
     def update_ss(step_size, c_sigma, d_sigma, path_ss):
         # returns step-size of a new population
-        pass
+        factor = np.exp((c_sigma / d_sigma) *
+                ((np.linalg.norm(path_ss) / np.zeros(np.shape(path_ss))) - 1))
+        return step_size * factor
 
 
     # secondary methods
@@ -91,12 +93,23 @@ class reliability_based_CMA_ES():
         # returns the weighted sum of the fittest individuals
         parent = np.empty(np.shape(sorted_individuals)[1])
         for i in range(parent_size):
-            parent += priorities[i] * sorted_individuals[i,:]
+            parent += priorities[i] * sorted_individuals[i, :]
         return parent
+
+    @staticmethod
+    def get_parent_product(sorted_individuals, parent_size, priorities):
+        # returns the weighted sum of the fittest individuals
+        parent_product = np.empty(np.shape(sorted_individuals)[1])
+        for i in range(parent_size):
+            parent_product += priorities[i] * sorted_individuals[i,:] * \
+                              sorted_individuals[i,:].T
+        return parent_product
 
     @staticmethod
     def fitness(instance, challenges, reliabilities, individuals):
         """
+        Daihyun Lim. Extracting Secret Keys from Integrated
+Circuits Msc thesis, MIT, 2004.
         build ltfarrays out of individuals
         get delay differences from ltfarrays for challenges
         get reliability vector out of delay differences
