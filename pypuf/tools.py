@@ -1,42 +1,44 @@
-from numpy import random, count_nonzero, array, append
-import itertools as it
+from numpy import count_nonzero, array, append
+from numpy.random import RandomState
+import itertools
 
 
-def random_input(n):
+def random_input(n, random_instance=RandomState()):
     """
     returns a random {-1,1}-vector of length `n`.
+
+    `choice` method of optionally provided PRNG is used.
+     If no PRNG provided, a fresh `numpy.random.RandomState`
+     instance is used.
     """
-    return random.choice((-1, +1), n)
+    return random_instance.choice((-1, +1), n)
 
 
-def all_inputs(n, repeat=1):
+def all_inputs(n):
     """
-    returns an iterator for all {-1,1}-vectors of length `n`, each repeatedly.
+    returns an iterator for all {-1,1}-vectors of length `n`.
     """
-    for input in it.product((-1, +1), repeat=n):
-        for repeated in it.repeat(input, times=repeat):
-            yield array(repeated)
+    return itertools.product((-1, +1), repeat=n)
 
 
-def random_inputs(n, num, repeat=1):
+def random_inputs(n, num, random_instance=RandomState()):
     """
-    returns an iterator for a random sample of {-1,1}-vectors of length `n`
-    (with replacement), each repeatedly.
+    returns an iterator for a random sample of {-1,1}-vectors of length `n` (with replacement).
+
+    If no PRNG provided, a fresh `numpy.random.RandomState` instance is used.
     """
     for i in range(num):
-        for input in it.repeat(random_input(n), times=repeat):
-            yield input
+        yield random_input(n, random_instance)
 
 
-def sample_inputs(n, num, repeat=1):
+def sample_inputs(n, num):
     """
-    Returns an iterator for either random samples or all possible samples of
-    {-1,1}-vectors of length `n`, each repeatedly, if required.
+    returns an iterator for either random samples of {-1,1}-vectors of length `n` if `num` < 2^n,
+    and an iterator for all {-1,1}-vectors of length `n` otherwise.
     Note that we return only 2^n vectors even with `num` > 2^n.
-    I.e. the output of this function is deterministic iff num >= 2^n.
+    In other words, the output of this function is deterministic if and only if num >= 2^n.
     """
-    return random_inputs(n, num, repeat) if num < 2**n else all_inputs(n, repeat)
-
+    return random_inputs(n, num) if num < 2**n else all_inputs(n)
 
 def iter_append_last(array_iterator, x):
     """
@@ -44,7 +46,6 @@ def iter_append_last(array_iterator, x):
     """
     for array in array_iterator:
         yield append(array, x)
-
 
 def approx_dist(a, b, num):
     """
@@ -56,7 +57,6 @@ def approx_dist(a, b, num):
     d = 0
     inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
-
 
 def compare_functions(x, y):
     """
@@ -71,7 +71,6 @@ def compare_functions(x, y):
     # The bytcode maybe differ from each other https://stackoverflow.com/a/20059029
     b &= xc.co_name == yc.co_name
     return b and xc.co_filename == yc.co_filename
-
 
 class TrainingSet():
     """
