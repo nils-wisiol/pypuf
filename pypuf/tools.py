@@ -1,4 +1,5 @@
-from numpy import random, count_nonzero, array, append
+from numpy import count_nonzero, array, append
+from numpy.random import RandomState
 import itertools
 
 
