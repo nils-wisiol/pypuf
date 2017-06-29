@@ -527,7 +527,7 @@ class LTFArray(Simulation):
 
 class NoisyLTFArray(LTFArray):
     """
-    Class that simulates k LTFs with n bits and a constant term each 
+    Class that simulates k LTFs with n bits and a constant term each
     with noise effect and constant bias added.
     """
 
@@ -540,7 +540,7 @@ class NoisyLTFArray(LTFArray):
         return sqrt(n) * sigma_weight * noisiness
 
     def __init__(self, weight_array, transform, combiner, sigma_noise,
-                 random_instance=RandomState(), bias=False):
+                 noise_seed=None, bias=False):
         """
         Initializes LTF array like in LTFArray and uses the provided
         PRNG instance for drawing noise values. If no PRNG provided, a
@@ -600,7 +600,7 @@ class SimulationMajorityLTFArray(NoisyLTFArray):
 
     def val(self, inputs):
         """
-        This function a calculates the output of the LTFArray based on weights with majority vote. 
+        This function a calculates the output of the LTFArray based on weights with majority vote.
         :param inputs: array of int shape(N,k,n)
                        Array of challenges which should be evaluated by the simulation.
         :return: array of int shape(N)
