@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from pypuf import tools
-from pypuf.learner.evolution_strategies.becker import reliability_based_CMA_ES as becker
+from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES as becker
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 n = 6
@@ -120,7 +120,7 @@ class TestLTFArray(unittest.TestCase):
         becker.get_parent(sorted_individuals, parent_size, priorities)
 
     def test_get_parent_product(self):
-        becker.get_parent_product(sorted_individuals, parent_size, priorities)
+        becker.get_cm_mu(sorted_individuals, parent_size, priorities)
 
     def test_fitness(self):
         becker.fitness(instance, challenges, reliabilities, individuals)
