@@ -210,7 +210,6 @@ class LogisticRegression(Learner):
         distance = 1
         self.iteration_count = 0
         while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
-            stderr.write('\riter %5i, dist % 2.4f         ' % (self.iteration_count, distance))
             self.iteration_count += 1
 
             # compute gradient & update model
@@ -226,8 +225,5 @@ class LogisticRegression(Learner):
             # check accuracy
             distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
-
-        if not converged and distance > .01:
-            stderr.write('\rNOT CONVERGED                    ')
 
         return model
