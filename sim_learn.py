@@ -124,7 +124,7 @@ def main(args):
             iterations = append(iterations, lr_learner.iteration_count)
             # output test result in machine-friendly format
             # seed_ltf seed_model idx_restart n k N transformation combiner iteration_count time accuracy
-            stdout.write(' '.join(
+            stderr.write(' '.join(
                 [
                     '0x%x' % seed_instance,
                     '0x%x' % seed_model,
