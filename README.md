@@ -43,7 +43,7 @@ pypuf is primarily designed as an API. However, it provides a subset of its feat
 
 #### Example Usage
 
-Example usage of `sim_learn` that simulates a 64 bit 2-xor Arbiter PUF and learns it to approx. 98% from 12000 challenge response pairs: `python3 sim_learn.py 64 2 atf xor 12000 1 0xdead 0xbeef`
+Example usage of `sim_learn` that simulates a 64 bit 2-xor Arbiter PUF and learns it to approx. 98% from 12000 challenge response pairs: `python3 sim_learn.py 64 2 atf xor 12000 1 1 0xdead 0xbeef`
 
 ### API
 
@@ -86,6 +86,14 @@ print('Learned a 64bit 2-xor XOR Arbiter PUF from 12000 CRPs with accuracy %f' %
 All contributions receive warm welcome! Please obey the coding standards within this project, that is, keep your code just like the code that is already there. Also, please don't forget to add tests for your code. We can only accept contributions under GNU GPLv3.
 
 If you're using pypuf in your research, please let us know so we can link to your work here.
+
+### Contribution quick check list
+
+ * Is your contribution GPLv3 compartible?
+ * Update README.md accordingly
+ * Document new code, update code comments for changed code
+ * Provide tests for your code
+ * Do not use `numpy.random` directly; always use an `numpy.random.RandomState` instance.
 
 ## Authors
 
