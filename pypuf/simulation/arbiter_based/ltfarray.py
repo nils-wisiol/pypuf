@@ -1,4 +1,4 @@
-from numpy import prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax
+from numpy import prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax, vectorize
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -185,6 +185,44 @@ class LTFArray(Simulation):
                 )
                 for j in range(N)
             ])
+
+    @staticmethod
+    def transform_polynomial(cs, k):
+        """
+        This input transformation interprets a challenge c as a
+        polynomial over the finite field GF(2^n)=F2/f*F2, where f is a
+        irreducible polynomial of degree n.
+        At the moment the irreducible polynomial f is hard coded and
+        of degree 65.
+        Each Arbiter Chain i receives as input the polynomial c^i
+        as element of GF(2^n).
+        """
+
+        # degree of f = 64
+        f = [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1]
+
+        N = len(cs)
+        n = len(cs[0])
+        assert n == 64, 'Polynomial transformation is only defined for challenges with n=64. Sorry!'
+
+        """ Transform challenge to 0,1 array to compute transformation with numpy. """
+        vtransform_to_01 = vectorize(tools.transform_challenge_11_to_01)
+        cs_01 = array([vtransform_to_01(c) for c in cs])
+
+        """ Compute c^i for each challenge for i from 1 to k. """
+        cs = concatenate([
+                [tools.poly_mult_div(c, f, k) for c in cs_01]
+        ])
+
+        """ Transform challenges back to -1,1 notation. """
+        vtransform_to_11 = vectorize(tools.transform_challenge_01_to_11)
+        result = array([vtransform_to_11(c) for c in cs])
+
+        assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
+        return result
+
 
     @staticmethod
     def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):

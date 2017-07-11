@@ -1,5 +1,5 @@
 import logging
-from numpy import count_nonzero, array, append
+from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack
 from numpy.random import RandomState
 import itertools
 
@@ -75,6 +75,53 @@ def compare_functions(x, y):
     # The bytcode maybe differ from each other https://stackoverflow.com/a/20059029
     b &= xc.co_name == yc.co_name
     return b and xc.co_filename == yc.co_filename
+
+
+def transform_challenge_01_to_11(a):
+    """
+    This function is meant to be used with the numpy vectorize method.
+    After vectorizing, transform_challenge_01_to_11 can be applied to
+    numpy arrays to transform a challenge from 0,1 notation to -1,1 notation.
+    :param a: challenge vector in 0,1 notation
+    :return: same vector in -1,1 notation
+    """
+    if (a % 2) == 0:
+        return 1
+    else:
+        return -1
+
+
+def transform_challenge_11_to_01(a):
+    """
+    This function is meant to be used with the numpy vectorize method.
+    After vectorizing, transform_challenge_11_to_01 can be applied to
+    numpy arrays to transform a challenge from -1,1 notation to 0,1 notation.
+    :param a: challenge vector in -1,1 notation
+    :return: same vector in 0,1 notation
+    """
+    if a == 1:
+        return 0
+    else:
+        return 1
+
+
+def poly_mult_div(c, f, k):
+    """
+    Return the list of polynomials
+        [c^2, c^3, ..., c^(k+1)] mod f
+    based on the challenge c and the irreducible polynomial f.
+    """
+
+    global res
+    for i in range(k):
+        c = polymul(c, c)
+        c = polydiv(c, f)[1]
+        c = append(zeros(len(f) - len(c) - 1), c)
+        if i == 0:
+            res = c
+        else:
+            res = vstack((res, c))
+    return res.astype(int)
 
 
 class TrainingSet():
