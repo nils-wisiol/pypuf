@@ -113,6 +113,7 @@ class LogisticRegression(Learner):
         self.transformation = transformation
         self.combiner = combiner
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
+        self.converged = False
 
         assert self.n == len(self.training_set.challenges[0])
 
@@ -205,7 +206,6 @@ class LogisticRegression(Learner):
         )
 
         updater = self.RPropModelUpdate(model)
-
         converged = False
         distance = 1
         self.iteration_count = 0
@@ -225,5 +225,10 @@ class LogisticRegression(Learner):
             # check accuracy
             distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
+
+        if not converged and distance > .01:
+            self.converged = False
+        else:
+            self.converged = True
 
         return model
