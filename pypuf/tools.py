@@ -112,9 +112,10 @@ def poly_mult_div(c, f, k):
     based on the challenge c and the irreducible polynomial f.
     """
 
+    c_original = c
     global res
     for i in range(k):
-        c = polymul(c, c)
+        c = polymul(c, c_original)
         c = polydiv(c, f)[1]
         c = append(zeros(len(f) - len(c) - 1), c)
         if i == 0:
