@@ -9,9 +9,9 @@ class TestLogisticRegression(unittest.TestCase):
     """
         This module tests the logistic regression learner.
     """
-    n = 16
+    n = 8
     k = 2
-    N = 12000
+    N = 2**8
     seed_model = 1234
     seed_instance = 1234
 

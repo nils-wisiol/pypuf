@@ -5,7 +5,7 @@ from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticR
 
 class TestExperimentLogisticRegression(unittest.TestCase):
     def setUp(self):
-        self.lr16_4 = ExperimentLogisticRegression('exp1.log', 8, 2, 12000, 0xbeef, 0xbeef, LTFArray.transform_id,
+        self.lr16_4 = ExperimentLogisticRegression('exp1.log', 8, 2, 2**8, 0xbeef, 0xbeef, LTFArray.transform_id,
                                                    LTFArray.combiner_xor, restarts=6)
         self.lr16_4.analysis()
 
