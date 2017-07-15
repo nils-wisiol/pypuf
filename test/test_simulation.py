@@ -205,6 +205,21 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_shift_secure_lightweight(self):
+        test_array = array([
+            [ 1, -1, -1,  1, -1,  1],
+        ])
+        assert_array_equal(
+            LTFArray.transform_shift_lightweight_secure(test_array, k=3),
+            [
+                [
+                    [-1, -1, -1,  1,  1, -1],
+                    [ 1, -1,  1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1,  1],
+                ],
+            ]
+        )
+
     def test_1_n_bent(self):
         test_array = array([
             [ 1, -1, -1,  1, -1,  1],

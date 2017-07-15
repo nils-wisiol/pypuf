@@ -108,6 +108,33 @@ class LTFArray(Simulation):
         return __class__.transform_shift(cs, k)
 
     @staticmethod
+    def transform_shift_lightweight_secure(cs, k):
+        """
+        Input transform as defined by Majzoobi et al. 2008, but with the shift
+        operation executed first.
+        """
+        N = len(cs)
+        n = len(cs[0])
+        assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n. Sorry!'
+
+        shifted = __class__.transform_shift(cs, k)
+
+        cs = transpose(
+            concatenate(
+                (
+                    [ shifted[:,:,i] * shifted[:,:,i+1] for i in range(0, n, 2) ],
+                    [ shifted[:,:,0] ],
+                    [ shifted[:,:,i] * shifted[:,:,i+1] for i in range(1, n-2, 2) ],
+                )
+            ),
+            (1, 2, 0)
+        )
+
+        assert cs.shape == (N, k, n)
+
+        return cs
+
+    @staticmethod
     def transform_soelter_lightweight_secure(cs, k):
         """
         Input transformation like defined by Majzoobi et al. (cf. transform_lightweight_secure),
