@@ -28,6 +28,7 @@ The simulation currently consists of just one very broad class, the LTF Array Si
  * `soelter_lightweight_secure`: as defined by Majzoobi et al., but with a one-bit modification due to Sölter.
  * `polynomial`: challenges are interpreted as polynomials from GF(2^n). From the initial challenge c the i-th Arbiter chain gets the coefficients of the polynomial c^(i+1) as challenge. For now only challenges with length 8, 16, 24, 32, 48, 64 are accepted.
  * `permutation_atf`: for each Arbiter chain first a pseudorandom permutation is applied and thereafter the ATF transform.
+ * `random`: Each Arbiter chain gets a random challenge derived from the original challenge using a PRNG.
 
 #### Combiner Function
 

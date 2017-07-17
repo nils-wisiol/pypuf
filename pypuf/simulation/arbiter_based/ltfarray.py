@@ -321,6 +321,24 @@ class LTFArray(Simulation):
         return result
 
     @staticmethod
+    def transform_random(cs, k):
+        """
+        This input transformation chooses for each Arbiter Chain an random challenge based on the initial challenge.
+        """
+
+        N = len(cs)
+        n = len(cs[0])
+
+        vtransform_to_01 = vectorize(tools.transform_challenge_11_to_01)
+        cs_01 = array([vtransform_to_01(c) for c in cs])
+
+        result = array([RandomState(c).choice((-1, 1), (k, n)) for c in cs_01])
+
+        assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
+        return result
+
+
+    @staticmethod
     def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
         """
         Returns weights for an array of k LTFs of size n each.

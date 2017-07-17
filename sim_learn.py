@@ -42,6 +42,8 @@ def main(args):
         stderr.write('                                  For now only challenges with length n=64 are accepted.\n')
         stderr.write('                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
         stderr.write('                                       is applied and thereafter the ATF transform.\n')
+        stderr.write('                  - random -- Each Arbiter chain gets a random challenge derived from the\n')
+        stderr.write('                              original challenge using a PRNG.\n')
         stderr.write('        combiner: used to combine the output bits to a single bit\n')
         stderr.write('                  currently available:\n')
         stderr.write('                  - xor     -- output the parity of all output bits\n')
