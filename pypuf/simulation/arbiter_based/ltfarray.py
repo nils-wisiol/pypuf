@@ -244,20 +244,32 @@ class LTFArray(Simulation):
         This input transformation interprets a challenge c as a
         polynomial over the finite field GF(2^n)=F2/f*F2, where f is a
         irreducible polynomial of degree n.
-        At the moment the irreducible polynomial f is hard coded and
-        of degree 65.
+        The irreducible polynomial f is hard coded and
+        of degree 8, 16, 24, 32, 48, or 64.
         Each Arbiter Chain i receives as input the polynomial c^i
         as element of GF(2^n).
         """
 
-        # degree of f = 64
-        f = [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 1]
-
         N = len(cs)
         n = len(cs[0])
-        assert n == 64, 'Polynomial transformation is only defined for challenges with n=64. Sorry!'
+        assert n in [8, 16, 24, 32, 48, 64], 'Polynomial transformation is only implemented for challenges with n in {8, 16, 24, 32, 48, 64}. ' \
+                                       'Sorry!'
+        if n == 64:
+            f = [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        elif n == 48:
+            f = [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1,
+                 0, 0, 1]
+        elif n == 32:
+            f = [1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        elif n == 24:
+            f = [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        elif n == 16:
+            f = [1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1]
+        elif n == 8:
+            f = [1, 0, 1, 0, 0, 1, 1, 0, 1]
 
         """ Transform challenge to 0,1 array to compute transformation with numpy. """
         vtransform_to_01 = vectorize(tools.transform_challenge_11_to_01)
