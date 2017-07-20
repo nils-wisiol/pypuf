@@ -4,8 +4,8 @@ from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES a
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
-n = 8
-k = 2
+n = 10
+k = 1
 mu = 0
 sigma = 1
 weight_array = LTFArray.normal_weights(n, k, mu, sigma, random_instance=np.random.RandomState(0x2500))
