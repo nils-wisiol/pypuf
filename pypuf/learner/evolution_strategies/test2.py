@@ -8,31 +8,30 @@ n = 8
 k = 2
 mu = 0
 sigma = 1
-weight_array = NoisyLTFArray.normal_weights(n, k, mu, sigma)
-transform = NoisyLTFArray.transform_atf
-combiner = NoisyLTFArray.combiner_xor
+weight_array = LTFArray.normal_weights(n, k, mu, sigma, random_instance=np.random.RandomState(0x2500))
+transform = LTFArray.transform_atf
+combiner = LTFArray.combiner_xor
 noisiness = 0.1
 sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma, noisiness)
+instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, random_instance=np.random.RandomState(0x7700))
 
-instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise)
-#print(vars(instance))
-
-
-pop_size = 30
-parent_size = 10
-priorities = np.array([.15, .14, .13, .12, .11, .09, .08, .07, .06, .05])
-challenge_num = 100
-repeat = 5
-unreliability = 0.04
-precision = 0.6
-becker = learner(instance, pop_size, parent_size, priorities,
-                 challenge_num, repeat, unreliability, precision)
-l = becker.learn()
-print('learned:\n', l.weight_array)
-
-pop_size = 5
+pop_size = 8
 parent_size = 4
 priorities = np.array([.25, .25, .25, .25])
+#pop_size = 30
+#parent_size = 10
+#priorities = np.array([.15, .14, .13, .12, .11, .09, .08, .07, .06, .05])
+challenge_num = 100
+repeat = 10
+unreliability = 0.04
+precision = 0.6
+seed_mutations = 0x5000
+seed_inputs = 0x300
+becker = learner(instance, pop_size, parent_size, priorities,
+                 challenge_num, repeat, unreliability, precision, seed_mutations, seed_inputs)
+l = becker.learn()
+#print('learned:\n', l.weight_array)
+
 
 """
 
