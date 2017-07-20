@@ -4,21 +4,17 @@ from pypuf import tools
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES as learner
 
+path_ss = np.array([2,2,2,2])
+norm = np.linalg.norm(path_ss)
+print('norm', norm)
 
-def reproduce(mean, cov_matrix, pop_size, step_size):
-    # returns a new generation of individuals as 2D array (pop_size, n)
-    mutations = np.random.multivariate_normal(np.zeros(np.shape(mean)), cov_matrix, pop_size)
-    duplicated_mean = np.tile(mean, (pop_size, 1))
-    return duplicated_mean + (step_size * mutations)
-
-mean = np.array([100,10,0,0])
+seed_mutations = 0x5000
+mutation_prng = np.random.RandomState(seed=seed_mutations)
+mean = np.array([0,0,0,0])
 cov_matrix = np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
-pop_size = 6
-step_size = 1
-
-repr = reproduce(mean, cov_matrix, pop_size, step_size)
-print('repr:\n', repr, np.shape(repr))
-print('cov_matrix:\n', cov_matrix)
+pop_size = 5
+mutations = mutation_prng.multivariate_normal(np.zeros(np.shape(mean)), cov_matrix, pop_size)
+print('mutations', mutations)
 
 
 

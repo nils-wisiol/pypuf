@@ -11,7 +11,9 @@ class Reliability_based_CMA_ES():
     #   priorities: linear low decreasing
     #   repeat = 5
     def __init__(self, instance, pop_size, parent_size, priorities,
-                 challenge_num, repeat, unreliability, precision):
+                 challenge_num, repeat, unreliability, precision, seed_mutations=0x6000, seed_inputs=0x20):
+        self.mutation_prng = np.random.RandomState(seed=seed_mutations)    # seed for random mutations
+        self.input_prng = np.random.RandomState(seed=seed_inputs)   # seed for random functions which sample inputs
         self.n = instance.n + 1                                     # length of LTFs plus 1 because of epsilon
         self.different_LTFs = np.zeros((instance.k, self.n))        # learned LTFs
         self.unreliability = unreliability                          # proportion of unreliable challenges
@@ -36,7 +38,7 @@ class Reliability_based_CMA_ES():
         self.c_mu = self.mu_w / self.n**2
         self.d_sigma = 1 + np.sqrt(self.mu_w / self.n)
         self.c_1 = 2 / self.n**2
-        self.c_c = 4 / self.n
+        self.c_c = 4 / self.n       #4 / self.n
         self.c_sigma = 4 / self.n
         assert len(priorities) == parent_size
         assert int(np.ndarray.sum(priorities)) == 1
@@ -50,7 +52,7 @@ class Reliability_based_CMA_ES():
             if self.is_different_LTF(new_LTF):
                 self.different_LTFs[self.num_of_LTFs] = new_LTF
                 self.num_of_LTFs += 1
-        self.different_LTFs = self.set_pole_of_LTFs(self.instance, self.different_LTFs)
+        self.different_LTFs = self.set_pole_of_LTFs(self.instance, self.different_LTFs, self.input_prng)
         return LTFArray(self.different_LTFs, LTFArray.transform_atf, LTFArray.combiner_xor, bias=False)
 
     def is_different_LTF(self, new_LTF):
@@ -60,25 +62,24 @@ class Reliability_based_CMA_ES():
         weight_arrays = self.different_LTFs[:self.num_of_LTFs, :]
         new_LTFArray = LTFArray(new_LTF[:, :-1], LTFArray.transform_atf, LTFArray.combiner_xor)
         different_LTFs = self.build_LTFArrays(weight_arrays[:, :-1])
-        challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num)))
-        responses = np.empty((self.num_of_LTFs, self.challenge_num))
+        challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num, self.input_prng)))
+        responses = np.zeros((self.num_of_LTFs, self.challenge_num))
         responses[0, :] = new_LTFArray.eval(challenges)
         for i, current_LTF in enumerate(different_LTFs):
             responses[i+1, :] = current_LTF.eval(challenges)
         return not self.is_correlated(responses)
 
-    # TODO
     def learn_LTF(self):
         # this is the main CMA-ES algorithm like that from Hansen
         terminate = False
-        new_LTF = np.empty(np.shape(self.individuals)[1])
+        new_LTF = np.zeros(np.shape(self.individuals)[1])
         x = 0
         while not terminate:
             x = x+1
             print('x =', x)
-            self.individuals = self.reproduce(self.mean, self.cov_matrix, self.pop_size, self.step_size)
-            #print('individuals:\n', self.individuals)
-            challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num)))
+            self.individuals = self.reproduce(self.mean, self.cov_matrix, self.pop_size, self.step_size,
+                                              self.mutation_prng)
+            challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num, self.input_prng)))
             measured_rels = self.measure_rels(self.instance, challenges, self.challenge_num, self.repeat)
             print('measured_rels:\n', measured_rels)
             correlations = self.fitness(challenges, self.challenge_num, measured_rels, self.individuals)
@@ -110,9 +111,9 @@ class Reliability_based_CMA_ES():
 
     # updating methods of evolution strategies
     @staticmethod
-    def reproduce(mean, cov_matrix, pop_size, step_size):
+    def reproduce(mean, cov_matrix, pop_size, step_size, mutation_prng):
         # returns a new generation of individuals as 2D array (pop_size, n)
-        mutations = np.random.multivariate_normal(np.zeros(np.shape(mean)), cov_matrix, pop_size)
+        mutations = mutation_prng.multivariate_normal(np.zeros(np.shape(mean)), cov_matrix, pop_size)
         duplicated_mean = np.tile(mean, (pop_size, 1))
         return duplicated_mean + (step_size * mutations)
 
@@ -159,6 +160,7 @@ class Reliability_based_CMA_ES():
         print('reliabilities:\n', reliabilities)
         correlations = __class__.get_correlations(reliabilities, measured_rels)
         print('correlations:\n', correlations)
+        correlations = [-.3 if x != x else x for x in correlations]
         return correlations
 
     @staticmethod
@@ -209,11 +211,11 @@ class Reliability_based_CMA_ES():
 
     # helping methods
     @staticmethod
-    def set_pole_of_LTFs(instance, different_LTFs):
+    def set_pole_of_LTFs(instance, different_LTFs, input_prng):
         # returns the correctly polarized XOR-LTFArray
         challenge_num = 10
         responses = np.empty((2, challenge_num))
-        challenges = tools.sample_inputs(instance.n, challenge_num)
+        challenges = tools.sample_inputs(instance.n, challenge_num, input_prng)
         cs1, cs2 = itertools.tee(challenges)
         xor_LTFArray = LTFArray(different_LTFs, LTFArray.transform_id, LTFArray.combiner_xor)
         responses[0, :] = instance.eval(cs1)
@@ -236,7 +238,7 @@ class Reliability_based_CMA_ES():
     @staticmethod
     def measure_rels(instance, challenges, challenge_num, repeat):
         # returns array of measured reliabilities of instance
-        responses = np.empty((repeat, challenge_num))
+        responses = np.zeros((repeat, challenge_num))
         for i in range(repeat):
             responses[i, :] = instance.eval(challenges)
         return np.abs(np.sum(responses, axis=0)) / repeat
