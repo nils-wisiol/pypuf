@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.special as sp
 import itertools
 from pypuf import tools
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -73,102 +74,87 @@ class Reliability_based_CMA_ES():
         # this is the main CMA-ES algorithm like that from Hansen
         terminate = False
         new_LTF = np.zeros(np.shape(self.individuals)[1])
-        x = 0
+        estimation_multinormal = np.sqrt(2) * sp.gamma((self.n+1)/2) / sp.gamma((self.n)/2)
         while not terminate:
-            x = x+1
-            print('x =', x)
-            self.individuals = self.reproduce(self.mean, self.cov_matrix, self.pop_size, self.step_size,
-                                              self.mutation_prng)
+            zero_mean = np.zeros(np.shape(self.mean))
+            mutations = self.sample_mutations(zero_mean, self.cov_matrix, self.pop_size, self.mutation_prng)
+            self.individuals = self.reproduce(self.mean, self.pop_size, self.step_size, mutations)
             challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num, self.input_prng)))
             measured_rels = self.measure_rels(self.instance, challenges, self.challenge_num, self.repeat)
-            print('measured_rels:\n', measured_rels)
             correlations = self.fitness(challenges, self.challenge_num, measured_rels, self.individuals)
-            print('correlations:\n', correlations)
-            for i in range(np.shape(correlations)[0]):
+            for i in range(self.pop_size):
                 if correlations[i] > self.precision:
                     new_LTF = self.individuals[i, :]
                     terminate = True
-            sorted_individuals = __class__.sort_individuals(self.individuals, correlations)
             if terminate:
                 break
-            parent = self.get_parent(sorted_individuals, self.parent_size, self.priorities)
-            print('parent:\n', parent)
-            cm_mu = self.get_cm_mu(sorted_individuals, self.parent_size, self.priorities)
-            #print('cm_mu:\n', cm_mu)
-            self.mean = self.update_mean(self.mean, self.step_size, parent)
-            print('mean:\n', self.mean)
+            sorting_indices = np.argsort(correlations)
+            sorted_mutations = mutations[sorting_indices[::-1]]
+            parent_mutations = self.get_parent_mutations(sorted_mutations, self.parent_size, self.priorities)
+            self.mean = self.update_mean(self.mean, self.step_size, parent_mutations)
             self.path_cm = self.cumulation_for_cm(self.path_cm, self.c_c, self.path_ss, self.n,
-                                                  self.mu_w, parent)
-            print('path_cm:\n', self.path_cm, '\nlength:', np.linalg.norm(self.path_cm))
-            self.path_ss = self.cumulation_for_ss(self.path_ss, self.c_sigma, self.mu_w, self.cov_matrix, parent)
-            print('path_ss:\n', self.path_ss, '\nlength:', np.linalg.norm(self.path_ss))
+                                                  self.mu_w, parent_mutations)
+            self.path_ss = self.cumulation_for_ss(self.path_ss, self.c_sigma, self.mu_w, self.cov_matrix,
+                                                  parent_mutations)
+            cm_mu = self.get_cm_mu(sorted_mutations, self.parent_size, self.priorities)
             self.cov_matrix = self.update_cm(self.cov_matrix, self.c_1, self.c_mu, self.path_cm, cm_mu)
-            print('cov_matrix:\n', self.cov_matrix)
-            self.step_size = self.update_ss(self.step_size, self.c_sigma, self.d_sigma, self.path_ss)
-            print('step_size:\n', self.step_size)
+            self.step_size = self.update_ss(self.step_size, self.c_sigma, self.d_sigma, self.path_ss, estimation_multinormal)
         return new_LTF
 
 
     # updating methods of evolution strategies
     @staticmethod
-    def reproduce(mean, cov_matrix, pop_size, step_size, mutation_prng):
-        # returns a new generation of individuals as 2D array (pop_size, n)
-        mutations = mutation_prng.multivariate_normal(np.zeros(np.shape(mean)), cov_matrix, pop_size)
+    def sample_mutations(zero_mean, cov_matrix, pop_size, mutation_prng):
+        # returns a new generation of individuals as 2D array (corresponds to y_i)
+        return mutation_prng.multivariate_normal(zero_mean, cov_matrix, pop_size)
+
+    @staticmethod
+    def reproduce(mean, pop_size, step_size, mutations):
+        # returns a new generation of individuals as 2D array (corresponds to x_i)
         duplicated_mean = np.tile(mean, (pop_size, 1))
         return duplicated_mean + (step_size * mutations)
 
     @staticmethod
-    def update_mean(mean, step_size, parent):
-        # returns mean of a new population as array (n)
-        return mean + step_size*parent
+    def update_mean(mean, step_size, parent_mutations):
+        # returns mean of a new population as array (corresponds to m)
+        return mean + step_size*parent_mutations
 
     @staticmethod
-    def cumulation_for_cm(path_cm, c_c, path_ss, n, mu_w, parent):
-        # returns cumulated evolution path of covariance matrix
+    def cumulation_for_cm(path_cm, c_c, path_ss, n, mu_w, parent_mutations):
+        # returns cumulated evolution path of covariance matrix (corresponds to p_c)
         path_cm = path_cm * (1-c_c)
         if(np.linalg.norm(path_ss) < 1.5 * np.sqrt(n)):
-            path_cm = path_cm + (np.sqrt(1 - (1-c_c)**2) * np.sqrt(mu_w) * parent)
+            path_cm = path_cm + (np.sqrt(1 - (1-c_c)**2) * np.sqrt(mu_w) * parent_mutations)
         return path_cm
 
     @staticmethod
     def cumulation_for_ss(path_ss, c_sigma, mu_w, cov_matrix, parent):
-        # returns cumulated evolution path of step-size
+        # returns cumulated evolution path of step-size (corresponds to p_sigma)
         cm_eigen_dec = __class__.modify_eigen_decomposition(cov_matrix)
         return (1-c_sigma) * path_ss + np.sqrt(1 - (1-c_sigma)**2) * np.sqrt(mu_w) * cm_eigen_dec @ parent
 
     @staticmethod
     def update_cm(cov_matrix, c_1, c_mu, path_cm, cm_mu):
-        # returns covariance matrix of a new population (pop_size, pop_size)
+        # returns covariance matrix of a new population (corresponds to C)
         return (1 - c_1 - c_mu) * cov_matrix + c_1 * path_cm * path_cm.T + c_mu * cm_mu
 
     @staticmethod
-    def update_ss(step_size, c_sigma, d_sigma, path_ss):
-        # returns step-size of a new population
-        factor = np.exp((c_sigma / d_sigma) * ((np.linalg.norm(path_ss) / np.sqrt(np.shape(path_ss)[0])) - 1))
+    def update_ss(step_size, c_sigma, d_sigma, path_ss, estimation_multinormal):
+        # returns step-size of a new population (corresponds to sigma)
+        factor = np.exp((c_sigma / d_sigma) * ((np.linalg.norm(path_ss) / estimation_multinormal) - 1))
         return step_size * factor
 
     @staticmethod
     def fitness(challenges, challenge_num, measured_rels, individuals):
-        # returns individuals sorted by their fitness (correlation coefficient)
+        # returns individuals sorted by their correlation coefficient as fitness
         pop_size = np.shape(individuals)[0]
         built_LTFArrays = __class__.build_LTFArrays(individuals[:, :-1])
         delay_diffs = __class__.get_delay_differences(built_LTFArrays, pop_size, challenges, challenge_num)
-        #print('delay_diffs:\n', delay_diffs)
         epsilons = individuals[:, -1]
-        #print('epsilons:\n', epsilons)
         reliabilities = __class__.get_reliabilities(delay_diffs, epsilons)
-        print('reliabilities:\n', reliabilities)
         correlations = __class__.get_correlations(reliabilities, measured_rels)
-        print('correlations:\n', correlations)
         correlations = [-.3 if x != x else x for x in correlations]
         return correlations
-
-    @staticmethod
-    def sort_individuals(individuals, correlations):
-        # returns 2D array of individuals as given from input, but sorted through
-        #   correlation coefficients
-        sorted_indices = np.argsort(correlations)
-        return individuals[sorted_indices[::-1]]
 
 
     # methods for calculating fitness
@@ -181,8 +167,7 @@ class Reliability_based_CMA_ES():
 
     @staticmethod
     def get_delay_differences(built_LTFArrays, pop_size, challenges, challenge_num):
-        # returns 2D array of delay differences for all challenges on every
-        #   individual
+        # returns 2D array of delay differences for all challenges on every individual
         delay_diffs = np.empty((pop_size, challenge_num))
         for i, built_LTFArray in enumerate(built_LTFArrays):
             delay_diffs[i, :] = built_LTFArray.val(challenges)
@@ -199,8 +184,8 @@ class Reliability_based_CMA_ES():
 
     @staticmethod
     def get_correlations(reliabilities, measured_rels):
-        # returns array of pearson correlation coefficients between reliability
-        #   array of individual and instance for all individuals
+        # returns array of pearson correlation coefficients between reliability array of individual
+        #   and instance for all individuals
         pop_size = np.shape(reliabilities)[0]
         correlations = np.zeros(pop_size)
         for i in range(pop_size):
@@ -244,25 +229,24 @@ class Reliability_based_CMA_ES():
         return np.abs(np.sum(responses, axis=0)) / repeat
 
     @staticmethod
-    def get_parent(sorted_individuals, parent_size, priorities):
-        # returns the weighted sum of the fittest individuals
-        parent = np.zeros(np.shape(sorted_individuals)[1])
+    def get_parent_mutations(sorted_mutations, parent_size, priorities):
+        # returns the weighted sum of the fittest individuals mutations (correspons to y_w)
+        parent_mutations = np.zeros(np.shape(sorted_mutations)[1])
         for i in range(parent_size):
-            parent = parent + priorities[i] * sorted_individuals[i, :]
-        return parent
+            parent_mutations = parent_mutations + priorities[i] * sorted_mutations[i, :]
+        return parent_mutations
 
     @staticmethod
-    def get_cm_mu(sorted_individuals, parent_size, priorities):
-        # returns the weighted sum of the fittest individuals
-        cm_mu = np.zeros((np.shape(sorted_individuals)[1], np.shape(sorted_individuals)[1]))
+    def get_cm_mu(sorted_mutations, parent_size, priorities):
+        # returns the weighted sum of the product of the fittest individuals mutations (correspons to C_mu)
+        cm_mu = np.zeros((np.shape(sorted_mutations)[1], np.shape(sorted_mutations)[1]))
         for i in range(parent_size):
-            cm_mu = cm_mu + priorities[i] * sorted_individuals[i, :, np.newaxis] @ sorted_individuals[i, np.newaxis, :]
+            cm_mu = cm_mu + priorities[i] * sorted_mutations[i, :, np.newaxis] @ sorted_mutations[i, np.newaxis, :]
         return cm_mu
 
     @staticmethod
     def modify_eigen_decomposition(matrix):
-        # returns modified eigen-decomposition of matrix A = B * D^2 * B^T
-        #   B * D^(-1) * B^T
+        # returns modified eigen-decomposition (B * D^(-1) * B^T) of matrix A = (B * D^2 * B^T) (correspons to C^(-1/2))
         eigen_values, eigen_vectors = np.linalg.eigh(matrix)
         diagonal = np.sqrt((np.diag(eigen_values)))
         diagonal_inverse = np.linalg.inv(diagonal)
