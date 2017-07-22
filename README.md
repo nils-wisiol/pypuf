@@ -30,6 +30,9 @@ The simulation currently consists of just one very broad class, the LTF Array Si
  * `permutation_atf`: for each Arbiter chain first a pseudorandom permutation is applied and thereafter the ATF transform.
  * `random`: Each Arbiter chain gets a random challenge derived from the original challenge using a PRNG.
 
+ `LTFArray` also implements "meta input transformations" that can be used to build a new input transformation from existing ones.
+ * `concat(transform_1, nn, transform_2)`: the first `nn` bit will be transformed using `transform_1`, the rest will be transformed with `transform_2`. 
+
 #### Combiner Function
 
 `LTFArray` currently only provides the traditional XOR (that is, parity) as a combiner function. Further combiner functions can be implemented as static functions in `LTFArray`, or anywhere else and given to the `LTFArray` constructor.

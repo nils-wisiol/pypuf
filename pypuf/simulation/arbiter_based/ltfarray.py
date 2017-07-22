@@ -337,6 +337,37 @@ class LTFArray(Simulation):
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
         return result
 
+    @staticmethod
+    def transform_concat(transform_1, nn, transform_2):
+        """
+        This input transformation will transform the first nn bit of each challenge using transform_1,
+        the remaining bits using transform_2.
+        :return: A function that can perform the desired transformation
+        """
+        def transform(cs, k):
+            (N,n) = cs.shape
+            cs1 = cs[:,:nn]
+            cs2 = cs[:,nn:]
+            transformed_1 = transform_1(cs1, k)
+            transformed_2 = transform_2(cs2, k)
+            assert transformed_1.shape == (N, k, nn)
+            assert transformed_2.shape == (N, k, n - nn)
+            return concatenate(
+                (
+                    transformed_1,
+                    transformed_2
+                ),
+                axis=2
+            )
+
+        transform.__name__ = 'transform_concat_%s_nn%i_%s' % \
+                             (
+                                 transform_1.__name__.replace('transform_', ''),
+                                 nn,
+                                 transform_2.__name__.replace('transform_', '')
+                             )
+
+        return transform
 
     @staticmethod
     def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
