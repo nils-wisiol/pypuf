@@ -119,7 +119,7 @@ def poly_mult_div(c, f, k):
         c = polydiv(c, f)[1]
         c = append(zeros(len(f) - len(c) - 1), c)
         if i == 0:
-            res = c
+            res = array([c])
         else:
             res = vstack((res, c))
     return res.astype(int)
