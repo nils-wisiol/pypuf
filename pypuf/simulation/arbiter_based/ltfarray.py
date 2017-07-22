@@ -184,7 +184,6 @@ class LTFArray(Simulation):
         """
         N = len(cs)
         n = len(cs[0])
-        assert k >= 2, '1-n bent transform currently only implemented for k>=2. Sorry!'
         assert n % 2 == 0, '1-n bent transform only defined for even n. Sorry!'
 
         shift_challenges = __class__.transform_shift(cs, n)
