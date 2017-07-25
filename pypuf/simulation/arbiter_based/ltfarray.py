@@ -254,7 +254,7 @@ class LTFArray(Simulation):
     def eval(self, inputs):
         """
         evaluates a given list of challenges regarding bias
-        :param x: list of challenges
+        :param inputs: list of challenges
         :return: list of responses
         """
         if self.bias:
@@ -281,7 +281,7 @@ class LTFArray(Simulation):
 
 class NoisyLTFArray(LTFArray):
     """
-    Class that simulates k LTFs with n bits and a constant term each 
+    Class that simulates k LTFs with n bits and a constant term each
     with noise effect and constant bias added.
     """
 
