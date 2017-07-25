@@ -33,6 +33,8 @@ def main(args):
         stderr.write('                                  the i-th Arbiter chain gets the coefficients \n')
         stderr.write('                                  of the polynomial c^(i+1) as challenge.\n')
         stderr.write('                                  For now only challenges with length n=64 are accepted.\n')
+        stderr.write('                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
+        stderr.write('                                       is applied and thereafter the ATF transform.\n')
         stderr.write('        combiner: used to combine the output bits to a single bit\n')
         stderr.write('                  currently available:\n')
         stderr.write('                  - xor     -- output the parity of all output bits\n')

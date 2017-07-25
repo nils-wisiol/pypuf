@@ -25,6 +25,7 @@ The simulation currently consists of just one very broad class, the LTF Array Si
  * `mm`: experimental input transformation with long PTF representation
  * `lightweight_secure`: input transformation as defined by Majzoobi et al. in [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf)
  * `polynomial`: challenges are interpreted as polynomials from GF(2^64). From the initial challenge c the i-th Arbiter chain gets the coefficients of the polynomial c^(i+1) as challenge. For now only challenges with length n=64 are accepted.
+ * `permutation_atf`: for each Arbiter chain first a pseudorandom permutation is applied and thereafter the ATF transform.
 
 #### Combiner Function
 
