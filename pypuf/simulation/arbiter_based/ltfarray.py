@@ -223,6 +223,39 @@ class LTFArray(Simulation):
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
         return result
 
+    @staticmethod
+    def transform_permutation_atf(cs, k):
+        """
+        This transformation performs first a pseudorandom permutation of the challenge k times before applying the
+        ATF transformation to each challenge.
+        :param cs:
+        :param k:
+        :return:
+        """
+        N = len(cs)
+        n = len(cs[0])
+        seed = 0x1234
+
+        """ Perform random permutations """
+        cs_permuted = array(
+            [
+                [RandomState(seed + i).permutation(c)
+                 for i in range(k)]
+                 for c in cs
+                ]
+        )
+        """ Perform atf transform """
+        result = transpose(
+            array([
+                      prod(cs_permuted[:, :, i:], 2)
+                      for i in range(n)
+                      ]),
+            (1, 2, 0)
+        )
+
+        assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
+
+        return result
 
     @staticmethod
     def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
