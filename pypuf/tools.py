@@ -136,27 +136,3 @@ class TrainingSet():
         self.challenges = array(list(sample_inputs(instance.n, N)))
         self.responses = instance.eval(self.challenges)
         self.N = N
-
-
-def setup_logger(logger_name, log_file="log", level=logging.INFO, write_file=True, write_console=True):
-    """
-        This function creates a logger, that can be used to log messages on stderr and/or a file.
-    :param logger_name: string name which should be used to get the  correct logger instance
-    :param log_file: file path to the log file
-    :param level: debug level default logging.INFO
-    :param write_file: if set to false the logger does not log to a file
-    :param write_console: if set to false the logger does not log to stderr
-    """
-    l = logging.getLogger(logger_name)
-    formatter = logging.Formatter('%(asctime)s : %(message)s')
-    if write_file:
-        file_handler = logging.FileHandler(log_file, mode='w')
-        file_handler.setFormatter(formatter)
-        l.addHandler(file_handler)
-
-    if write_console:
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(formatter)
-        l.addHandler(stream_handler)
-
-    l.setLevel(level)

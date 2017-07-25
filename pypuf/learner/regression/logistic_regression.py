@@ -1,6 +1,6 @@
-from sys import stderr
 from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
 from numpy.random import RandomState
+from numpy.linalg import norm
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import compare_functions
@@ -20,7 +20,7 @@ class LogisticRegression(Learner):
         """
 
         def __init__(self, model):
-            self.model = model
+            model = model
 
         def update(self, gradient):
             """
@@ -85,7 +85,7 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState()):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState(), logger=None):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -114,6 +114,7 @@ class LogisticRegression(Learner):
         self.combiner = combiner
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
         self.converged = False
+        self.logger = logger
 
         assert self.n == len(self.training_set.challenges[0])
 
@@ -195,6 +196,19 @@ class LogisticRegression(Learner):
         :return: The computed model.
         """
 
+        # log format
+        def log_state():
+            if self.logger is None:
+                return
+            self.logger.debug(
+                '%i\t%f\t%f\t%s' % (
+                    self.iteration_count,
+                    distance,
+                    norm(updater.step),
+                    ','.join(map(str, model.weight_array.flatten()))
+                )
+            )
+
         # let numpy raise exceptions
         seterr(all='raise')
 
@@ -209,6 +223,7 @@ class LogisticRegression(Learner):
         converged = False
         distance = 1
         self.iteration_count = 0
+        log_state()
         while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
 
@@ -225,6 +240,9 @@ class LogisticRegression(Learner):
             # check accuracy
             distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
+
+            # log
+            log_state()
 
         if not converged and distance > .01:
             self.converged = False

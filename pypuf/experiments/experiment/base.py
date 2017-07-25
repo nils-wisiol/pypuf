@@ -1,71 +1,51 @@
 import abc
 import time
 import logging
-from pypuf.tools import setup_logger
 
 
 class Experiment(object):
     """
-        This class is the inteface for all experiments executed by the pypuf.experiments.experimenter.Experimenter class
-        and ensures compatibility.
+    This class defines an experiment, mainly consisting of instructions how to run and analyze it (methods run() and
+    analyze(), respectively). It can be used with the Experimenter class to run Experiments in parallel.
     """
 
-    def __init__(self, log_name, learner):
+    def __init__(self, log_name):
         """
-        :param learner: A pypuf.simulation.base.Simulation instance
         :param log_name: A unique name, used for log path.
         """
+
         # This must be a valid file name to be able to log the results
-        self.log_name = log_name
-        setup_logger(self.log_name, self.log_name, write_console=False)
-        self.logger = logging.getLogger(self.log_name)
+        self.progress_logger = logging.getLogger(log_name)
+        file_handler = logging.FileHandler('%s.log' % log_name, mode='w')
+        file_handler.setLevel(logging.DEBUG)
+        self.progress_logger.addHandler(file_handler)
+        self.progress_logger.setLevel(logging.DEBUG)
+        self.result_logger = self.progress_logger.parent
 
-        # The learner must be set to a valid parameter
-        self.learner = learner
-        # assign instance for analysing
-        self.instance = self.learner.training_set.instance
-        # must be set in execute
-        self.model = None
-        # must be set in execute
-        self.start_time = 0
-        # must be set in execute
-        self.measured_time = 0
+        # will be set in execute
+        self.measured_time = None
 
     @abc.abstractmethod
-    def name(self):
-        raise NotImplementedError('users must define output to use this base class')
-
-    @abc.abstractmethod
-    def output_string(self):
-        raise NotImplementedError('users must define output to use this base class')
-
-    def _output(self, queue):
+    def analyze(self):
         """
-            This method should be used to pass the experiment result as string back to the master.
-            This is necessary because the master process(Experimenter) can not get a deep copy of the experiment back.
-        """
-        msg = '{0}\n{1}'.format(self.name(), self.output_string())
-        queue.put_nowait(msg)
-        self.logger.info(msg)
-
-    @abc.abstractmethod
-    def analysis(self):
-        """
-            This method should analyse the results from learning which vary by the method of learning.
+        This method analyzes the results of the experiment.
         """
         raise NotImplementedError('users must define analysis to use this base class')
 
-    def execute(self, queue, semaphore):
+    @abc.abstractmethod
+    def run(self):
         """
-            This method is used by pypuf.experiments.experimenter.Experimenter. Every single spawned thread uses this
-            method in oder to learn a trainingset. This method also handles the semaphore release call to coordinate the
-            threads. If you want to provide iterative learning maybe with an certain stop criterion you have to override
-            this method. If you override this method make sure to call semaphore().release() as last method in order to
-            release resources.
+        This method runs the actual experiment.
         """
-        self.start_time = time.time()
-        self.model = self.learner.learn()
-        self.measured_time = time.time() - self.start_time
-        self.analysis()
-        self._output(queue)
-        semaphore.release()
+        raise NotImplementedError('users must define run() to use this base class')
+
+    def execute(self):
+        """
+        Executes the experiment at hand by
+        (1) calling run() and measuring the run time of run() and
+        (2) calling analyze().
+        """
+        start_time = time.time()
+        self.run()
+        self.measured_time = time.time() - start_time
+        self.analyze()
