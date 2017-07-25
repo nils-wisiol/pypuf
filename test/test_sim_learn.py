@@ -39,4 +39,7 @@ class TestSimLearn(unittest.TestCase):
     def test_ip_mod2_1_1_bent(self):
         sim_learn.main(["sim_learn", "8", "2", "1_1_bent", "ip_mod2", "20", "1", "2", "1234", "1234"])
 
+    def test_permutation_atf(self):
+        sim_learn.main(["sim_learn", "8", "2", "permutation_atf", "xor", "10", "1", "2", "1234", "1234"])
+
 
