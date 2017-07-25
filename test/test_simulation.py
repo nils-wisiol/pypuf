@@ -292,6 +292,30 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_permutation_atf(self):
+        test_array = array([
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
+        ])
+        assert_array_equal(
+            LTFArray.transform_permutation_atf(test_array, k=4),
+            [
+                [
+                    [-1, -1, 1, -1, -1, 1],
+                    [-1, 1, -1, -1, -1, -1],
+                    [-1, 1, 1, 1, -1, 1],
+                    [-1, 1, 1, -1, -1, -1]
+                ],
+
+                [
+                    [-1, -1, -1, -1, 1, -1],
+                    [-1, -1, 1, 1, -1, 1],
+                    [-1, 1, -1, 1, 1, 1],
+                    [-1, -1, -1, 1, -1, 1]
+                ]
+            ]
+        )
+
 
 class TestLTFArray(unittest.TestCase):
 
