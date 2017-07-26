@@ -82,6 +82,8 @@ pypuf is primarily designed as an API. However, it provides a subset of its feat
 
 `stability_calculation` is a command line interface that allows to generate a stability histogram for a simulated PUF, i.e. to determine an approximation of how the probability to see the 'correct' answer is distributed among the challenge space. For details, please refer to [Why Attackers Lose](https://eprint.iacr.org/2017/932.pdf).
 
+`input_trans_comparison` is a command line interface that allows to compare the learning success of logistic regression on various derivatives of XOR Arbiter PUFs.
+
 #### Example Usage
 
 Example usage of `sim_learn` that simulates a 64 bit 2-xor Arbiter PUF and learns it to approx. 98% from 12000 challenge response pairs: `python3 sim_learn.py 64 2 atf xor 12000 1 1 0xdead 0xbeef`
