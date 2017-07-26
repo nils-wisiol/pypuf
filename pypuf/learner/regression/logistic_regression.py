@@ -106,7 +106,7 @@ class LogisticRegression(Learner):
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
         self.iteration_limit = 10000
-        self.convergence_decimals = 3
+        self.convergence_decimals = 2
         self.sign_combined_model_responses = None
         self.sigmoid_derivative = full(self.training_set.N, None, double)
         self.min_distance = 1
@@ -232,10 +232,7 @@ class LogisticRegression(Learner):
             model.weight_array += updater.update(gradient)
 
             # check convergence
-            converged = (
-                [0] * self.n ==
-                around(gradient, decimals=self.convergence_decimals)
-            ).all()
+            converged = norm(updater.step) < 10**-self.convergence_decimals
 
             # check accuracy
             distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
