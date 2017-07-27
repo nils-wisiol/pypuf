@@ -2,7 +2,6 @@ from numpy import zeros,array,sign,dot,random
 from sys import stderr
 
 def getChallenge(wArray, minAccuracy):
-    
     posArray=[]
     negArray=[]
     challengeArray=zeros(wArray.size)
@@ -12,7 +11,7 @@ def getChallenge(wArray, minAccuracy):
     for i in range(wArray.size):
         weightArray.append((wArray[i],i))
     weightArray=sorted(weightArray, key=lambda tup: abs(tup[0]), reverse=True)
-    print(weightArray)
+#    print(weightArray)
     "greedy algorithm"
     for i in range(len(weightArray)):
         if sumPos<=sumNeg:
@@ -25,17 +24,24 @@ def getChallenge(wArray, minAccuracy):
             challengeArray[weightArray[i][1]]=-1*__signum(weightArray[i][0])
 #    print(challengeArray)        
     actAccuracy=abs(sumPos-sumNeg)
-    if actAccuracy<minAccuracy:
-        return challengeArray
+#    print(sumPos)
+#    print(sumNeg)
+#    print(actAccuracy)
+#    print(minAccuracy)
+#    print("")
+#    if actAccuracy<0.2*minAccuracy:
+#        print("juchu")
+#        return challengeArray
     
     
-    print(posArray)
-    print(negArray)
+#    print(posArray)
+#    print(negArray)
     
     optSwap=(sumPos-sumNeg)/2.0
 #    print("optSwap: %s"% optSwap)
     "heuristik"
-    while actAccuracy>minAccuracy:
+
+    while True:#actAccuracy>0.2*minAccuracy:
         posIndex=-1
         negIndex=-1
         bestPosIndex=0
@@ -70,9 +76,9 @@ def getChallenge(wArray, minAccuracy):
             else:
                 negIndex+=1
                 
-        print("Accuracy after chosen swap: %s" % (abs(bestFit[2])*2))
-        print("posIndex: %s" % bestPosIndex)
-        print("negIndex: %s" % bestNegIndex)
+#        print("Accuracy after chosen swap: %s" % (abs(bestFit[2])*2))
+#        print("posIndex: %s" % bestPosIndex)
+#        print("negIndex: %s" % bestNegIndex)
         if(abs(bestFit[2])*2<actAccuracy):
             [posArray,negArray,challengeArray]=__swap(posArray,negArray,bestPosIndex,bestNegIndex,bestFit,challengeArray)
             optSwap=bestFit[2]
@@ -120,22 +126,22 @@ def __swap(posArray,negArray,posIndex,negIndex,bestFit, challengeArray):
                     posArray.insert(i,newPos)
                     challengeArray[bestFit[1][1]]*=-1
                     break;
-    print(posArray)
-    print(negArray)
+#    print(posArray)
+#    print(negArray)
     return [posArray,negArray, challengeArray]
 
 def __signum(x):
     if sign(x)!=0:
         return sign(x)
     else:
-        return 1
+        return -1
 
 def __getKey(x):
     return x[0]
 
-weightArray=array([1,2,2,3,0.45,0.3,4.5,-3,3,-12,20])
-minAccuracy=0.01
-actAccuracy=0
-challengeArray=getChallenge(weightArray,minAccuracy)
-print(challengeArray)
-print("%s\n" % dot(weightArray,challengeArray))
+#weightArray=array([1,2,2,3,0.45,0.3,4.5,-3,3,-12,20])
+#minAccuracy=0.01
+#actAccuracy=0
+#challengeArray=getChallenge(weightArray,minAccuracy)
+#print(challengeArray)
+#print("%s\n" % dot(weightArray,challengeArray))

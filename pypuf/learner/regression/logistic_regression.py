@@ -172,7 +172,7 @@ class LogisticRegression(Learner):
         # in a multiprocessing scenario the object references would not be the same!
         if compare_functions(self.combiner, LTFArray.combiner_xor):
             model_gradient = model_gradient_xor
-        elif compare_functions(self.combiner, LTFArray.combiner_ip_mod2):
+        elif compare_functions(self.combiner == LTFArray.combiner_ip_mod2):
             model_gradient = model_gradient_ip_mod2
         else:
             raise Exception('No gradient function known for combiner %s' % self.combiner)
