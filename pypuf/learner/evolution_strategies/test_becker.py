@@ -4,6 +4,14 @@ from pypuf import tools
 from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES as becker
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
+
+# TODO -which reliabilities are possible with different values of k and repeat
+challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num, self.input_prng)))
+measured_rels = self.measure_rels(self.instance, challenges, self.challenge_num, self.repeat)
+challenges = tools.sample_inputs(instance.n, challenge_num, input_prng)
+cs1, cs2 = itertools.tee(challenges)
+
+
 n = 6
 k = 2
 mu = 0

@@ -8,12 +8,12 @@ n = 10
 k = 1
 mu = 0
 sigma = 1
-weight_array = LTFArray.normal_weights(n, k, mu, sigma, random_instance=np.random.RandomState(0x2500))
+weight_array = LTFArray.normal_weights(n, k, mu, sigma, random_instance=np.random.RandomState(0x3500))
 transform = LTFArray.transform_atf
 combiner = LTFArray.combiner_xor
 noisiness = 0.1
 sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma, noisiness)
-instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, random_instance=np.random.RandomState(0x7700))
+instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, random_instance=np.random.RandomState(0x8700))
 
 pop_size = 8
 parent_size = 4
@@ -25,8 +25,8 @@ challenge_num = 100
 repeat = 10
 unreliability = 0.04
 precision = 0.6
-seed_mutations = 0x5000
-seed_inputs = 0x300
+seed_mutations = 0x6000
+seed_inputs = 0x400
 becker = learner(instance, pop_size, parent_size, priorities,
                  challenge_num, repeat, unreliability, precision, seed_mutations, seed_inputs)
 l = becker.learn()
