@@ -88,7 +88,35 @@ class LTFArray(Simulation):
         return result
 
     @staticmethod
+    def transform_lightweight_secure_original(cs, k):
+        """
+        Input transform as defined by Majzoobi et al. 2008.
+        """
+        N = len(cs)
+        n = len(cs[0])
+        assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n. Sorry!'
+
+        cs_shift_trans = __class__.transform_shift_lightweight_secure(cs, k)
+
+        """ Perform atf transform """
+        result = transpose(
+            array([
+                prod(cs_shift_trans[:, :, i:], 2)
+                for i in range(n)
+            ]),
+            (1, 2, 0)
+        )
+
+        assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape. Sorry!'
+
+        return result
+
+    @staticmethod
     def transform_lightweight_secure(cs, k):
+        """
+        Input transform as defined by Majzoobi et al. 2008, but with the shift
+        operation executed after and without ATF transform.
+        """
         N = len(cs)
         n = len(cs[0])
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n. Sorry!'
@@ -110,8 +138,8 @@ class LTFArray(Simulation):
     @staticmethod
     def transform_shift_lightweight_secure(cs, k):
         """
-        Input transform as defined by Majzoobi et al. 2008, but with the shift
-        operation executed first.
+        Input transform as defined by Majzoobi et al. 2008, with the shift
+        operation executed first and without ATF transform.
         """
         N = len(cs)
         n = len(cs[0])
