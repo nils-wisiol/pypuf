@@ -1,8 +1,6 @@
 import numpy as np
-import itertools
-from pypuf import tools
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-import pypuf.learner.evolution_strategies.CMA_ES as CMA_ES
+from pypuf.learner.evolution_strategies import CMA_ES
 
 class Reliability_based_CMA_ES():
 
@@ -10,7 +8,8 @@ class Reliability_based_CMA_ES():
     #   pop_size=30
     #   parent_size=10 (>= 0.3*pop_size)
     #   priorities: linearly low decreasing
-    def __init__(self, k, n, challenges, responses, repeat, precision, pop_size, parent_size, priorities, random_seed):
+    def __init__(self, k, n, challenges, responses, repeat, precision, pop_size, parent_size, priorities,
+                 prng=np.random.RandomState()):
         self.k = k                                              # number of XORed LTFs
         self.n = n                                              # length of LTFs plus 1 because of epsilon
         self.challenges = challenges                            # set of challenges applied on instance to learn
@@ -21,7 +20,7 @@ class Reliability_based_CMA_ES():
         self.challenge_num = np.shape(self.challenges)[0]       # number of challenges used
         self.measured_rels = self.get_measured_rels(self.responses, self.repeat)    # measured reliabilities (instance)
         # parameters for CMA_ES
-        self.prng = np.random.RandomState(seed=random_seed)     # pseudo random number generator (CMA_ES)
+        self.prng = prng                                        # pseudo random number generator (CMA_ES)
         self.precision = precision                              # intended scale of step-size to achieve (CMA_ES)
         self.pop_size = pop_size                                # number of models sampled each iteration (CMA_ES)
         self.parent_size = parent_size                          # number of considered models each iteration (CMA_ES)
@@ -115,7 +114,7 @@ class Reliability_based_CMA_ES():
     def set_pole_of_LTFs(different_LTFs, challenges, responses):
         # returns the correctly polarized XOR-LTFArray
         challenge_num = np.shape(challenges)[0]
-        xor_LTFArray = LTFArray(different_LTFs, LTFArray.transform_id, LTFArray.combiner_xor)
+        xor_LTFArray = LTFArray(different_LTFs, LTFArray.transform_atf, LTFArray.combiner_xor)
         responses_model = xor_LTFArray.eval(challenges)
         difference = np.sum(np.abs(responses - responses_model))
         if difference > challenge_num:
@@ -123,11 +122,11 @@ class Reliability_based_CMA_ES():
         return different_LTFs
 
     @staticmethod
-    def is_correlated(responses):
+    def is_correlated(responses_of_models):
         # returns True iff 2 response arrays are more than 75% equal
-        (num_of_LTFs, challenge_num) = np.shape(responses)
+        (num_of_LTFs, challenge_num) = np.shape(responses_of_models)
         for i in range(1, num_of_LTFs):
-            differences = np.sum(np.abs(responses[0, :] - responses[i, :])) / 2
+            differences = np.sum(np.abs(responses_of_models[0, :] - responses_of_models[i, :])) / 2
             if differences < 0.25*challenge_num or differences > 0.75*challenge_num:
                 return True
         return False

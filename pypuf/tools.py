@@ -31,7 +31,7 @@ def random_inputs(n, num, random_instance=RandomState()):
         yield random_input(n, random_instance)
 
 
-def sample_inputs(n, num):
+def sample_inputs(n, num, random_instance=RandomState()):
     """
     returns an iterator for either random samples of {-1,1}-vectors of length `n` if `num` < 2^n,
     and an iterator for all {-1,1}-vectors of length `n` otherwise.
