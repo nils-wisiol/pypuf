@@ -8,7 +8,7 @@ class CMA_ES():
         self.precision = precision                              # intended scale of step-size to achieve
         self.evaluate_fitness = fitness_function                # fitness function for evaluating solution candidates
         self.n = n                                              # number of parameters to learn
-        self.individuals = np.zeros((self.pop_size, self.n))    # solution candidates
+        self.individuals = np.zeros((pop_size, n))              # solution candidates
         # mean, step_size,  pop_size,   parent_size,    priorities, cov_matrix,   path_cm,    path_ss
         # m,    sigma,      lambda,     mu,             w_i,        C,            p_c,        p_sigma
         self.mean = np.zeros(self.n)                            # mean vector of distribution
@@ -27,7 +27,7 @@ class CMA_ES():
         self.c_sigma = 4 / self.n
         self.c_d_sigma = self.c_sigma / (1 + np.sqrt(self.mu_w / self.n))
         assert len(self.weights) == self.parent_size
-        assert int(np.ndarray.sum(self.weights)) == 1
+        assert int(round(np.ndarray.sum(self.weights), 3)) == 1
         assert (self.c_1 + self.c_mu <= 1)
 
     def evolutionary_search(self):
@@ -60,9 +60,9 @@ class CMA_ES():
 
     # updating methods of evolution strategies
     @staticmethod
-    def sample_mutations(zero_mean, cov_matrix, pop_size, mutation_prng):
+    def sample_mutations(zero_mean, cov_matrix, pop_size, prng):
         # returns a new generation of individuals as 2D array (corresponds to y_i)
-        return mutation_prng.multivariate_normal(zero_mean, cov_matrix, pop_size)
+        return prng.multivariate_normal(zero_mean, cov_matrix, pop_size)
 
     @staticmethod
     def reproduce(mean, pop_size, step_size, mutations):
@@ -71,23 +71,23 @@ class CMA_ES():
         return duplicated_mean + (step_size * mutations)
 
     @staticmethod
-    def update_mean(mean, step_size, parent_mutations):
+    def update_mean(mean, step_size, favorite_mutation):
         # returns mean of a new population as array (corresponds to m)
-        return mean + step_size*parent_mutations
+        return mean + step_size * favorite_mutation
 
     @staticmethod
-    def cumulation_for_cm(path_cm, c_c, path_ss, n, mu_w, parent_mutations):
+    def cumulation_for_cm(path_cm, c_c, path_ss, n, mu_w, favorite_mutation):
         # returns cumulated evolution path of covariance matrix (corresponds to p_c)
         path_cm = path_cm * (1-c_c)
         if(np.linalg.norm(path_ss) < 1.5 * np.sqrt(n)):
-            path_cm = path_cm + (np.sqrt(1 - (1-c_c)**2) * np.sqrt(mu_w) * parent_mutations)
+            path_cm += (np.sqrt(1 - (1-c_c)**2) * np.sqrt(mu_w) * favorite_mutation)
         return path_cm
 
     @staticmethod
-    def cumulation_for_ss(path_ss, c_sigma, mu_w, cov_matrix, parent):
+    def cumulation_for_ss(path_ss, c_sigma, mu_w, cov_matrix, favorite):
         # returns cumulated evolution path of step-size (corresponds to p_sigma)
         cm_eigen_dec = __class__.modify_eigen_decomposition(cov_matrix)
-        return (1-c_sigma) * path_ss + np.sqrt(1 - (1-c_sigma)**2) * np.sqrt(mu_w) * cm_eigen_dec @ parent
+        return (1-c_sigma) * path_ss + np.sqrt(1 - (1-c_sigma)**2) * np.sqrt(mu_w) * cm_eigen_dec @ favorite
 
     @staticmethod
     def update_cm(cov_matrix, c_1, c_mu, path_cm, cm_mu):

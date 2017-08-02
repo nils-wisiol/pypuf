@@ -31,14 +31,14 @@ def random_inputs(n, num, random_instance=RandomState()):
         yield random_input(n, random_instance)
 
 
-def sample_inputs(n, num):
+def sample_inputs(n, num, random_instance=RandomState()):
     """
     returns an iterator for either random samples of {-1,1}-vectors of length `n` if `num` < 2^n,
     and an iterator for all {-1,1}-vectors of length `n` otherwise.
     Note that we return only 2^n vectors even with `num` > 2^n.
     In other words, the output of this function is deterministic if and only if num >= 2^n.
     """
-    return random_inputs(n, num) if num < 2**n else all_inputs(n)
+    return random_inputs(n, num, random_instance) if num < 2**n else all_inputs(n)
 
 def iter_append_last(array_iterator, x):
     """
