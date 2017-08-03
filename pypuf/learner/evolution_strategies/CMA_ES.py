@@ -36,10 +36,7 @@ class CMA_ES():
         solution = np.zeros(np.shape(self.individuals)[1])
         estimation_multinormal = np.sqrt(2) * sp.gamma((self.n+1)/2) / sp.gamma((self.n)/2)
         zero_mean = np.zeros(np.shape(self.mean))
-        iteration = 0
         while not terminate:
-            iteration += 1
-            print('iteration: ', iteration)
             if self.step_size < self.precision:
                 terminate = True
                 solution = self.mean
