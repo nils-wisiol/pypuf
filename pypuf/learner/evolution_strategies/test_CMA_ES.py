@@ -38,23 +38,16 @@ fitness_function = get_fitness_function(solution)
 fitness_values = fitness_function(individuals)
 print('fitness_values\n', fitness_values)
 
-# create CMA_ES object
-solution = np.array([100, -6.66, 0, 5])
-fitness_function = get_fitness_function(solution)
-precision = 1 / 2**10
-n = 8
-pop_size = 16
-parent_size = 4
-weights = np.array([0.4, 0.3, 0.2, 0.1])
-prng = np.random.RandomState(0x5000)
-cma_es = CMA_ES(fitness_function, precision, n, pop_size, parent_size, weights, prng)
-
 # test sample_mutations
 zero_mean = np.array([0, 0, 0, 0])
 cov_matrix = np.array([[1, 0, 0.9, 0.5],
                        [0, 1, 0.1, 0],
                        [0.9, 0.1, 1, 0.3],
                        [0.5, 0, 0.3, 1]])
+"""cov_matrix = np.array([[0.52923091, -0.0542376, 0.29767901, 0.073488],
+                       [-0.0542376, 1.491414, -0.363717, 0.71178],
+                       [0.29767901, -0.363717, 1.69502509, 0.574722],
+                       [0.073488, 0.71178, 0.574722, 0.6906]])"""
 pop_size = 7
 mutation_prng = np.random.RandomState(0x1234)
 mutations = CMA_ES.sample_mutations(zero_mean, cov_matrix, pop_size, mutation_prng)
@@ -105,50 +98,48 @@ cov_matrix = np.array([[1, 0, 0.9, 0.5],
 c_1 = 0.005
 c_mu = 0.01
 path_cm = np.array([4, 4, 2, 2])
-# TODO init accurate cm_mu
-cm_mu = np.array([[1, 0, 0.9, 0.5],
+outer_product = np.array([[1, 0, 1.9, -0.5],
                        [0, 1, 0.1, 0],
-                       [0.9, 0.1, 1, 0.3],
-                       [0.5, 0, 0.3, 1]])
-cov_matrix = CMA_ES.update_cm(cov_matrix, c_1, c_mu, path_cm, cm_mu)
+                       [1.9, 0.1, 1, 0.3],
+                       [-0.5, 0, 0.3, 1]])
+cov_matrix = CMA_ES.update_cm(cov_matrix, c_1, c_mu, path_cm, outer_product)
 print('cov_matrix\n', cov_matrix)
 
 # test for update_ss
 step_size = 2
-# TODO init accurate c_d_sigma
-c_d_sigma = '?'
+c_d_sigma = 0.15
 path_ss = np.array([5, 1, 9, 0])
 estimation_multinormal = 5
 step_size = CMA_ES.update_ss(step_size, c_d_sigma, path_ss, estimation_multinormal)
 print('step_size\n', step_size)
 
 # test for get_favorite_mutations
-sorted_mutations = np.array([[0, 1.11, -2, -0.3],
-                             [-0.777, 1.5, 0.1234, 1],
-                             [1, 1, 1, 1],
-                             [5, 5, 5, 5],
-                             [1, 2, 1, 2],
-                             [4, 3, 2, 1],
-                             [0, 1, -0.5, 3],
-                             [-1, -2, -3, -4]])
+vector = np.array([[0, 1.11, -2, -0.3],
+                   [-0.777, 1.5, 0.1234, 1],
+                   [1, 1, 1, 1],
+                   [5, 5, 5, 5],
+                   [1, 2, 1, 2],
+                   [4, 3, 2, 1],
+                   [0, 1, -0.5, 3],
+                   [-1, -2, -3, -4]])
 parent_size = 3
 priorities = np.array([0.5, 0.3, 0.2])
-favorite_mutations = CMA_ES.get_favorite_mutations(sorted_mutations, parent_size, priorities)
+favorite_mutations = CMA_ES.get_favorite_mutations(vector, parent_size, priorities)
 print('favorite_mutations\n', favorite_mutations)
 
 # test for get_cm_mu
-sorted_mutations = np.array([[0, 1.11, -2, -0.3],
-                             [-0.777, 1.5, 0.1234, 1],
-                             [1, 1, 1, 1],
-                             [5, 5, 5, 5],
-                             [1, 2, 1, 2],
-                             [4, 3, 2, 1],
-                             [0, 1, -0.5, 3],
-                             [-1, -2, -3, -4]])
+vector = np.array([[0.001, 1.11, -2, -0.3],
+                   [-0.777, 1.5, 0.1234, 1],
+                   [1, 1, 1, 1],
+                   [5, 5, 5, 5],
+                   [1, 2, 1, 2],
+                   [4, 3, 2, 1],
+                   [0, 1, -0.5, 3],
+                   [-1, -2, -3, -4]])
 parent_size = 3
 priorities = np.array([0.34, 0.33, 0.33])
-cm_mu = CMA_ES.get_cm_mu(sorted_mutations, parent_size, priorities)
-print('cm_mu\n', cm_mu)
+outer_product = CMA_ES.get_mutations_outer_product(vector, parent_size, priorities)
+print('outer_product\n', outer_product)
 
 # test modify_eigen_decomposition
 matrix = np.array([[1, 0, 0.9, 0.5],
@@ -165,3 +156,21 @@ matrix = np.array([[1, 0, 0.9, 0.5],
                    [0.5, 0, 0.3, 1]])
 symmetry = CMA_ES.is_symmetric(matrix, tol=1e-8)
 print('symmetry\n', symmetry)
+
+# test matrix multiplication '@'
+vector = np.array([.1, .2, .3, -.4])
+product = vector[:, np.newaxis] @ vector[np.newaxis, :]
+print('product\n', product)
+
+# test evolutionary_search
+solution = np.array([100, -6.66, 0, 5, -7.65, 3])
+fitness_function = get_fitness_function(solution)
+precision = 1 / 2**10
+n = 6
+pop_size = 16
+parent_size = 4
+weights = np.array([0.4, 0.3, 0.2, 0.1])
+prng = np.random.RandomState(0x5000)
+cma_es = CMA_ES(fitness_function, precision, n, pop_size, parent_size, weights, prng)
+reached_solution = cma_es.evolutionary_search()
+print('reached_solution\n', reached_solution)
