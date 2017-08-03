@@ -36,7 +36,10 @@ class CMA_ES():
         solution = np.zeros(np.shape(self.individuals)[1])
         estimation_multinormal = np.sqrt(2) * sp.gamma((self.n+1)/2) / sp.gamma((self.n)/2)
         zero_mean = np.zeros(np.shape(self.mean))
+        iteration = 0
         while not terminate:
+            iteration += 1
+            print('iteration: ', iteration)
             if self.step_size < self.precision:
                 terminate = True
                 solution = self.mean
@@ -53,7 +56,7 @@ class CMA_ES():
                                                   favorite_mutations)
             self.path_ss = self.cumulation_for_ss(self.path_ss, self.c_sigma, self.mu_w, self.cov_matrix,
                                                   favorite_mutations)
-            cm_mu = self.get_cm_mu(sorted_mutations, self.parent_size, self.weights)
+            cm_mu = self.get_mutations_outer_product(sorted_mutations, self.parent_size, self.weights)
             self.cov_matrix = self.update_cm(self.cov_matrix, self.c_1, self.c_mu, self.path_cm, cm_mu)
             self.step_size = self.update_ss(self.step_size, self.c_d_sigma, self.path_ss, estimation_multinormal)
         return solution
@@ -109,12 +112,12 @@ class CMA_ES():
         return parent_mutations
 
     @staticmethod
-    def get_cm_mu(sorted_mutations, parent_size, priorities):
+    def get_mutations_outer_product(sorted_mutations, parent_size, priorities):
         # returns the weighted sum of the product of the fittest individuals mutations (corresponds to C_mu)
-        cm_mu = np.zeros((np.shape(sorted_mutations)[1], np.shape(sorted_mutations)[1]))
+        outer_product = np.zeros((np.shape(sorted_mutations)[1], np.shape(sorted_mutations)[1]))
         for i in range(parent_size):
-            cm_mu = cm_mu + priorities[i] * sorted_mutations[i, :, np.newaxis] @ sorted_mutations[i, np.newaxis, :]
-        return cm_mu
+            outer_product += priorities[i] * sorted_mutations[i, :, np.newaxis] @ sorted_mutations[i, np.newaxis, :]
+        return outer_product
 
     @staticmethod
     def modify_eigen_decomposition(matrix):
