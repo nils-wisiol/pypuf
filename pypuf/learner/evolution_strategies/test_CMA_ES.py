@@ -1,5 +1,5 @@
 import numpy as np
-from pypuf.learner.evolution_strategies.CMA_ES import CMA_ES
+from pypuf.learner.evolution_strategies.cma_es import CMA_ES
 
 def f(x, array):
     # returns function value f(x), where array defines polynom f
