@@ -118,7 +118,7 @@ class CMA_ES():
 
     @staticmethod
     def modify_eigen_decomposition(matrix):
-        # returns modified eigen-decomposition (B * D^(-1) * B^T) of matrix A = (B * D^2 * B^T) (corresponds to C^(-1/2))
+        # returns modified eigen-decomposition (B * D^(-1) * B^T) of matrix A=(B * D^2 * B^T) (corresponds to C^(-1/2))
         eigen_values, eigen_vectors = np.linalg.eigh(matrix)
         diagonal = 1 / np.diag(np.sqrt(np.diag(eigen_values)))
         return eigen_vectors @ np.diag(diagonal) @ eigen_vectors.T
