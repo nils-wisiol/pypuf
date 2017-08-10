@@ -93,7 +93,7 @@ reliabilities = np.array([[1, 1, 0, 1, 0, 1, 1],
 correlations = Becker.get_correlations(reliabilities, measured_rels)
 print('correlations\n', correlations)
 
-
+"""
 responses_new_LTF = np.array([0.2, -1.8, -0.7, 0.9, -0.49, 0.621, -1.6, 0.77])
 responses_diff_LTFs = np.array([[-1.2, -0.42, -0.81, 1.62, 0.47, 0.23, -0.37, 0.68],
                            [0.61, -2.5, 0.29, 1.16, -1.83, 0.72, -0.82, 0.775]])
@@ -105,4 +105,18 @@ challenges = np.array(list(tools.sample_inputs(n-1, num, prng)))
 challenge_num = num
 is_diff = Becker.is_different_LTF(new_LTF, different_LTFs, num_of_LTFs, challenges)
 print('is_diff\n', is_diff)
+"""
 
+a = np.array([1,2,3])
+res = a[np.newaxis, :] @ a[:, np.newaxis]
+print('res:\n', res)
+
+responses_diff_LTFs = np.array([[1,-1,-1,-1,1,1,1,1],
+                                [-1,-1,-1,1,1,-1,1,-1]])
+responses_new_LTF = np.array([1,-1,-1,-1,1,1,-1,-1])
+num_of_LTFs, challenge_num = np.shape(responses_diff_LTFs)
+for i in range(num_of_LTFs):
+    differences = np.sum(np.abs(responses_new_LTF[:] - responses_diff_LTFs[i, :])) / 2
+    print('differences:', differences, '; 0.25*challenge_num:', 0.25*challenge_num)
+    if differences < 0.25*challenge_num or differences > 0.75*challenge_num:
+        print('is correlated')
