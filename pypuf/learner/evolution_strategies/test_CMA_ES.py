@@ -174,3 +174,11 @@ prng = np.random.RandomState(0x5000)
 cma_es = CMA_ES(fitness_function, precision, n, pop_size, parent_size, weights, prng)
 reached_solution = cma_es.evolutionary_search()
 print('reached_solution\n', reached_solution)
+
+# test sorting
+fitness_values = np.array([0.3, -0.5, 0.8, 0.1])
+count_nan = np.count_nonzero(np.isnan(fitness_values))
+sorting_indices = np.argsort(fitness_values)
+mutations = np.array([1,2,3,4])
+sorted_mutations = np.roll(mutations[sorting_indices[::-1]], -count_nan)
+print('sorted_mutations\n', sorted_mutations)
