@@ -142,10 +142,10 @@ outer_product = CMA_ES.get_mutations_outer_product(vector, parent_size, prioriti
 print('outer_product\n', outer_product)
 
 # test modify_eigen_decomposition
-matrix = np.array([[1, 0, 0.9, 0.5],
-                   [0, 1, 0.1, 0],
-                   [0.9, 0.1, 1, 0.3],
-                   [0.5, 0, 0.3, 1]])
+matrix = np.array([[1, 0, 0, 0.5],
+                   [0, 1, 0, 0],
+                   [0, 0, 1, 0],
+                   [0.5, 0, 0, 1]])
 decomposition = CMA_ES.modify_eigen_decomposition(matrix)
 print('decomposition\n', decomposition)
 
@@ -172,8 +172,8 @@ parent_size = 4
 weights = np.array([0.4, 0.3, 0.2, 0.1])
 prng = np.random.RandomState(0x5000)
 cma_es = CMA_ES(fitness_function, precision, n, pop_size, parent_size, weights, prng)
-reached_solution = cma_es.evolutionary_search()
-print('reached_solution\n', reached_solution)
+#reached_solution = cma_es.evolutionary_search()
+#print('reached_solution\n', reached_solution)
 
 # test sorting
 fitness_values = np.array([0.3, -0.5, 0.8, 0.1])

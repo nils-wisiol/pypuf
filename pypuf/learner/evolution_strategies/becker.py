@@ -17,7 +17,7 @@ class Reliability_based_CMA_ES():
         self.challenges = challenges                            # set of challenges applied on instance to learn
         self.responses = responses                              # evaluated responses of the challenges on instance
         self.repeat = repeat                                    # frequency of same repeated challenge
-        self.different_LTFs = np.zeros((self.k, self.n))        # all currently learned LTFs
+        self.different_LTFs = np.zeros((self.k, self.n-1))      # all currently learned LTFs (without epsilon)
         self.num_of_LTFs = 0                                    # number of different learned LTFs
         self.measured_rels = self.get_measured_rels(self.responses) # measured reliabilities (instance)
         # parameters for CMA_ES
