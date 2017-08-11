@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import special as sp, linalg as li
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.learner.evolution_strategies.cma_es import CMA_ES
 
@@ -31,18 +32,19 @@ class Reliability_based_CMA_ES():
         # this is the general learning method
         # returns an XOR-LTFArray with nearly the same behavior as learned instance
         fitness_function = self.get_fitness_function(self.challenges, self.measured_rels, self.transform, self.combiner)
+        normalize = np.sqrt(2) * sp.gamma((self.n) / 2) / sp.gamma((self.n - 1) / 2)
         while self.num_of_LTFs < self.k:
             cma_es = CMA_ES(fitness_function, self.precision, self.n, self.pop_size, self.parent_size,
                             self.priorities, self.prng)
             new_LTF = cma_es.evolutionary_search()[:-1]     # remove epsilon
             if self.is_different_LTF(new_LTF, self.different_LTFs, self.num_of_LTFs, self.challenges, self.transform,
                                      self.combiner):
-                self.different_LTFs[self.num_of_LTFs] = new_LTF
+                self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / li.norm(new_LTF)  # normalize weights
                 self.num_of_LTFs += 1
         common_responses = self.get_common_responses(self.responses)
         self.different_LTFs = self.set_pole_of_LTFs(self.different_LTFs, self.challenges, common_responses,
                                                     self.transform, self.combiner)
-        return LTFArray(self.different_LTFs, LTFArray.transform_atf, LTFArray.combiner_xor, bias=False)
+        return LTFArray(self.different_LTFs, self.transform, self.combiner, bias=False)
 
     @staticmethod
     def get_fitness_function(challenges, measured_rels, transform, combiner):
@@ -98,7 +100,7 @@ class Reliability_based_CMA_ES():
     @staticmethod
     def get_delay_differences(built_LTFArrays, pop_size, challenges):
         # returns 2D array of delay differences for all challenges on every individual
-        delay_diffs = np.zeros((pop_size, np.shape(challenges)[0]))
+        delay_diffs = np.empty((pop_size, np.shape(challenges)[0]))
         for i, built_LTFArray in enumerate(built_LTFArrays):
             delay_diffs[i, :] = built_LTFArray.val(challenges)
         return delay_diffs

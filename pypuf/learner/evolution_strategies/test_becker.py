@@ -95,19 +95,21 @@ measured_rels = Becker.get_measured_rels(responses)
 print('measured_rels\n', measured_rels)
 
 # test for learn
-weight_array = np.array([[0.311, 2.75, -1.82, -0.558, 1.22, 0.5, -0.05, -0.811, -1.2, -0.422, 0.72, 1.681]])
+#weight_array = np.array([[0.311, 2.75, -1.82, -0.558, 1.22, 0.5, -0.05, -0.811, -1.2, -0.422, 0.72, 1.681]])
                          #[-1.42, 0.39, -1.491, 0.8, 2.08, -0.333, 0.539, -1.36, 2.51, -1.77, -0.193, 0.81],
                          #[0.73, 1.38, 1.91, -0.7, -3.107, 1.84, 1.014, -0.7203, -0.25, -0.267, 1.17, 0.69],
                          #[-2.3, 0.218, -1.25, -0.412, 0.294, -1.16, -0.18, 0.4, 2.3, -1.37, -0.53, 0.0874]])
-n = 12
+n = 20
 sigma_weight = 1
 noisiness = 0.2
 sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness)
-instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise)
 k = 1
-num = 2**11
-transform = LTFArray.transform_id
-prng = np.random.RandomState(0x1111)
+mu = 0
+sigma = sigma_weight
+weight_array = LTFArray.normal_weights(n, k, mu, sigma, prng)
+instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise)
+num = 2**10
+prng = np.random.RandomState(0x50E0)
 challenges = tools.sample_inputs(n, num, prng)
 repeat = 5
 responses = np.zeros((repeat, num))
@@ -123,5 +125,9 @@ challenges = np.array(list(challenges))
 becker = Becker(k, n+1, transform, combiner, challenges, responses, repeat,
                 precision, pop_size, parent_size, priorities, prng)
 
-xor_LTFArray = becker.learn()
-print(vars(xor_LTFArray))
+learned_instance = becker.learn()
+num = 1000
+accuracy = 1 - tools.approx_dist(instance, learned_instance, num)
+print('accuracy = ', accuracy)
+print('learned_instance', vars(learned_instance))
+print('original_instance', vars(instance))
