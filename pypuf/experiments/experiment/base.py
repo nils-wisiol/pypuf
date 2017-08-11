@@ -1,6 +1,7 @@
 import abc
 import time
 import logging
+import logging.handlers
 
 
 class Experiment(object):
@@ -14,13 +15,15 @@ class Experiment(object):
         :param log_name: A unique name, used for log path.
         """
 
-        # This must be a valid file name to be able to log the results
+        # Setup logger for experiment specific logging
         self.progress_logger = logging.getLogger(log_name)
         file_handler = logging.FileHandler('%s.log' % log_name, mode='w')
         file_handler.setLevel(logging.DEBUG)
         self.progress_logger.addHandler(file_handler)
         self.progress_logger.setLevel(logging.DEBUG)
-        self.result_logger = self.progress_logger.parent
+
+        # This must be set at run
+        self.result_logger = None
 
         # will be set in execute
         self.measured_time = None
@@ -39,13 +42,29 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-    def execute(self):
+
+
+    def execute(self, queue, logger_name):
         """
         Executes the experiment at hand by
         (1) calling run() and measuring the run time of run() and
         (2) calling analyze().
         """
+        self.result_logger = setup_result_logger(queue, logger_name)
         start_time = time.time()
         self.run()
         self.measured_time = time.time() - start_time
         self.analyze()
+
+def setup_result_logger(queue, logger_name):
+    """
+    This method setups a connection to the experimenter result logger.
+    :param queue: Multiprocessing safe queue which is used to serialize the logging
+    :param logger_name: Name of the experimenter result logger
+    :return:
+    """
+    handler = logging.handlers.QueueHandler(queue)
+    root = logging.getLogger(logger_name)
+    root.addHandler(handler)
+    root.setLevel(logging.DEBUG)
+    return root
