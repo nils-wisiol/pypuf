@@ -23,8 +23,9 @@ The simulation currently consists of just one very broad class, the LTF Array Si
  * `id`: use the generated challenge directly as input to the LTF (note that this *does not* correspond to the physical implementation of Arbiter PUFs)
  * `atf`: use *Arbiter Threshold Functions*, that is, transform the challenges in a way such that we simulate physical implementations of Arbiter PUFs
  * `mm`: experimental input transformation with long PTF representation
- * `lightweight_secure`: input transformation as defined by Majzoobi et al. in [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf)
- * `shift_lightweight_secure`: as defined by Majzoobi et al., but with the shift operation executed first.
+ * `lightweight_secure_original`: input transformation as defined by Majzoobi et al. in [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf) 
+ * `lightweight_secure`: (DEPRECATED) Input transform as defined by Majzoobi et al. 2008, but with the shift operation executed after and without ATF transform.
+ * `shift_lightweight_secure`: (DEPRECATED) Input transform as defined by Majzoobi et al. 2008, with the shift operation executed first and without ATF transform.
  * `soelter_lightweight_secure`: as defined by Majzoobi et al., but with a one-bit modification due to Sölter.
  * `polynomial`: challenges are interpreted as polynomials from GF(2^n). From the initial challenge c the i-th Arbiter chain gets the coefficients of the polynomial c^(i+1) as challenge. For now only challenges with length 8, 16, 24, 32, 48, 64 are accepted.
  * `permutation_atf`: for each Arbiter chain first a pseudorandom permutation is applied and thereafter the ATF transform.
