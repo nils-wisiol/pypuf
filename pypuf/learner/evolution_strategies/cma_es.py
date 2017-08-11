@@ -36,8 +36,11 @@ class CMA_ES():
         solution = np.zeros(np.shape(self.individuals)[1])
         estimation_multinormal = np.sqrt(2) * sp.gamma((self.n+1)/2) / sp.gamma((self.n)/2)
         zero_mean = np.zeros(np.shape(self.mean))
-        while not terminate:
+        i = 0
+        while not terminate and i<100:
+            i += 1
             print('step size = ', self.step_size)
+            print('cov_matrix\n', self.cov_matrix)
             if self.step_size < self.precision:
                 terminate = True
                 solution = self.mean
@@ -122,7 +125,7 @@ class CMA_ES():
         # returns modified eigen-decomposition (B * D^(-1) * B^T) of matrix A=(B * D^2 * B^T) (corresponds to C^(-1/2))
         eigen_values, eigen_vectors = np.linalg.eigh(matrix)
         assert (eigen_values > 0).all()
-        diagonal = 1 / np.sqrt(eigen_values)
+        diagonal = 1 / np.diag(np.sqrt(np.diag(eigen_values)))
         return eigen_vectors @ np.diag(diagonal) @ eigen_vectors.T
 
     @staticmethod
