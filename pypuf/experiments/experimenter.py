@@ -17,17 +17,8 @@ class Experimenter(object):
         # Store experiments list
         self.experiments = experiments
 
-        # Setup logging to both file and console
-        file_handler = logging.FileHandler(filename='%s.log' % log_name, mode='w')
-        file_handler.setLevel(logging.INFO)
-
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.INFO)
-
-        self.logger = logging.getLogger(log_name)
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(stream_handler)
+        # Store logger name
+        self.logger_name = log_name
 
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
@@ -38,18 +29,24 @@ class Experimenter(object):
         Runs all experiments.
         """
 
+        # Setup multiprocessing logging
+        queue = multiprocessing.Queue(-1)
+        listener = multiprocessing.Process(target=log_listener,
+                                           args=(queue, setup_logger, self.logger_name,))
+        listener.start()
+
         jobs = []
 
         for exp in self.experiments:
 
             # define experiment process
-            def run_experiment(semaphore):
-                exp.execute()  # run the actual experiment
+            def run_experiment(queue, semaphore, logger_name):
+                exp.execute(queue, logger_name)  # run the actual experiment
                 semaphore.release()  # release CPU
 
             job = multiprocessing.Process(
                 target=run_experiment,
-                args=(self.semaphore,)
+                args=(queue, self.semaphore, self.logger_name)
             )
 
             # run experiment
@@ -63,3 +60,35 @@ class Experimenter(object):
         for job in jobs:
             job.join()
 
+        # Quit logging process
+        queue.put_nowait(None)
+        listener.join()
+
+
+def setup_logger(logger_name):
+    root = logging.getLogger(logger_name)
+
+    # Setup logging to both file and console
+    file_handler = logging.FileHandler(filename='%s.log' % logger_name, mode='w')
+    file_handler.setLevel(logging.INFO)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+
+    root.addHandler(file_handler)
+    root.addHandler(stream_handler)
+
+
+def log_listener(queue, configurer, logger_name):
+    configurer(logger_name)
+    while True:
+        try:
+            record = queue.get()
+            if record is None:  # We send this as a sentinel to tell the listener to quit.
+                break
+            logger = logging.getLogger(record.name)
+            logger.handle(record)  # No level or filter logic applied - just do it!
+        except Exception:
+            import sys, traceback
+            print('Whoops! Problem:', file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
