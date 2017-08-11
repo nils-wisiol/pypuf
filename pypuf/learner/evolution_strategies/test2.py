@@ -46,77 +46,26 @@ class TestLTFArray(unittest.TestCase):
         (instance_4, 30, 10, priorities_4)
     ]
 
-    # parameters for becker's attack
-    # k, n, challenges, responses, repeat, precision, pop_size, parent_size, priorities, prng
 
+p_values = np.array([0.9999, 0.9995, 0.999, 0.995, 0.99, 0.98, 0.95, 0.9])
+k_values = np.array([1, 2, 4, 6, 8, 12, 16, 20])
 
+def stability(p, k):
+    return ((2*p - 1)**k + 1) / 2
 
-# TODO -which reliabilities are possible with different values of k and repeat
-"""challenges = np.array(list(tools.sample_inputs(self.instance.n, self.challenge_num, self.input_prng)))
-measured_rels = self.measure_rels(self.instance, challenges, self.challenge_num, self.repeat)
-challenges = tools.sample_inputs(instance.n, challenge_num, input_prng)
-cs1, cs2 = itertools.tee(challenges)
-"""
+stabilities = np.zeros((8+1, 8+1))
+stabilities[0, 1:] = p_values
+stabilities[1:, 0] = k_values.T
+for i in range(8):
+    for j in range(8):
+        stabilities[i+1,j+1] = stability(p_values[j], k_values[i])
 
-n = 6
-k = 2
-mu = 0
-sigma = 1
-prng = np.random.RandomState(0x44)
-weight_array = NoisyLTFArray.normal_weights(n, k, mu, sigma, prng)
-transform = NoisyLTFArray.transform_atf
-combiner = NoisyLTFArray.combiner_xor
-noisiness = 0.1
-sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma, noisiness)
+indices = stabilities > 0.8
+copy = np.copy(stabilities)
+copy[indices] = 0
+stabilities = stabilities - copy
 
-
-instance = LTFArray(weight_array, transform, combiner)
-num = 16
-challenges = np.array(list(tools.sample_inputs(n, num, prng)))
-res = instance.eval(challenges)
-print('res\n', res)
-
-
-
-responses = np.array([[-1, -1, 1, -1, 1, 1, 1],
-                      [-1, -1, -1, -1, 1, 1, 1],
-                      [1, -1, 1, -1, 1, -1, 1],
-                      [-1, -1, 1, -1, 1, 1, 1],
-                      [-1, -1, -1, -1, 1, 1, 1]])
-measured_rels = Becker.get_measured_rels(responses)
-print('measured_rels\n', measured_rels)
-
-reliabilities = np.array([[1, 1, 0, 1, 0, 1, 1],
-                          [1, 1, 1, 1, 1, 1, 1],
-                          [0, 1, 0, 0, 0, 1, 0],
-                          [1, 0, 1, 0, 1, 1, 0]])
-correlations = Becker.get_correlations(reliabilities, measured_rels)
-print('correlations\n', correlations)
-
-"""
-responses_new_LTF = np.array([0.2, -1.8, -0.7, 0.9, -0.49, 0.621, -1.6, 0.77])
-responses_diff_LTFs = np.array([[-1.2, -0.42, -0.81, 1.62, 0.47, 0.23, -0.37, 0.68],
-                           [0.61, -2.5, 0.29, 1.16, -1.83, 0.72, -0.82, 0.775]])
-num_of_LTFs = 2
-n = 8
-num = 64
-prng = np.random.RandomState(0x1111)
-challenges = np.array(list(tools.sample_inputs(n-1, num, prng)))
-challenge_num = num
-is_diff = Becker.is_different_LTF(new_LTF, different_LTFs, num_of_LTFs, challenges)
-print('is_diff\n', is_diff)
-"""
-
-a = np.array([1,2,3])
-res = a[np.newaxis, :] @ a[:, np.newaxis]
-print('res:\n', res)
-
-responses_diff_LTFs = np.array([[1,-1,-1,-1,1,1,1,1],
-                                [-1,-1,-1,1,1,-1,1,-1]])
-responses_new_LTF = np.array([1,-1,-1,-1,1,1,-1,-1])
-num_of_LTFs, challenge_num = np.shape(responses_diff_LTFs)
-for i in range(num_of_LTFs):
-    differences = np.sum(np.abs(responses_new_LTF[:] - responses_diff_LTFs[i, :])) / 2
-    print('differences:', differences, '; 0.25*challenge_num:', 0.25*challenge_num)
-    if differences < 0.25*challenge_num or differences > 0.75*challenge_num:
-        print('is correlated')
+len = np.shape(stabilities)[0]
+for i in range(len):
+    print(np.array_str(stabilities[i, :]))
+#print(stabilities)
