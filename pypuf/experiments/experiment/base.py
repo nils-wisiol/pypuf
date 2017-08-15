@@ -17,9 +17,7 @@ class Experiment(object):
 
         # Setup logger for experiment specific logging
         self.progress_logger = logging.getLogger(log_name)
-        file_handler = logging.FileHandler('%s.log' % log_name, mode='w')
-        file_handler.setLevel(logging.DEBUG)
-        self.progress_logger.addHandler(file_handler)
+        self.log_name = log_name
         self.progress_logger.setLevel(logging.DEBUG)
 
         # This must be set at run
@@ -51,6 +49,9 @@ class Experiment(object):
         (2) calling analyze().
         """
         self.result_logger = setup_result_logger(queue, logger_name)
+        file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
+        file_handler.setLevel(logging.DEBUG)
+        self.progress_logger.addHandler(file_handler)
         start_time = time.time()
         self.run()
         self.measured_time = time.time() - start_time
