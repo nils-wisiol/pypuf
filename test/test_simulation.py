@@ -256,6 +256,33 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_transform_stack(self):
+        test_array = array([
+            [1, -1, 1, -1],
+            [-1, -1, 1, -1],
+        ])
+        assert_array_equal(
+            LTFArray.transform_stack(
+                transform_1=LTFArray.transform_id,
+                kk=2,
+                transform_2=LTFArray.transform_shift
+            )(test_array, k=4),
+            [
+                [
+                    [1, -1, 1, -1],
+                    [1, -1, 1, -1],
+                    [1, -1, 1, -1],
+                    [-1, 1, -1, 1],
+                ],
+                [
+                    [-1, -1, 1, -1],
+                    [-1, -1, 1, -1],
+                    [-1, -1, 1, -1],
+                    [-1, 1, -1, -1],
+                ],
+            ]
+        )
+
     def test_transform_concat(self):
         test_array = array([
             [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
