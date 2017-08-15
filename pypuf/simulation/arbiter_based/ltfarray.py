@@ -366,6 +366,36 @@ class LTFArray(Simulation):
         return result
 
     @staticmethod
+    def transform_stack(transform_1, kk, transform_2):
+        """
+        This input transformation will transform the first kk challenges using transform_1,
+        the remaining k - kk challenges using transform_2.
+        :return: A function that can perform the desired transformation
+        """
+        def transform(cs, k):
+            (N,n) = cs.shape
+            transformed_1 = transform_1(cs, kk)
+            transformed_2 = transform_2(cs, k - kk)
+            assert transformed_1.shape == (N, kk, n)
+            assert transformed_2.shape == (N, k - kk, n)
+            return concatenate(
+                (
+                    transformed_1,
+                    transformed_2,
+                ),
+                axis=1
+            )
+
+        transform.__name__ = 'transform_stack_%s_nn%i_%s' % \
+                             (
+                                 transform_1.__name__.replace('transform_', ''),
+                                 kk,
+                                 transform_2.__name__.replace('transform_', '')
+                             )
+
+        return transform
+
+    @staticmethod
     def transform_concat(transform_1, nn, transform_2):
         """
         This input transformation will transform the first nn bit of each challenge using transform_1,
