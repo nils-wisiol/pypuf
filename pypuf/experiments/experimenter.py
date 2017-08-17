@@ -41,8 +41,12 @@ class Experimenter(object):
 
             # define experiment process
             def run_experiment(queue, semaphore, logger_name):
-                exp.execute(queue, logger_name)  # run the actual experiment
-                semaphore.release()  # release CPU
+                try:
+                    exp.execute(queue, logger_name)  # run the actual experiment
+                    semaphore.release()  # release CPU
+                except Exception as e:
+                    semaphore.release()  # release CPU
+                    raise e
 
             job = multiprocessing.Process(
                 target=run_experiment,
