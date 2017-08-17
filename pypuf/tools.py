@@ -1,5 +1,5 @@
 import logging
-from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack
+from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack, mean, prod, ones
 from numpy.random import RandomState
 import itertools
 
@@ -52,7 +52,7 @@ def iter_append_last(array_iterator, x):
 
 def approx_dist(a, b, num):
     """
-    approximate the distance of two functions a, b by evaluating a random set of inputs.
+    Approximate the distance of two functions a, b by evaluating a random set of inputs.
     a, b needs to have eval() method and input_length member.
     :return: probability (randomly uniform x) for a.eval(x) != b.eval(x)
     """
@@ -60,6 +60,25 @@ def approx_dist(a, b, num):
     d = 0
     inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
+
+
+def approx_fourier_coefficient(s, training_set):
+    """
+    Approximate the Fourier coefficient of a function on the subset `s`
+    by evaluating the function on `training_set`
+    """
+    return mean(training_set.responses * chi_vectorized(s, training_set.challenges))
+
+
+def chi_vectorized(s, inputs):
+    """
+    :return: chi_s(x) = prod_(i \in s) x_i for all x in inputs
+    """
+    assert len(s) == len(inputs[0])
+    result = inputs[:, s > 0]
+    if result.size == 0:
+        return ones(len(inputs))
+    return prod(result, axis=1)
 
 
 def compare_functions(x, y):
