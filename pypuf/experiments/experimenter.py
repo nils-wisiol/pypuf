@@ -35,7 +35,8 @@ class Experimenter(object):
                                            args=(queue, setup_logger, self.logger_name,))
         listener.start()
 
-        jobs = []
+        # list of active jobs
+        active_jobs = []
 
         for exp in self.experiments:
 
@@ -52,15 +53,25 @@ class Experimenter(object):
                 args=(queue, self.semaphore, self.logger_name)
             )
 
-            # run experiment
-            self.semaphore.acquire()  # wait for a free CPU
-            job.start()
+            # wait for a free CPU
+            self.semaphore.acquire()
 
-            # keep a list of all jobs
-            jobs.append(job)
+            # update list of active jobs
+            def list_active_jobs():
+                still_active_jobs = []
+                for j in active_jobs:
+                    j.join(0)
+                    if j.exitcode is None:
+                        still_active_jobs.append(j)
+                return still_active_jobs
+
+            # start experiment
+            job.start()
+            active_jobs = list_active_jobs()
+            active_jobs.append(job)
 
         # wait for all processes to be finished
-        for job in jobs:
+        for job in active_jobs:
             job.join()
 
         # Quit logging process
