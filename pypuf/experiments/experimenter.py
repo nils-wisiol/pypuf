@@ -41,7 +41,10 @@ class Experimenter(object):
 
             # define experiment process
             def run_experiment(queue, semaphore, logger_name):
-                exp.execute(queue, logger_name)  # run the actual experiment
+                try:
+                    exp.execute(queue, logger_name)  # run the actual experiment
+                except:
+                    print('ERROR Experiment failed')
                 semaphore.release()  # release CPU
 
             job = multiprocessing.Process(
