@@ -2,6 +2,7 @@ import unittest
 import os
 import glob
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.experiments.experiment.base import Experiment
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experimenter import Experimenter
 
@@ -76,3 +77,27 @@ class TestExperimenter(unittest.TestCase):
         log_file = open('test_multiprocessing_logs.log', 'r')
         self.assertEqual(line_count(log_file), n, 'Unexpected number of results')
         log_file.close()
+
+    def test_file_handle(self):
+        """
+        This test check if process file handles are deleted. Some Systems have have limit of open file handles. 
+        :return: 
+        """
+        class ExperimentDummy(Experiment):
+            def __init__(self, log_name):
+                super().__init__(log_name)
+
+            def run(self):
+                pass
+
+            def analyze(self):
+                pass
+
+        experiments = []
+        n = 1024
+        for i in range(n):
+            log_name = 'fail{0}'.format(i)
+            experiments.append(ExperimentDummy(log_name))
+
+        experimenter = Experimenter('fail', experiments)
+        experimenter.run()
