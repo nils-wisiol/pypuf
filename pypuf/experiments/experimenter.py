@@ -86,11 +86,7 @@ def setup_logger(logger_name):
     file_handler = logging.FileHandler(filename='%s.log' % logger_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
-
     root.addHandler(file_handler)
-    root.addHandler(stream_handler)
 
 
 def log_listener(queue, configurer, logger_name):
