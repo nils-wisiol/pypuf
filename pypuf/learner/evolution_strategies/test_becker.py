@@ -5,7 +5,7 @@ from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES a
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
-transform = LTFArray.transform_atf
+transform = LTFArray.transform_id
 combiner = LTFArray.combiner_xor
 
 # test for is_different_LTF checked!
@@ -28,7 +28,10 @@ prng = prng
 challenges = np.array(list(tools.sample_inputs(n, num, prng)))
 challenge_num = challenge_num
 measured_rels = np.array([1.5, 2.5, 2.5, 2.5, 0.5, 1.5, 1.5, 2.5, 2.5, 2.5, 1.5, 2.5, 0.5, 2.5, 0.5, 1.5])
-fitness_function = Becker.get_fitness_function(challenges, challenge_num, transform, combiner)
+epsilon = 0.8
+from scipy import special as sp
+normalize = np.sqrt(2) * sp.gamma((n) / 2) / sp.gamma((n - 1) / 2)
+fitness_function = Becker.get_fitness_function(challenges, measured_rels, epsilon, transform, combiner)
 print('fitness_function\n', fitness_function)
 
 # test for build_LTFArrays checked!
@@ -50,8 +53,9 @@ delay_diffs = np.array([[0.03, 1.77, -1.48, -2.4],
                         [3.62, 2, 6.2, -1.8],
                         [0.1, -3.2, 2.4, 2.1],
                         [-2.4, 0.6, 4.6, -2.77]])
-epsilons = np.array([0.5, -2.1, 4.2, 1.5])
-reliabilities = Becker.get_reliabilities(delay_diffs, epsilons)
+###epsilons = np.array([0.5, -2.1, 4.2, 1.5])
+epsilon = 2.0
+reliabilities = Becker.get_reliabilities(delay_diffs, epsilon)
 print('reliabilities\n', reliabilities)
 
 # test for get_correlations checked!
@@ -67,7 +71,6 @@ print('correlations\n', correlations)
 different_LTFs = np.array([[-0.1, 0.15, 0.2], [0.1, 0.15, -0.2]])
 challenges = np.array([[1,1,1], [-1,1,-1], [-1,-1,1], [1,-1,-1]])
 xor_LTFArray = LTFArray(different_LTFs, transform, combiner)
-responses_model = xor_LTFArray.eval(challenges)
 common_responses = np.array([1, 1, -1, 1])
 print('different_LTFs\n', different_LTFs)
 polarized_LTFs = Becker.set_pole_of_LTFs(different_LTFs, challenges, common_responses, transform, combiner)
@@ -103,31 +106,38 @@ n = 20
 sigma_weight = 1
 noisiness = 0.2
 sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness)
-k = 1
+k = 2
 mu = 0
 sigma = sigma_weight
 weight_array = LTFArray.normal_weights(n, k, mu, sigma, prng)
 instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise)
-num = 2**10
-prng = np.random.RandomState(0x50E0)
+num = 2**11
+prng = np.random.RandomState(0xA7E3)    #0x50E0, 0xA0E0, 0xA7E3
 challenges = tools.sample_inputs(n, num, prng)
 repeat = 5
-responses = np.zeros((repeat, num))
+responses_repeated = np.zeros((repeat, num))
 for i in range(repeat):
     challenges, cs = iter.tee(challenges)
-    responses[i, :] = instance.eval(np.array(list(cs)))
-precision = 1 / 2**10
+    responses_repeated[i, :] = instance.eval(np.array(list(cs)))
+step_size_limit = 1 / 2**9
+iteration_limit = 3000
 pop_size = 30
-parent_size = 10
-priorities = np.array([.20, .15, .12, .10, .08, .07, .07, .07, .07, .07])
-prng = np.random.RandomState(0x1234)
+parent_size = 9
+#priorities = np.array([.20, .15, .12, .10, .08, .07, .07, .07, .07, .07])
+#priorities = np.array([.16, .14, .13, .12, .11, .1, .09, .08, .07])
+priorities = np.array([.12, .11, .11, .11, .11, .11, .11, .11, .11])
+#priorities = np.array([.13, .13, .13, .13, .12, .12, .12, .12])
+prng = np.random.RandomState(0x1D4)
 challenges = np.array(list(challenges))
-becker = Becker(k, n+1, transform, combiner, challenges, responses, repeat,
-                precision, pop_size, parent_size, priorities, prng)
+becker = Becker(k, n, transform, combiner, challenges, responses_repeated, repeat, step_size_limit,
+                 iteration_limit, pop_size, parent_size, priorities, prng)
 
 learned_instance = becker.learn()
-num = 1000
-accuracy = 1 - tools.approx_dist(instance, learned_instance, num)
+responses_model = learned_instance.eval(challenges)
+responses_instance = becker.get_common_responses(responses_repeated)
+assert len(responses_model) == len(responses_instance)
+accuracy = 1 - (num - np.count_nonzero(responses_instance == responses_model)) / num
+
 print('accuracy = ', accuracy)
 print('learned_instance', vars(learned_instance))
 print('original_instance', vars(instance))

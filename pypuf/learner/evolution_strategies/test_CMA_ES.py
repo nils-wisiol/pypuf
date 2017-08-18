@@ -162,19 +162,6 @@ vector = np.array([.1, .2, .3, -.4])
 product = vector[:, np.newaxis] @ vector[np.newaxis, :]
 print('product\n', product)
 
-# test evolutionary_search
-solution = np.array([100, -6.66, 0, 5, -7.65, 3])
-fitness_function = get_fitness_function(solution)
-precision = 1 / 2**10
-n = 6
-pop_size = 16
-parent_size = 4
-weights = np.array([0.4, 0.3, 0.2, 0.1])
-prng = np.random.RandomState(0x5000)
-cma_es = CMA_ES(fitness_function, precision, n, pop_size, parent_size, weights, prng)
-#reached_solution = cma_es.evolutionary_search()
-#print('reached_solution\n', reached_solution)
-
 # test sorting
 fitness_values = np.array([0.3, -0.5, 0.8, 0.1])
 count_nan = np.count_nonzero(np.isnan(fitness_values))
@@ -182,3 +169,19 @@ sorting_indices = np.argsort(fitness_values)
 mutations = np.array([1,2,3,4])
 sorted_mutations = np.roll(mutations[sorting_indices[::-1]], -count_nan)
 print('sorted_mutations\n', sorted_mutations)
+
+# test evolutionary_search
+solution = np.array([100, 1000, 0, 5, -7.65, 3, 3, -5, -1.5, 1.05, 0, 1])
+fitness_function = get_fitness_function(solution)
+n = 12
+pop_size = 16
+parent_size = 4
+weights = np.array([0.4, 0.3, 0.2, 0.1])
+step_size_limit = 1 / 2**20
+iteration_limit = 2000
+prng = np.random.RandomState(0x6803)
+cma_es = CMA_ES(fitness_function, n, pop_size, parent_size, weights, step_size_limit, iteration_limit,
+                 prng, abortion_function=None)
+reached_solution = cma_es.evolutionary_search()
+print('reached_solution\n', reached_solution)
+#print('CMA-object\n', vars(cma_es))

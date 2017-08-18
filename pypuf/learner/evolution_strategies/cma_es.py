@@ -3,9 +3,14 @@ from scipy import special as sp
 
 class CMA_ES():
 
-    def __init__(self, fitness_function, precision, n, pop_size, parent_size, weights, prng=np.random.RandomState()):
+    def __init__(self, fitness_function, n, pop_size, parent_size, weights, step_size_limit, iteration_limit,
+                 prng=np.random.RandomState(), abortion_function=None):
         self.prng = prng                                        # pseudo random number generator for random mutations
-        self.precision = precision                              # intended scale of step-size to achieve
+        self.iterations = 0                                     # number of iterations within the search method
+        self.iteration_limit = iteration_limit                  # maximum number of iterations
+        self.step_size_limit = step_size_limit                  # intended scale of step-size to achieve
+        self.check_unwanted = abortion_function                    # comparing function to abort search method
+                                                                    # for comparing with previously learned LTFs
         self.evaluate_fitness = fitness_function                # fitness function for evaluating solution candidates
         self.n = n                                              # number of parameters to learn
         self.individuals = np.zeros((pop_size, n))              # solution candidates
@@ -36,13 +41,18 @@ class CMA_ES():
         solution = np.zeros(np.shape(self.individuals)[1])
         estimation_multinormal = np.sqrt(2) * sp.gamma((self.n+1)/2) / sp.gamma((self.n)/2)
         zero_mean = np.zeros(np.shape(self.mean))
-        i = 0
         while not terminate:
-            i += 1
-            if self.step_size < self.precision or i>=200:
+            self.iterations += 1
+            # abort, if the current mean approximates an unwanted solution, every 50 iterations
+            if self.iterations % 50 == 0 and self.check_unwanted!=None:
+                if self.check_unwanted(self.mean):
+                    return None
+            # terminate, if any termination condition is fulfilled
+            if self.step_size <= self.step_size_limit or self.iterations >= self.iteration_limit:
                 terminate = True
                 solution = np.copy(self.mean)
                 break
+            # updating parameters
             mutations = self.sample_mutations(zero_mean, self.cov_matrix, self.pop_size, self.prng)
             self.individuals = self.reproduce(self.mean, self.pop_size, self.step_size, mutations)
             fitness_values = self.evaluate_fitness(self.individuals)
@@ -63,12 +73,12 @@ class CMA_ES():
     # updating methods of evolution strategies
     @staticmethod
     def sample_mutations(zero_mean, cov_matrix, pop_size, prng):
-        # returns a new generation of individuals as 2D array (corresponds to y_i)
-        return prng.multivariate_normal(zero_mean, cov_matrix, pop_size)
+        # returns mutations for a new generation of individuals as 2D array (corresponds to y_i)
+        return prng.multivariate_normal(zero_mean, cov_matrix, pop_size, check_valid='warn')
 
     @staticmethod
     def reproduce(mean, pop_size, step_size, mutations):
-        # returns a new generation of individuals as 2D array (corresponds to x_i)
+        # returns a new generation of individuals out of mutations as 2D array (corresponds to x_i)
         duplicated_mean = np.tile(mean, (pop_size, 1))
         return duplicated_mean + (step_size * mutations)
 
@@ -94,7 +104,8 @@ class CMA_ES():
     @staticmethod
     def update_cm(cov_matrix, c_1, c_mu, path_cm, cm_mu):
         # returns covariance matrix of a new population (corresponds to C)
-        return (1 - c_1 - c_mu) * cov_matrix + c_1 * path_cm[:, np.newaxis] @ path_cm[np.newaxis, :] + c_mu * cm_mu
+        matrix = (1 - c_1 - c_mu) * cov_matrix + c_1 * path_cm[:, np.newaxis] @ path_cm[np.newaxis, :] + c_mu * cm_mu
+        return matrix / max(np.diag(matrix))
 
     @staticmethod
     def update_ss(step_size, c_d_sigma, path_ss, estimation_multinormal):
@@ -122,11 +133,11 @@ class CMA_ES():
     def modify_eigen_decomposition(matrix):
         # returns modified eigen-decomposition (B * D^(-1) * B^T) of matrix A=(B * D^2 * B^T) (corresponds to C^(-1/2))
         eigen_values, eigen_vectors = np.linalg.eigh(matrix)
-        assert (eigen_values > 0).all()
+        assert (eigen_values >= 0).all()
         diagonal = 1 / np.sqrt(eigen_values)
         return eigen_vectors @ np.diag(diagonal) @ eigen_vectors.T
 
     @staticmethod
     def is_symmetric(matrix, tol=1e-8):
-        # returns true iff the matrix is symmetric
+        # returns true, if the matrix is symmetric
         return np.allclose(matrix, matrix.T, atol=tol)

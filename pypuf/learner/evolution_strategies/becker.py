@@ -9,63 +9,86 @@ class Reliability_based_CMA_ES():
     #   pop_size=30
     #   parent_size=10 (>= 0.3*pop_size)
     #   priorities: linearly low decreasing
-    def __init__(self, k, n, transform, combiner, challenges, responses, repeat, precision, pop_size, parent_size, priorities,
-                 prng=np.random.RandomState()):
-        self.k = k                                              # number of XORed LTFs
-        self.n = n                                              # length of LTFs plus 1 because of epsilon
-        self.transform = transform                              # function for modifying challenges
-        self.combiner = combiner                                # function for combining the particular LTFArrays
-        self.challenges = challenges                            # set of challenges applied on instance to learn
-        self.responses = responses                              # evaluated responses of the challenges on instance
-        self.repeat = repeat                                    # frequency of same repeated challenge
-        self.different_LTFs = np.zeros((self.k, self.n-1))      # all currently learned LTFs (without epsilon)
-        self.num_of_LTFs = 0                                    # number of different learned LTFs
-        self.measured_rels = self.get_measured_rels(self.responses) # measured reliabilities (instance)
+    def __init__(self, k, n, transform, combiner, challenges, responses_repeated, repeat, step_size_limit,
+                 iteration_limit, pop_size, parent_size, priorities, prng=np.random.RandomState()):
+        self.k = k                                          # number of XORed LTFs
+        self.n = n                                          # length of LTFs
+        self.transform = transform                          # function for modifying challenges
+        self.combiner = combiner                            # function for combining the particular LTFArrays
+        self.challenges = challenges                        # set of challenges applied on instance to learn
+        self.responses_repeated = responses_repeated        # responses of repeatedly evaluated challenges on instance
+        self.repeat = repeat                                # frequency of same repeated challenge
+        self.different_LTFs = np.zeros((self.k, self.n))    # all currently learned LTFs
+        self.num_of_LTFs = 0                                # number of different learned LTFs
+        self.measured_rels = self.get_measured_rels(self.responses_repeated)    # measured reliabilities (instance)
         # parameters for CMA_ES
-        self.prng = prng                                        # pseudo random number generator (CMA_ES)
-        self.precision = precision                              # intended scale of step-size to achieve (CMA_ES)
-        self.pop_size = pop_size                                # number of models sampled each iteration (CMA_ES)
-        self.parent_size = parent_size                          # number of considered models each iteration (CMA_ES)
-        self.priorities = priorities                            # array of consideration proportion (CMA_ES)
+        self.prng = prng                                    # pseudo random number generator (CMA_ES)
+        self.step_size_limit = step_size_limit              # intended scale of step-size to achieve (CMA_ES)
+        self.iteration_limit = iteration_limit              # maximum number of iterations within learning (CMA_ES)
+        self.pop_size = pop_size                            # number of models sampled each iteration (CMA_ES)
+        self.parent_size = parent_size                      # number of considered models each iteration (CMA_ES)
+        self.priorities = priorities                        # array of consideration proportions (CMA_ES)
 
     def learn(self):
         # this is the general learning method
         # returns an XOR-LTFArray with nearly the same behavior as learned instance
-        fitness_function = self.get_fitness_function(self.challenges, self.measured_rels, self.transform, self.combiner)
+        epsilon = self.n / 10
+        fitness_function = self.get_fitness_function(self.challenges, self.measured_rels, epsilon,
+                                                     self.transform, self.combiner)
         normalize = np.sqrt(2) * sp.gamma((self.n) / 2) / sp.gamma((self.n - 1) / 2)
         while self.num_of_LTFs < self.k:
-            cma_es = CMA_ES(fitness_function, self.precision, self.n, self.pop_size, self.parent_size,
-                            self.priorities, self.prng)
-            new_LTF = cma_es.evolutionary_search()[:-1]     # remove epsilon
+            abortion_function = self.get_abortion_function(self.different_LTFs, self.num_of_LTFs, self.challenges,
+                                                           self.transform, self.combiner)
+            cma_es = CMA_ES(fitness_function, self.n, self.pop_size, self.parent_size, self.priorities,
+                            self.step_size_limit, self.iteration_limit, self.prng, abortion_function)
+            new_LTF = cma_es.evolutionary_search()
             if self.is_different_LTF(new_LTF, self.different_LTFs, self.num_of_LTFs, self.challenges, self.transform,
                                      self.combiner):
                 self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / li.norm(new_LTF)  # normalize weights
                 self.num_of_LTFs += 1
-        common_responses = self.get_common_responses(self.responses)
+        common_responses = self.get_common_responses(self.responses_repeated)
         self.different_LTFs = self.set_pole_of_LTFs(self.different_LTFs, self.challenges, common_responses,
                                                     self.transform, self.combiner)
         return LTFArray(self.different_LTFs, self.transform, self.combiner, bias=False)
 
     @staticmethod
-    def get_fitness_function(challenges, measured_rels, transform, combiner):
+    def get_fitness_function(challenges, measured_rels, epsilon, transform, combiner):
         # returns a fitness function on a fixed set of challenges and corresponding reliabilities
         becker = __class__
 
         def fitness(individuals):
             # returns individuals sorted by their correlation coefficient as fitness
             pop_size = np.shape(individuals)[0]
-            built_LTFArrays = becker.build_LTFArrays(individuals[:, :-1], transform, combiner)
+            built_LTFArrays = becker.build_LTFArrays(individuals, transform, combiner)
             delay_diffs = becker.get_delay_differences(built_LTFArrays, pop_size, challenges)
-            epsilons = individuals[:, -1]
-            reliabilities = becker.get_reliabilities(delay_diffs, epsilons)
+            reliabilities = becker.get_reliabilities(delay_diffs, epsilon)
             correlations = becker.get_correlations(reliabilities, measured_rels)
             return correlations
 
         return fitness
 
     @staticmethod
+    def get_abortion_function(different_LTFs, num_of_LTFs, challenges, transform, combiner):
+        # returns an abortion function on a fixed set of challenges and LTFs
+        becker = __class__
+        weight_arrays = different_LTFs[:num_of_LTFs, :]
+        different_LTFArrays = becker.build_LTFArrays(weight_arrays, transform, combiner)
+        responses_diff_LTFs = np.zeros((num_of_LTFs, np.shape(challenges)[0]))
+        for i, current_LTF in enumerate(different_LTFArrays):
+            responses_diff_LTFs[i, :] = current_LTF.eval(challenges)
+
+        def abortion_function(new_LTF):
+            if num_of_LTFs == 0:
+                return False
+            new_LTFArray = LTFArray(new_LTF[np.newaxis, :], transform, combiner)
+            responses_new_LTF = new_LTFArray.eval(challenges)
+            return becker.is_correlated(responses_new_LTF, responses_diff_LTFs)
+
+        return abortion_function
+
+    @staticmethod
     def is_different_LTF(new_LTF, different_LTFs, num_of_LTFs, challenges, transform, combiner):
-        # returns True, iff new_LTF is different from previously learned LTFs
+        # returns True, if new_LTF is different from previously learned LTFs
         if num_of_LTFs == 0:
             return True
         weight_arrays = different_LTFs[:num_of_LTFs, :]
@@ -106,11 +129,11 @@ class Reliability_based_CMA_ES():
         return delay_diffs
 
     @staticmethod
-    def get_reliabilities(delay_diffs, epsilons):
+    def get_reliabilities(delay_diffs, epsilon):
         # returns 2D array of reliabilities for all challenges on every individual
         reliabilities = np.zeros(np.shape(delay_diffs))
-        for i in range(np.shape(epsilons)[0]):
-            indices_of_reliable = np.abs(delay_diffs[i, :]) > np.abs(epsilons[i])
+        for i in range(np.shape(reliabilities)[0]):
+            indices_of_reliable = np.abs(delay_diffs[i, :]) > epsilon
             reliabilities[i, indices_of_reliable] = 1
         return reliabilities
 
@@ -132,7 +155,7 @@ class Reliability_based_CMA_ES():
     # helping methods
     @staticmethod
     def is_correlated(responses_new_LTF, responses_diff_LTFs):
-        # returns True, iff 2 response arrays are more than 75% equal
+        # returns True, if 2 response arrays are more than 75% equal (Hamming distance)
         num_of_LTFs, challenge_num = np.shape(responses_diff_LTFs)
         for i in range(num_of_LTFs):
             differences = np.sum(np.abs(responses_new_LTF[:] - responses_diff_LTFs[i, :])) / 2
@@ -142,6 +165,7 @@ class Reliability_based_CMA_ES():
 
     @staticmethod
     def get_common_responses(responses):
+        # returns the common responses out of repeated responses
         return np.sign(np.sum(responses, axis=0))
 
     @staticmethod

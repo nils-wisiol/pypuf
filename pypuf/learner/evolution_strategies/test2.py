@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from pypuf import tools
-from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES as Becker
+#from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES as Becker
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 class TestLTFArray(unittest.TestCase):
@@ -66,6 +66,25 @@ copy[indices] = 0
 stabilities = stabilities - copy
 
 len = np.shape(stabilities)[0]
-for i in range(len):
-    print(np.array_str(stabilities[i, :]))
+#for i in range(len):
+ #   print(np.array_str(stabilities[i, :]))
 #print(stabilities)
+
+mat = np.array([[3,0,1.5], [0,2,2.5], [1.5,2.5,3.5]])
+print('mat\n', mat)
+diag = np.diag(mat)
+print('diag\n', diag)
+max = max(diag)
+print('max\n', max)
+norm = mat / max
+print('norm\n', norm)
+
+def bla(fun=None):
+    return fun!=None
+
+def fun():
+    return True
+
+a = bla()
+print('a\n', a)
+print(a!=None)
