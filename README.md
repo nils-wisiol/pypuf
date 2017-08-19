@@ -33,6 +33,7 @@ The simulation currently consists of just one very broad class, the LTF Array Si
 
  `LTFArray` also implements "meta input transformations" that can be used to build a new input transformation from existing ones.
  * `concat(transform_1, nn, transform_2)`: the first `nn` bit will be transformed using `transform_1`, the rest will be transformed with `transform_2`. 
+ * `permutations(seed, nn, kk, atf)`: each of the `kk` LTFs will be fed a random, but fixed permutation generated based on the given seed. If `atf`, then challenges will be ATF-transformed after permuting them.
  * `stack(transform_1, kk, transform_2)`: the first `kk` challenges will be transformed using `transform_1`, the rest will be transformed with `transform_2`.
 
 #### Combiner Function

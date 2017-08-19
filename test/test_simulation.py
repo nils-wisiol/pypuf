@@ -283,6 +283,51 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_transform_permutations(self):
+        test_array = array([
+            [1,2,3,4],
+            [10,20,30,40],
+        ])
+        assert_array_equal(
+            LTFArray.transform_permutations(
+                seed=0xbeef,
+                nn=4,
+                kk=3,
+            )(test_array, k=3),
+            [
+                [
+                    [4, 1, 2, 3],
+                    [1, 4, 3, 2],
+                    [3, 1, 4, 2],
+                ],
+                [
+                    [40, 10, 20, 30],
+                    [10, 40, 30, 20],
+                    [30, 10, 40, 20],
+                ],
+            ],
+        )
+        assert_array_equal(
+            LTFArray.transform_permutations(
+                seed=0xbeef,
+                nn=4,
+                kk=3,
+                atf=True,
+            )(test_array, k=3),
+            [
+                [
+                    [4*1*2*3, 1*2*3, 2*3, 3],
+                    [1*4*3*2, 4*3*2, 3*2, 2],
+                    [3*1*4*2, 1*4*2, 4*2, 2],
+                ],
+                [
+                    [40*10*20*30, 10*20*30, 20*30, 30],
+                    [10*40*30*20, 40*30*20, 30*20, 20],
+                    [30*10*40*20, 10*40*20, 40*20, 20],
+                ],
+            ],
+        )
+
     def test_transform_concat(self):
         test_array = array([
             [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
