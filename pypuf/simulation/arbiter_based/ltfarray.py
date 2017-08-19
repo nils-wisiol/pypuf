@@ -368,7 +368,7 @@ class LTFArray(Simulation):
     @staticmethod
     def transform_stack(transform_1, kk, transform_2):
         """
-        This input transformation will transform the first kk challenges using transform_1,
+        Returns an input transformation that will transform the first kk challenges using transform_1,
         the remaining k - kk challenges using transform_2.
         :return: A function that can perform the desired transformation
         """
@@ -398,7 +398,7 @@ class LTFArray(Simulation):
     @staticmethod
     def transform_concat(transform_1, nn, transform_2):
         """
-        This input transformation will transform the first nn bit of each challenge using transform_1,
+        Returns an input transformation that will transform the first nn bit of each challenge using transform_1,
         the remaining bits using transform_2.
         :return: A function that can perform the desired transformation
         """
