@@ -396,6 +396,48 @@ class LTFArray(Simulation):
         return transform
 
     @staticmethod
+    def transform_permutations(seed, nn, kk, atf=False):
+        """
+        Returns an input transformation that uses k pseudorandomly generated permutations
+        :param seed: Seed for the pseudorandom generation
+        :param nn: challenge length (must equal LTFArray.n)
+        :param kk: Number of permutations to be used (must equal LTFArray.k)
+        :param atf: Perform ATF transform after permuting
+        :return: The desired input transform
+        """
+        r = RandomState(seed)
+        permutations = [r.permutation(nn) for x in range(kk)]
+
+        def transform(cs, k):
+            (N, n) = cs.shape
+            assert k == kk and n == nn, \
+                'Permutations Input Transform cannot be used for LTFArrays with size other than defined'
+
+            result = swapaxes(
+                array([
+                    cs[:, permutations[i]]
+                    for i in range(kk)
+                ]),
+                0,
+                1
+            )
+
+            if atf:
+                """ Perform atf transform """
+                result = transpose(
+                    array([
+                        prod(result[:, :, i:], 2)
+                        for i in range(n)
+                    ]),
+                    (1, 2, 0)
+                )
+
+            return result
+
+        transform.__name__ = 'transform_permutations' + ('_plus_atf_' if atf else '') + '_%x' % seed
+        return transform
+
+    @staticmethod
     def transform_concat(transform_1, nn, transform_2):
         """
         Returns an input transformation that will transform the first nn bit of each challenge using transform_1,
