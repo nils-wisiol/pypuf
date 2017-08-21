@@ -4,7 +4,7 @@ Physically Unclonable Functions (PUFs) are of research interest in the field of 
 
 ## Installation
 
-pypuf solely needs python3 and `numpy`. Hence, we do not rely on a virtual environment as of now.
+pypuf solely needs python3.4+, `numpy`, and `scipy`. Hence, we do not rely on a virtual environment as of now.
 
 ## Idea
 
@@ -14,7 +14,8 @@ Note that pypuf uses the {-1,1} notation of bits, where True = -1 and False = +1
 
 ### Simulation
 
-The simulation currently consists of just one very broad class, the LTF Array Simulator. It can simulate an array of Linear Threshold Functions and hence simulate [Arbiter PUFs](https://people.csail.mit.edu/devadas/pubs/cpuf-journal.pdf), XOR Arbiter PUFs, [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf), and more custom designs. To that end, the input transformation can be chosen (e.g. as designed for the Lightweight Secure PUF) and the combiner function can be chosen (to generalize the usually used XOR function).
+The simulation currently consists of a very broad class, the LTF Array Simulator. It can simulate an array of Linear Threshold Functions and hence simulate [Arbiter PUFs](https://people.csail.mit.edu/devadas/pubs/cpuf-journal.pdf), XOR Arbiter PUFs, [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf), and more custom designs. To that end, the input transformation can be chosen (e.g. as designed for the Lightweight Secure PUF) and the combiner function can be chosen (to generalize the usually used XOR function).  
+Another component of the simulation is the Fourier expansion of a Boolean function. It either can be evaluated returning a real value or boxed into the sign operator, returning -1 or +1.
 
 #### Input Transformation
 
@@ -43,7 +44,7 @@ The simulation currently consists of just one very broad class, the LTF Array Si
 ### Learning
 
 pypuf currently ships a logistic regression algorithm that was proposed to learn (XOR) Arbiter PUFs by [Sölter](https://www.researchgate.net/profile/Jan_Soelter/publication/259580784_Cryptanalysis_of_electrical_PUFs_via_machine_learning_algorithms/links/00b4952cc03621836c000000/Cryptanalysis-of-electrical-PUFs-via-machine-learning-algorithms.pdf) and [Rührmair et al](https://eprint.iacr.org/2010/251.pdf).
-
+Additionally pypuf aims for the provision of PAC learning algorithms currently represented only by   the Low Degree Algorithm introduced by [Mansour](http://www.cs.columbia.edu/~rocco/Teaching/S12/Readings/Mansour-survey.pdf).
 ## Usage
 
 pypuf is primarily designed as an API. However, it provides a subset of its features as a command line interface.
@@ -100,7 +101,7 @@ If you're using pypuf in your research, please let us know so we can link to you
 
 ### Contribution quick check list
 
- * Is your contribution GPLv3 compartible?
+ * Is your contribution GPLv3 compatible?
  * Update README.md accordingly
  * Document new code, update code comments for changed code
  * Provide tests for your code
@@ -113,3 +114,4 @@ Significant contribution to this project are due to (in chronological order):
  * Nils Wisiol (nils.wisiol++a+t++fu-berlin.de)
  * Christoph Graebnitz (christoph.graebnitz++a+t++fu-berlin.de)
  * Christopher Mühl (chrism++a+t++zedat.fu-berlin.de)
+ * Benjamin Zengin (benjamin.zengin++a+t++fu-berlin.de)
