@@ -174,13 +174,11 @@ print('sorted_mutations\n', sorted_mutations)
 solution = np.array([100, 1000, 0, 5, -7.65, 3, 3, -5, -1.5, 1.05, 0, 1])
 fitness_function = get_fitness_function(solution)
 n = 12
-pop_size = 16
-parent_size = 4
-weights = np.array([0.4, 0.3, 0.2, 0.1])
+pop_size = 8
 step_size_limit = 1 / 2**20
 iteration_limit = 2000
 prng = np.random.RandomState(0x6803)
-cma_es = CMA_ES(fitness_function, n, pop_size, parent_size, weights, step_size_limit, iteration_limit,
+cma_es = CMA_ES(fitness_function, n, pop_size, step_size_limit, iteration_limit,
                  prng, abortion_function=None)
 reached_solution = cma_es.evolutionary_search()
 print('reached_solution\n', reached_solution)

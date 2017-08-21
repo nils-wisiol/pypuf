@@ -9,43 +9,61 @@ class Reliability_based_CMA_ES():
     #   pop_size=30
     #   parent_size=10 (>= 0.3*pop_size)
     #   priorities: linearly low decreasing
-    def __init__(self, k, n, transform, combiner, challenges, responses_repeated, repeat, step_size_limit,
-                 iteration_limit, pop_size, parent_size, priorities, prng=np.random.RandomState()):
+    def __init__(self, k, n, transform, combiner, challenges, responses_repeated, repetitions, step_size_limit,
+                 iteration_limit, prng=np.random.RandomState()):
         self.k = k                                          # number of XORed LTFs
         self.n = n                                          # length of LTFs
         self.transform = transform                          # function for modifying challenges
         self.combiner = combiner                            # function for combining the particular LTFArrays
         self.challenges = challenges                        # set of challenges applied on instance to learn
         self.responses_repeated = responses_repeated        # responses of repeatedly evaluated challenges on instance
-        self.repeat = repeat                                # frequency of same repeated challenge
+        self.repetitions = repetitions                      # number of repetitions of all challenges
         self.different_LTFs = np.zeros((self.k, self.n))    # all currently learned LTFs
         self.num_of_LTFs = 0                                # number of different learned LTFs
-        self.measured_rels = self.get_measured_rels(self.responses_repeated)    # measured reliabilities (instance)
         # parameters for CMA_ES
         self.prng = prng                                    # pseudo random number generator (CMA_ES)
         self.step_size_limit = step_size_limit              # intended scale of step-size to achieve (CMA_ES)
         self.iteration_limit = iteration_limit              # maximum number of iterations within learning (CMA_ES)
-        self.pop_size = pop_size                            # number of models sampled each iteration (CMA_ES)
-        self.parent_size = parent_size                      # number of considered models each iteration (CMA_ES)
-        self.priorities = priorities                        # array of consideration proportions (CMA_ES)
+        # parameters to log
+        self.abortions = 0                                  # number of abortions due to same LTF (CMA_ES)
+        self.iterations = 0                                 # total number of iterations to learn whole LTF (CMA_ES)
+        self.termination_causes = np.array([0,0,0])         # numbers of causes for termination (CMA_ES)
+                                                                # causes: step_size, iteration, stagnation
 
     def learn(self):
         # this is the general learning method
         # returns an XOR-LTFArray with nearly the same behavior as learned instance
-        epsilon = self.n / 10
-        fitness_function = self.get_fitness_function(self.challenges, self.measured_rels, epsilon,
-                                                     self.transform, self.combiner)
+        epsilon = np.sqrt(self.n) * 0.1
+        measured_rels = self.get_measured_rels(self.responses_repeated)
+        if np.var(measured_rels) == 0:
+            raise Exception('The reliabilities of the responses from the instance to learn are to high!')
+        fitness_function = self.get_fitness_function(self.challenges, measured_rels, epsilon, self.transform,
+                                                     self.combiner)
         normalize = np.sqrt(2) * sp.gamma((self.n) / 2) / sp.gamma((self.n - 1) / 2)
+        # learn new particular LTF
         while self.num_of_LTFs < self.k:
             abortion_function = self.get_abortion_function(self.different_LTFs, self.num_of_LTFs, self.challenges,
                                                            self.transform, self.combiner)
-            cma_es = CMA_ES(fitness_function, self.n, self.pop_size, self.parent_size, self.priorities,
-                            self.step_size_limit, self.iteration_limit, self.prng, abortion_function)
+            cma_es = CMA_ES(fitness_function, self.n, self.step_size_limit, self.iteration_limit, self.prng,
+                            abortion_function)
             new_LTF = cma_es.evolutionary_search()
-            if self.is_different_LTF(new_LTF, self.different_LTFs, self.num_of_LTFs, self.challenges, self.transform,
-                                     self.combiner):
-                self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / li.norm(new_LTF)  # normalize weights
-                self.num_of_LTFs += 1
+            self.iterations += cma_es.iterations
+            if new_LTF is None:
+                self.abortions += 1
+            else:
+                # count termination causes
+                if cma_es.termination_cause == 'step_size':
+                    self.termination_causes[0] += 1
+                elif cma_es.termination_cause == 'iteration':
+                    self.termination_causes[1] += 1
+                elif cma_es.termination_cause == 'stagnation':
+                    self.termination_causes[2] += 1
+                # include normalized new_LTF, if it is different from previous ones
+                if self.is_different_LTF(new_LTF, self.different_LTFs, self.num_of_LTFs, self.challenges,
+                                         self.transform, self.combiner):
+                    self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / li.norm(new_LTF)  # normalize weights
+                    self.num_of_LTFs += 1
+        # polarize the learned combined LTF
         common_responses = self.get_common_responses(self.responses_repeated)
         self.different_LTFs = self.set_pole_of_LTFs(self.different_LTFs, self.challenges, common_responses,
                                                     self.transform, self.combiner)
@@ -103,11 +121,12 @@ class Reliability_based_CMA_ES():
     @staticmethod
     def set_pole_of_LTFs(different_LTFs, challenges, common_responses, transform, combiner):
         # returns the correctly polarized XOR-LTFArray
-        xor_LTFArray = LTFArray(different_LTFs, transform, combiner)
-        responses_model = xor_LTFArray.eval(challenges)
-        difference = np.sum(np.abs(common_responses - responses_model))
+        model = LTFArray(different_LTFs, transform, combiner)
+        responses_model = model.eval(challenges)
+        challenge_num = np.shape(challenges)[0]
+        accuracy = np.count_nonzero(responses_model == common_responses) / challenge_num
         polarized_LTFs = different_LTFs
-        if difference > np.shape(challenges)[0]:
+        if accuracy < 0.5:
             polarized_LTFs[0, :] *= -1
         return polarized_LTFs
 
@@ -145,10 +164,10 @@ class Reliability_based_CMA_ES():
         correlations = np.zeros(pop_size)
         ones = np.full(np.shape(reliabilities)[1], 1)
         for i in range(pop_size):
-            if np.any(reliabilities[i, :]) and not np.array_equal(reliabilities[i, :], ones):
-                correlations[i] = np.corrcoef(reliabilities[i, :], measured_rels)[0, 1]
-            else:
+            if np.var(reliabilities[i, :]) == 0:    # avoid divide by zero
                 correlations[i] = -1
+            else:
+                correlations[i] = np.corrcoef(reliabilities[i, :], measured_rels)[0, 1]
         return correlations
 
 
