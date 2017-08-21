@@ -98,39 +98,29 @@ measured_rels = Becker.get_measured_rels(responses)
 print('measured_rels\n', measured_rels)
 
 # test for learn
-#weight_array = np.array([[0.311, 2.75, -1.82, -0.558, 1.22, 0.5, -0.05, -0.811, -1.2, -0.422, 0.72, 1.681]])
-                         #[-1.42, 0.39, -1.491, 0.8, 2.08, -0.333, 0.539, -1.36, 2.51, -1.77, -0.193, 0.81],
-                         #[0.73, 1.38, 1.91, -0.7, -3.107, 1.84, 1.014, -0.7203, -0.25, -0.267, 1.17, 0.69],
-                         #[-2.3, 0.218, -1.25, -0.412, 0.294, -1.16, -0.18, 0.4, 2.3, -1.37, -0.53, 0.0874]])
 n = 20
 sigma_weight = 1
-noisiness = 0.2
+noisiness = 0.05
 sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness)
 k = 2
 mu = 0
 sigma = sigma_weight
 weight_array = LTFArray.normal_weights(n, k, mu, sigma, prng)
 instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise)
-num = 2**11
-prng = np.random.RandomState(0xA7E3)    #0x50E0, 0xA0E0, 0xA7E3
+num = 2**13
+prng = np.random.RandomState(0xA7E3)
 challenges = tools.sample_inputs(n, num, prng)
-repeat = 5
-responses_repeated = np.zeros((repeat, num))
-for i in range(repeat):
+repetitions = 20
+responses_repeated = np.zeros((repetitions, num))
+for i in range(repetitions):
     challenges, cs = iter.tee(challenges)
     responses_repeated[i, :] = instance.eval(np.array(list(cs)))
-step_size_limit = 1 / 2**9
-iteration_limit = 3000
-pop_size = 30
-parent_size = 9
-#priorities = np.array([.20, .15, .12, .10, .08, .07, .07, .07, .07, .07])
-#priorities = np.array([.16, .14, .13, .12, .11, .1, .09, .08, .07])
-priorities = np.array([.12, .11, .11, .11, .11, .11, .11, .11, .11])
-#priorities = np.array([.13, .13, .13, .13, .12, .12, .12, .12])
+limit_step_size = 1 / 2 ** 10
+limit_iteration = 3000
 prng = np.random.RandomState(0x1D4)
 challenges = np.array(list(challenges))
-becker = Becker(k, n, transform, combiner, challenges, responses_repeated, repeat, step_size_limit,
-                 iteration_limit, pop_size, parent_size, priorities, prng)
+becker = Becker(k, n, transform, combiner, challenges, responses_repeated, repetitions, limit_step_size,
+                limit_iteration, prng)
 
 learned_instance = becker.learn()
 responses_model = learned_instance.eval(challenges)

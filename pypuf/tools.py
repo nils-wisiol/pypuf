@@ -54,7 +54,6 @@ def approx_dist(a, b, num):
     :return: probability (randomly uniform x) for a.eval(x) != b.eval(x)
     """
     assert a.n == b.n
-    d = 0
     inputs = array(list(random_inputs(a.n, num)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
