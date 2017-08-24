@@ -1,4 +1,5 @@
-from numpy import prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax, vectorize
+from numpy import sum, prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax,\
+    vectorize
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -560,3 +561,66 @@ class NoisyLTFArray(LTFArray):
         evaled_inputs = super().ltf_eval(inputs)
         noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(len(evaled_inputs), self.k))
         return evaled_inputs + noise
+
+
+class SimulationMajorityLTFArray(NoisyLTFArray):
+    """
+    This class provides a majority vote version of the NoisyLTFArray.
+    It uses different noises for each PUF instance and each challenge input.
+    Majority vote means that each fo the k PUFs get evaluated vote_count times
+    in order to mitigate the impact of noise to the responses. With this class
+    it is possible to simulate quite stable huge PUF systems.
+    This class can be used as PUF simulation in order to generate a trainingset.
+    """
+
+    def __init__(self, weight_array, transform, combiner, sigma_noise,
+                 random_instance_noise=RandomState(), bias=False, vote_count=1):
+        """
+        :param weight_array: array of floats with shape(k,n)
+                            Array of weights which represents the PUF stage delays.
+        :param transform: A function: array of int with shape(N,k,n), int number of PUFs k -> shape(N,k,n)
+                          The function transforms input challenges in order to increase resistance against attacks.
+        :param combiner: A function: array of int with shape(N,k,n) -> array of in with shape(N)
+                         The functions combines the outputs of k PUFs to one bit results,
+                         in oder to increase resistance against attacks.
+        :param sigma_noise: float
+                            Standard deviation of noise distribution.
+        :param random_instance_noise: RandomState
+                                      This pseudo-random number generator is used to generate noise.
+        :param bias: boolean
+                     This value is used to turn on input/output distort of this simulation.
+        :param vote_count: positive odd int
+                           Number which defines the number of evaluations of PUFs in oder to majority vote the output.
+        """
+        super().__init__(weight_array, transform, combiner, sigma_noise=sigma_noise,
+                         random_instance=random_instance_noise, bias=bias)
+        # majority vote only works with an odd number of votes
+        assert vote_count % 2 == 1
+        self.vote_count = vote_count
+
+    def val(self, inputs):
+        """
+        This function a calculates the output of the LTFArray based on weights with majority vote. 
+        :param inputs: array of int shape(N,k,n)
+                       Array of challenges which should be evaluated by the simulation.
+        :return: array of int shape(N)
+                 Array of responses for the N different challenges.
+        """
+        return self.combiner(self.majority_vote(self.transform(inputs, self.k)))
+
+    def majority_vote(self, transformed_inputs):
+        """
+        This function evaluates transformed input challenges and uses majority vote on them.
+        :param transformed_inputs: array of int with shape(N,k,n)
+                                   Array of transformed input challenges.
+        :return: array of int with shape(N,k,n)
+                 Majority voted responses for each of the k PUFs.
+        """
+        return sum(
+            sign(
+                array([
+                    self.ltf_eval(transformed_inputs) for _ in range(self.vote_count)
+                ])
+            ),
+            0
+        )

@@ -14,7 +14,7 @@ Note that pypuf uses the {-1,1} notation of bits, where True = -1 and False = +1
 
 ### Simulation
 
-The simulation currently consists of a very broad class, the LTF Array Simulator. It can simulate an array of Linear Threshold Functions and hence simulate [Arbiter PUFs](https://people.csail.mit.edu/devadas/pubs/cpuf-journal.pdf), XOR Arbiter PUFs, [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf), and more custom designs. To that end, the input transformation can be chosen (e.g. as designed for the Lightweight Secure PUF) and the combiner function can be chosen (to generalize the usually used XOR function).  
+The simulation currently consists of a very broad class, the LTF Array Simulator. It can simulate an array of Linear Threshold Functions and hence simulate [Arbiter PUFs](https://people.csail.mit.edu/devadas/pubs/cpuf-journal.pdf), XOR Arbiter PUFs, [Lightweight Secure PUFs](http://aceslab.org/sites/default/files/Lightweight%20Secure%20PUFs_0.pdf), Majority Vote PUFs, and more custom designs. To that end, the input transformation can be chosen (e.g. as designed for the Lightweight Secure PUF) and the combiner function can be chosen (to generalize the usually used XOR function).  
 Another component of the simulation is the Fourier expansion of a Boolean function. It either can be evaluated returning a real value or boxed into the sign operator, returning -1 or +1.
 
 #### Input Transformation
