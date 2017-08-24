@@ -1,8 +1,8 @@
 import unittest
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, array, around
+from numpy import shape, dot, array, around, array_equal
 from numpy.random import RandomState
 
 
@@ -583,3 +583,89 @@ class TestNoisyLTFArray(TestLTFArray):
                                                                size=(len(evaled_ltf_array), k)), decimals=10),
                 around(noisy_ltf_array.ltf_eval(transformed_inputs), decimals=10)
             )
+
+
+class TestSimulationMajorityLTFArray(unittest.TestCase):
+    def test_majority_voting(self):
+        weight_prng1 = RandomState(seed=0xBADA55)
+        noise_prng = RandomState(seed=0xC0FFEE)
+        crp_count = 16  # number of random inputs per test set
+        n = 8
+        k = 16
+        mu = 0
+        sigma = 1
+        vote_count = 1
+
+        weight_array = LTFArray.normal_weights(n, k, mu, sigma, weight_prng1)
+
+        mv_noisy_ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            sigma_noise=1,
+            random_instance_noise=noise_prng,
+            vote_count=vote_count,
+        )
+
+        ltf_array = LTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor
+        )
+
+        inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
+
+        ltf_array_result = ltf_array.eval(inputs)
+        mv_noisy_ltf_array_result = mv_noisy_ltf_array.eval(inputs)
+        # These test checks if the output is different because of noise
+        self.assertFalse(array_equal(ltf_array_result, mv_noisy_ltf_array_result), 'These arrays must be different')
+
+        # reset pseudo random number generator
+        noise_prng = RandomState(seed=0xC0FFEE)
+        # increase the vote_count in order to get equality
+        vote_count = 277
+        mv_noisy_ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            sigma_noise=1,
+            random_instance_noise=noise_prng,
+            vote_count=vote_count,
+        )
+        # This checks if the majority vote works
+        mv_noisy_ltf_array_result = mv_noisy_ltf_array.eval(inputs)
+        assert_array_equal(mv_noisy_ltf_array_result, ltf_array_result)
+
+    def test_transformations_combiner(self):
+        """
+        This test checks all combinations of transformations and combiners for SimulationMajorityLTFArray to run.
+        """
+        noise_prng = RandomState(seed=0xC0FFEE)
+        weight_prng1 = RandomState(seed=0xBADA55)
+        crp_count = 16  # number of random inputs per test set
+        n = 8
+        k = 2
+        mu = 0
+        sigma = 1
+        vote_count = 1
+        weight_array = LTFArray.normal_weights(n, k, mu, sigma, weight_prng1)
+
+        inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
+
+        def get_functions_with_prefix(prefix, obj):
+            return [func for func in dir(obj) if func.startswith(prefix)]
+
+        combiners = get_functions_with_prefix('combiner_', SimulationMajorityLTFArray)
+        transformations = get_functions_with_prefix('transform_', SimulationMajorityLTFArray)
+
+        for transformation in transformations:
+            for combiner in combiners:
+                mv_noisy_ltf_array = SimulationMajorityLTFArray(
+                    weight_array=weight_array,
+                    transform=getattr(SimulationMajorityLTFArray, transformation),
+                    combiner=getattr(SimulationMajorityLTFArray, combiner),
+                    sigma_noise=1,
+                    random_instance_noise=noise_prng,
+                    vote_count=vote_count,
+                )
+                mv_noisy_ltf_array.eval(inputs)
