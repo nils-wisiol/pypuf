@@ -1,7 +1,8 @@
 import logging
-from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack, mean, prod, ones
+from numpy import count_nonzero, array, append, vstack, mean, prod, ones
 from numpy.random import RandomState
 import itertools
+import polymath as pm
 
 
 def random_input(n, random_instance=RandomState()):
@@ -134,14 +135,13 @@ def poly_mult_div(c, f, k):
     c_original = c
     global res
     for i in range(k):
-        c = polymul(c, c_original)
-        c = polydiv(c, f)[1]
-        c = append(zeros(len(f) - len(c) - 1), c)
+        c = pm.polymul(c, c_original)
+        c = pm.polymodpad(c, f)
         if i == 0:
             res = array([c])
         else:
             res = vstack((res, c))
-    return res.astype(int)
+    return res
 
 
 class TrainingSet():
