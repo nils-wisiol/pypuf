@@ -33,9 +33,9 @@ Another component of the simulation is the Fourier expansion of a Boolean functi
  * `random`: Each Arbiter chain gets a random challenge derived from the original challenge using a PRNG.
 
  `LTFArray` also implements "meta input transformations" that can be used to build a new input transformation from existing ones.
- * `concat(transform_1, nn, transform_2)`: the first `nn` bit will be transformed using `transform_1`, the rest will be transformed with `transform_2`. 
- * `permutations(seed, nn, kk, atf)`: each of the `kk` LTFs will be fed a random, but fixed permutation generated based on the given seed. If `atf`, then challenges will be ATF-transformed after permuting them.
- * `stack(transform_1, kk, transform_2)`: the first `kk` challenges will be transformed using `transform_1`, the rest will be transformed with `transform_2`.
+ * `generate_concatenated_transform(transform_1, nn, transform_2)`: the first `nn` bit will be transformed using `transform_1`, the rest will be transformed with `transform_2`. 
+ * `generate_random_permutation_transform(seed, nn, kk, atf)`: each of the `kk` LTFs will be fed a random, but fixed permutation generated based on the given seed. If `atf`, then challenges will be ATF-transformed after permuting them.
+ * `generate_stacked_transform(transform_1, kk, transform_2)`: the first `kk` challenges will be transformed using `transform_1`, the rest will be transformed with `transform_2`.
 
 #### Combiner Function
 
