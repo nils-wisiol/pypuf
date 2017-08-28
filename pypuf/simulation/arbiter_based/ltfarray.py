@@ -367,7 +367,7 @@ class LTFArray(Simulation):
         return result
 
     @staticmethod
-    def transform_stack(transform_1, kk, transform_2):
+    def gen_transform_stack(transform_1, kk, transform_2):
         """
         Returns an input transformation that will transform the first kk challenges using transform_1,
         the remaining k - kk challenges using transform_2.
@@ -397,7 +397,7 @@ class LTFArray(Simulation):
         return transform
 
     @staticmethod
-    def transform_permutations(seed, nn, kk, atf=False):
+    def gen_transform_permutations(seed, nn, kk, atf=False):
         """
         Returns an input transformation that uses k pseudorandomly generated permutations
         :param seed: Seed for the pseudorandom generation
@@ -439,7 +439,7 @@ class LTFArray(Simulation):
         return transform
 
     @staticmethod
-    def transform_concat(transform_1, nn, transform_2):
+    def gen_transform_concat(transform_1, nn, transform_2):
         """
         Returns an input transformation that will transform the first nn bit of each challenge using transform_1,
         the remaining bits using transform_2.

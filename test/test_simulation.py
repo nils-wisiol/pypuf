@@ -262,7 +262,7 @@ class TestInputTransformation(unittest.TestCase):
             [-1, -1, 1, -1],
         ])
         assert_array_equal(
-            LTFArray.transform_stack(
+            LTFArray.gen_transform_stack(
                 transform_1=LTFArray.transform_id,
                 kk=2,
                 transform_2=LTFArray.transform_shift
@@ -289,7 +289,7 @@ class TestInputTransformation(unittest.TestCase):
             [10,20,30,40],
         ])
         assert_array_equal(
-            LTFArray.transform_permutations(
+            LTFArray.gen_transform_permutations(
                 seed=0xbeef,
                 nn=4,
                 kk=3,
@@ -308,7 +308,7 @@ class TestInputTransformation(unittest.TestCase):
             ],
         )
         assert_array_equal(
-            LTFArray.transform_permutations(
+            LTFArray.gen_transform_permutations(
                 seed=0xbeef,
                 nn=4,
                 kk=3,
@@ -333,7 +333,7 @@ class TestInputTransformation(unittest.TestCase):
             [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
         ])
         assert_array_equal(
-            LTFArray.transform_concat(
+            LTFArray.gen_transform_concat(
                 transform_1=LTFArray.transform_1_n_bent,
                 nn=6,
                 transform_2=LTFArray.transform_id,
