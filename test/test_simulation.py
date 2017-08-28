@@ -577,7 +577,9 @@ class TestNoisyLTFArray(TestLTFArray):
                 random_instance=noise_prng_1,
             )
 
+            evaled_ltf_array = ltf_array.ltf_eval(transformed_inputs)
             assert_array_equal(
-                around(ltf_array.ltf_eval(transformed_inputs) + noise_prng_2.normal(size=(1, k)), decimals=10),
+                around(evaled_ltf_array + noise_prng_2.normal(loc=0, scale=1,
+                                                               size=(len(evaled_ltf_array), k)), decimals=10),
                 around(noisy_ltf_array.ltf_eval(transformed_inputs), decimals=10)
             )
