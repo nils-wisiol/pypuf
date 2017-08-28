@@ -557,5 +557,6 @@ class NoisyLTFArray(LTFArray):
         Random numbers are drawn from the PRNG instance generated when
         initializing the NoisyLTFArray.
         """
-        noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(1, self.k))
-        return super().ltf_eval(inputs) + noise
+        evaled_inputs = super().ltf_eval(inputs)
+        noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(len(evaled_inputs), self.k))
+        return evaled_inputs + noise
