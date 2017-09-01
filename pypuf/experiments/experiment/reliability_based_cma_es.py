@@ -1,7 +1,6 @@
-import itertools as it
 from numpy import array, zeros
-from numpy.linalg import norm
 from numpy.random import RandomState
+from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf.learner.evolution_strategies.becker import Reliability_based_CMA_ES
@@ -152,7 +151,8 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         responses_model = self.model.eval(self.challenges)
         responses_instance = Reliability_based_CMA_ES.get_common_responses(self.responses_repeated)
         assert len(responses_model) == len(responses_instance)
-        accuracy = 1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.n))
+        accuracy = 1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.n),
+                                           random_instance=RandomState(0xC0DEBA5E))
         abortions = self.learner.abortions
 
         self.result_logger.info(
