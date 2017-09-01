@@ -49,14 +49,14 @@ def iter_append_last(array_iterator, x):
         yield append(array, x)
 
 
-def approx_dist(a, b, num):
+def approx_dist(a, b, num, random_instance=RandomState()):
     """
     Approximate the distance of two functions a, b by evaluating a random set of inputs.
     a, b needs to have eval() method and input_length member.
     :return: probability (randomly uniform x) for a.eval(x) != b.eval(x)
     """
     assert a.n == b.n
-    inputs = array(list(random_inputs(a.n, num)))
+    inputs = array(list(random_inputs(a.n, num, random_instance=random_instance)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
 
