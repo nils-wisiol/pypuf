@@ -1,4 +1,4 @@
-from numpy import count_nonzero, array, append
+from numpy import count_nonzero, array, append, polymul, polydiv, zeros, vstack, mean, prod, ones
 from numpy.random import RandomState
 import itertools
 
