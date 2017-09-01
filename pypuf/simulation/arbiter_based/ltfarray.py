@@ -540,7 +540,7 @@ class NoisyLTFArray(LTFArray):
         return sqrt(n) * sigma_weight * noisiness
 
     def __init__(self, weight_array, transform, combiner, sigma_noise,
-                 noise_seed=None, bias=False):
+                 random_instance=RandomState(), bias=False):
         """
         Initializes LTF array like in LTFArray and uses the provided
         PRNG instance for drawing noise values. If no PRNG provided, a
