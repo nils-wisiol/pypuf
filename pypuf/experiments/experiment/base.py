@@ -19,12 +19,14 @@ class Experiment(object):
         self.progress_logger = logging.getLogger(log_name)
         self.log_name = log_name
         self.progress_logger.setLevel(logging.DEBUG)
-
+        self.file_handler = None
         # This must be set at run
         self.result_logger = None
 
         # will be set in execute
         self.measured_time = None
+
+        self.queue = None
 
     @abc.abstractmethod
     def analyze(self):
@@ -48,10 +50,15 @@ class Experiment(object):
         (1) calling run() and measuring the run time of run() and
         (2) calling analyze().
         """
-        self.result_logger = setup_result_logger(queue, logger_name)
-        file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
-        file_handler.setLevel(logging.DEBUG)
-        self.progress_logger.addHandler(file_handler)
+        if self.queue is None:
+            self.queue = queue
+
+        if self.result_logger is None and self.file_handler is None:
+            self.result_logger = setup_result_logger(queue, logger_name)
+            self.file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
+            self.file_handler.setLevel(logging.DEBUG)
+            self.progress_logger.addHandler(self.file_handler)
+
         start_time = time.time()
         self.run()
         self.measured_time = time.time() - start_time
