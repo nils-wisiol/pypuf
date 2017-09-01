@@ -114,7 +114,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         challenge_prng = RandomState(self.seed_challenges)
 
         # Weight array for the instance which should be learned
-        weight_array = LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma, instance_prng)
+        weight_array = LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma, random_instance=instance_prng)
 
         # vote_count must be an odd number greater then zero
         assert self.vote_count > 0 and self.vote_count % 2 != 0
@@ -128,19 +128,18 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                                                        bias=self.bias, vote_count=self.vote_count)
 
         # sample challenges
-        self.challenges = tools.sample_inputs(self.n, self.N, challenge_prng)
+        self.challenges = array(list(tools.sample_inputs(self.n, self.N, random_instance=challenge_prng)))
 
         # extract responses from instance
         self.responses_repeated = zeros((self.repetitions, self.N))
         for i in range(self.repetitions):
-            challenges, cs = it.tee(self.challenges)
-            self.responses_repeated[i, :] = self.instance.eval(array(list(cs)))
+            self.responses_repeated[i, :] = self.instance.eval(self.challenges)
 
         # Setup learner
         self.learner = Reliability_based_CMA_ES(self.k, self.n, self.transformation, self.combiner, self.challenges,
                                                 self.responses_repeated, self.repetitions,
                                                 self.limit_step_size,
-                                                self.limit_iteration, model_prng)
+                                                self.limit_iteration, prng=model_prng)
         self.model = self.learner.learn()
 
     def analyze(self):
