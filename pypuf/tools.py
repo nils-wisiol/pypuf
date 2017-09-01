@@ -38,7 +38,7 @@ def sample_inputs(n, num, random_instance=RandomState()):
     Note that we return only 2^n vectors even with `num` > 2^n.
     In other words, the output of this function is deterministic if and only if num >= 2^n.
     """
-    return random_inputs(n, num) if num < 2 ** n else all_inputs(n)
+    return random_inputs(n, num, random_instance=random_instance) if num < 2 ** n else all_inputs(n)
 
 
 def iter_append_last(array_iterator, x):
