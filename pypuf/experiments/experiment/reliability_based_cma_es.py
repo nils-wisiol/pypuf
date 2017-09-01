@@ -155,21 +155,21 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                                            random_instance=RandomState(0xC0DEBA5E))
         abortions = self.learner.abortions
 
-        self.result_logger.info(
-            # seed_instance  seed_model i      n      k      N      trans  comb   iter   time   accuracy  model values
-            '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%f\t' '%f\t' '%f\t'    '%s' % (
-                self.seed_instance,
-                self.seed_model,
-                0,  # restart count, kept for compatibility to old log files
-                self.n,
-                self.k,
-                self.N,
-                self.transformation.__name__,
-                self.combiner.__name__,
-                self.learner.iterations,
-                self.measured_time,
-                accuracy,
-                abortions,
-                ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
-            )
+        # seed_instance  seed_model i      n      k      N      trans  comb   iter   time   accuracy  model values
+        msg = '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%f\t' '%f\t' '%f\t'    '%s' % (
+            self.seed_instance,
+            self.seed_model,
+            0,  # restart count, kept for compatibility to old log files
+            self.n,
+            self.k,
+            self.N,
+            self.transformation.__name__,
+            self.combiner.__name__,
+            self.learner.iterations,
+            self.measured_time,
+            accuracy,
+            abortions,
+            ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
         )
+        self.progress_logger.info(msg)
+        self.result_logger.info(msg)
