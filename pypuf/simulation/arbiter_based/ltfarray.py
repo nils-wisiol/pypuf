@@ -1,5 +1,5 @@
 from numpy import sum, prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax,\
-    vectorize
+    vectorize, tile
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -564,7 +564,7 @@ class NoisyLTFArray(LTFArray):
         return evaled_inputs + noise
 
 
-class SimulationMajorityLTFArray(NoisyLTFArray):
+class SimulationMajorityLTFArray(LTFArray):
     """
     This class provides a majority vote version of the NoisyLTFArray.
     It uses different noises for each PUF instance and each challenge input.
@@ -593,8 +593,9 @@ class SimulationMajorityLTFArray(NoisyLTFArray):
         :param vote_count: positive odd int
                            Number which defines the number of evaluations of PUFs in oder to majority vote the output.
         """
-        super().__init__(weight_array, transform, combiner, sigma_noise=sigma_noise,
-                         random_instance=random_instance_noise, bias=bias)
+        super().__init__(weight_array, transform, combiner, bias=bias)
+        self.sigma_noise = sigma_noise
+        self.random = random_instance_noise
         # majority vote only works with an odd number of votes
         assert vote_count % 2 == 1
         self.vote_count = vote_count
@@ -617,11 +618,9 @@ class SimulationMajorityLTFArray(NoisyLTFArray):
         :return: array of int with shape(N,k,n)
                  Majority voted responses for each of the k PUFs.
         """
-        return sum(
-            sign(
-                array([
-                    self.ltf_eval(transformed_inputs) for _ in range(self.vote_count)
-                ])
-            ),
-            0
-        )
+        evaled_inputs = tile(super().ltf_eval(transformed_inputs), (self.vote_count, 1, 1))
+        noise = self.random.normal(loc=0,
+                                   scale=self.sigma_noise,
+                                   size=(self.vote_count, len(transformed_inputs), self.k))
+        responses = sign(sum(sign(evaled_inputs + noise), 0))
+        return responses
