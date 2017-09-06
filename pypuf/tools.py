@@ -32,14 +32,14 @@ def random_inputs(n, num, random_instance=RandomState()):
         yield random_input(n, random_instance)
 
 
-def sample_inputs(n, num):
+def sample_inputs(n, num, random_instance=RandomState()):
     """
     returns an iterator for either random samples of {-1,1}-vectors of length `n` if `num` < 2^n,
     and an iterator for all {-1,1}-vectors of length `n` otherwise.
     Note that we return only 2^n vectors even with `num` > 2^n.
     In other words, the output of this function is deterministic if and only if num >= 2^n.
     """
-    return random_inputs(n, num) if num < 2 ** n else all_inputs(n)
+    return random_inputs(n, num, random_instance) if num < 2 ** n else all_inputs(n)
 
 
 def iter_append_last(array_iterator, x):
@@ -50,7 +50,7 @@ def iter_append_last(array_iterator, x):
         yield append(array, x)
 
 
-def approx_dist(a, b, num):
+def approx_dist(a, b, num, random_instance=RandomState()):
     """
     Approximate the distance of two functions a, b by evaluating a random set of inputs.
     a, b needs to have eval() method and input_length member.
@@ -58,7 +58,7 @@ def approx_dist(a, b, num):
     """
     assert a.n == b.n
     d = 0
-    inputs = array(list(random_inputs(a.n, num)))
+    inputs = array(list(random_inputs(a.n, num, random_instance)))
     return (num - count_nonzero(a.eval(inputs) == b.eval(inputs))) / num
 
 
