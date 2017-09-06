@@ -1,7 +1,6 @@
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, sum, abs
 from numpy.random import RandomState
 import itertools
-import polymath as pm
 
 
 def random_input(n, random_instance=RandomState()):
@@ -130,6 +129,7 @@ def poly_mult_div(c, f, k):
         [c^2, c^3, ..., c^(k+1)] mod f
     based on the challenge c and the irreducible polynomial f.
     """
+    import polymath as pm
 
     c_original = c
     global res
