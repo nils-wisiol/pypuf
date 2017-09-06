@@ -1,9 +1,10 @@
 import unittest
 import os
 import glob
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
+from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
 from pypuf.experiments.experimenter import Experimenter
 
 
@@ -40,6 +41,34 @@ class TestExperimenter(unittest.TestCase):
         experimenter = Experimenter('log', experiments)
         experimenter.run()
 
+    def test_mv_experiments(self):
+        experiments = []
+        for i in range(5):
+            n = 8
+            logger_name = 'test_mv_exp{0}'.format(i)
+            experiment = ExperimentMajorityVoteFindVotes(
+                log_name=logger_name,
+                n=n,
+                k=2,
+                challenge_count=2 ** 8,
+                seed_instance=0xC0DEBA5E,
+                seed_instance_noise=0xdeadbeef,
+                transformation=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+                mu=0,
+                sigma=1,
+                sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+                seed_challenges=0xf000+i,
+                desired_stability=0.95,
+                overall_desired_stability=0.8,
+                minimum_vote_count=1,
+                iterations=2,
+                bias=False
+            )
+            experiments.append(experiment)
+        experimenter = Experimenter('test_mv_experimenter', experiments)
+        experimenter.run()
+
     def test_multiprocessing_logs(self):
         """
         This test checks for the predicted amount for result.
@@ -52,6 +81,29 @@ class TestExperimenter(unittest.TestCase):
                                                     LTFArray.transform_id,
                                                     LTFArray.combiner_xor)
             experiments.append(lr16_4_1)
+
+        for i in range(n):
+            log_name = 'test_multiprocessing_logs{0}'.format(i)
+            experiment = ExperimentMajorityVoteFindVotes(
+                log_name=log_name,
+                n=8,
+                k=2,
+                challenge_count=2 ** 8,
+                seed_instance=0xC0DEBA5E,
+                seed_instance_noise=0xdeadbeef,
+                transformation=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+                mu=0,
+                sigma=1,
+                sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+                seed_challenges=0xf000 + i,
+                desired_stability=0.95,
+                overall_desired_stability=0.8,
+                minimum_vote_count=1,
+                iterations=2,
+                bias=False
+            )
+            experiments.append(experiment)
 
         experimenter = Experimenter('test_multiprocessing_logs', experiments)
         experimenter.run()
@@ -75,7 +127,7 @@ class TestExperimenter(unittest.TestCase):
 
         # Check if the number of results is correct
         log_file = open('test_multiprocessing_logs.log', 'r')
-        self.assertEqual(line_count(log_file), n, 'Unexpected number of results')
+        self.assertEqual(line_count(log_file), n*2, 'Unexpected number of results')
         log_file.close()
 
     def test_file_handle(self):
