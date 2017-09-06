@@ -1,5 +1,4 @@
-import logging
-from numpy import count_nonzero, array, append, vstack, mean, prod, ones
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, sum, abs
 from numpy.random import RandomState
 import itertools
 import polymath as pm
@@ -142,6 +141,26 @@ def poly_mult_div(c, f, k):
         else:
             res = vstack((res, c))
     return res
+
+
+def approx_stabilities(instance, num, reps, random_instance=RandomState()):
+    """
+        This function approximates the stability of the given `instance` for
+        `num` challenges evaluating it `reps` times per challenge. The stability
+        is the probability that the instance gives the correct response when
+        evaluated.
+        :param instance: The instance for the stability approximation
+        :param num: Amount of challenges to be evaluated
+        :param reps: Amount of repetitions per challenge
+        :return: list of the stabilities for each challenge
+    """
+
+    challenges = sample_inputs(instance.n, num, random_instance)
+    responses = zeros((reps, num))
+    for i in range(reps):
+        challenges, cs = itertools.tee(challenges)
+        responses[i, :] = instance.eval(array(list(cs)))
+    return 0.5 + 0.5 * abs(sum(responses, axis=0)) / reps
 
 
 class TrainingSet():
