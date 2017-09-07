@@ -49,8 +49,8 @@ def main(args):
                 sigma=1,
                 sigma_noise_ratio=args.s_ratio,
                 seed_challenges=seed_challenges + i,
-                desired_stability=0.95,
-                overall_desired_stability=0.8,
+                desired_stability=args.stab_c,
+                overall_desired_stability=args.stab_all,
                 minimum_vote_count=1,
                 iterations=iterations,
                 bias=False
@@ -61,4 +61,4 @@ def main(args):
     experimenter.run()
 
 if __name__ == '__main__':
-    main(argv)
+    main(argv[1:])
