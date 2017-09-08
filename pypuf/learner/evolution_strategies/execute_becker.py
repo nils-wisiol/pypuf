@@ -23,110 +23,115 @@ def get_particular_accuracies(instance, model, k, challenges):
                 accuracies[i] = accuracy
     return accuracies
 
-# test set:
-# challenge_num, repetitions, noisiness, k, n, limit_step_size, limit_iteration
-test_sets = np.array([
-    [2 ** 10, 2, 0.1, 1, 32, 1 / 2 ** 8, 2 ** 10],
-    [2 ** 10, 2, 0.1, 1, 32, 1 / 2 ** 8, 2 ** 14],
-    [2 ** 10, 2, 0.1, 1, 32, 1 / 2 ** 12, 2 ** 10],
-    [2 ** 10, 2, 0.1, 1, 32, 1 / 2 ** 12, 2 ** 14],
-    [2 ** 10, 2, 0.05, 1, 32, 1 / 2 ** 8, 2 ** 10],
-    [2 ** 10, 2, 0.05, 1, 32, 1 / 2 ** 8, 2 ** 14],
-    [2 ** 10, 2, 0.05, 1, 32, 1 / 2 ** 12, 2 ** 10],
-    [2 ** 10, 2, 0.05, 1, 32, 1 / 2 ** 12, 2 ** 14],
-    [2 ** 13, 2, 0.1, 1, 32, 1 / 2 ** 8, 2 ** 10],
-    [2 ** 13, 2, 0.1, 1, 32, 1 / 2 ** 8, 2 ** 14],
-    [2 ** 13, 2, 0.1, 1, 32, 1 / 2 ** 12, 2 ** 10],
-    [2 ** 13, 2, 0.1, 1, 32, 1 / 2 ** 12, 2 ** 14],
-    [2 ** 13, 2, 0.05, 1, 32, 1 / 2 ** 8, 2 ** 10],
-    [2 ** 13, 2, 0.05, 1, 32, 1 / 2 ** 8, 2 ** 14],
-    [2 ** 13, 2, 0.05, 1, 32, 1 / 2 ** 12, 2 ** 10],
-    [2 ** 13, 2, 0.05, 1, 32, 1 / 2 ** 12, 2 ** 14]
-])
+# set path
+path = 'becker_execs.csv'
 
-prngs = np.array([0x1111, 0xABC, 0x1234, 0x3D9B])
+# set parameters
+pop_sizes = np.array([20])
+challenge_nums = np.array([2**16])
+repetitions = np.array([2**3])
+noisinesses = np.array([1/2**3])
+ks = np.array([4])
+ns = np.array([32])
+limits_s = np.array([1/2**12])
+limits_i = np.array([2**12])
 
-for set in test_sets:
-    for number in prngs:
-        # set pseudo random number generator
-        prng = np.random.RandomState(number)
+# set pseudo random number generator
+prng = np.random.RandomState(0xA1A7)
 
-        # set test parameters
-        challenge_num = int(set[0])
-        repetitions = int(set[1])
-        noisiness = set[2]
-        k = int(set[3])
-        n = int(set[4])
-        limit_step_size = set[5]
-        limit_iteration = set[6]
+# execute with parameters as set above
+for pop_size in pop_sizes:
+    for challenge_num in challenge_nums:
+        for repetition in repetitions:
+            for noisiness in noisinesses:
+                for k in ks:
+                    for n in ns:
+                        for limit_s in limits_s:
+                            for limit_i in limits_i:
 
-        # build instance of XOR Arbiter PUF to learn
-        transform = LTFArray.transform_id
-        combiner = LTFArray.combiner_xor
-        sigma_weight = 1
-        sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness)
-        mu = 0
-        sigma = sigma_weight
-        weight_array = LTFArray.normal_weights(n, k, mu, sigma, prng)
-        instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng)
+                                # set test parameters
+                                challenge_num = int(challenge_num)
+                                repetition = int(repetition)
+                                noisiness = noisiness
+                                k = int(k)
+                                n = int(n)
+                                limit_step_size = limit_s
+                                limit_iteration = limit_i
 
-        # sample challenges
-        challenges = tools.sample_inputs(n, challenge_num, prng)
+                                # build instance of XOR Arbiter PUF to learn
+                                transform = LTFArray.transform_id
+                                combiner = LTFArray.combiner_xor
+                                sigma_weight = 1
+                                sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight,
+                                                                                            noisiness)
+                                mu = 0
+                                sigma = sigma_weight
+                                weight_array = LTFArray.normal_weights(n, k, mu, sigma, prng)
+                                instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng)
 
-        # extract responses from instance
-        responses_repeated = np.zeros((repetitions, challenge_num))
-        for i in range(repetitions):
-            challenges, cs = it.tee(challenges)
-            responses_repeated[i, :] = instance.eval(np.array(list(cs)))
+                                # sample challenges
+                                challenges = tools.sample_inputs(n, challenge_num, prng)
 
-        # set parameters for CMA-ES
-        challenges = np.array(list(challenges))
-        becker = Becker(k, n, transform, combiner, challenges, responses_repeated, repetitions, limit_step_size,
-                        limit_iteration, prng)
+                                # extract responses from instance
+                                responses_repeated = np.zeros((repetition, challenge_num))
+                                for i in range(repetition):
+                                    challenges, cs = it.tee(challenges)
+                                    responses_repeated[i, :] = instance.eval(np.array(list(cs)))
 
-        # learn instance and evaluate solution
-        model = becker.learn()
-        responses_model = model.eval(challenges)
-        responses_instance = becker.get_common_responses(responses_repeated)
-        assert len(responses_model) == len(responses_instance)
-        accuracy = 1 - tools.approx_dist(instance, model, 2 ** 14)
-        accuracy_training = 1 - (challenge_num - np.count_nonzero(responses_instance==responses_model)) / challenge_num
-        accuracy_instance = 1 - tools.approx_dist(instance, instance, 2 ** 14)
-        iterations = becker.iterations
-        abortions = becker.abortions
-        challenge_num = challenge_num
-        causes = becker.termination_causes
-        termination1 = causes[0]
-        termination2 = causes[1]
-        termination3 = causes[2]
-        particular_accuracies = get_particular_accuracies(instance, model, k, challenges)
+                                # set parameters for CMA-ES
+                                challenges = np.array(list(challenges))
+                                becker = Becker(k, n, transform, combiner, challenges, responses_repeated,
+                                                repetition, limit_step_size, limit_iteration, prng)
+                                becker.pop_size = pop_size
 
-        # write into csv-file
-        import csv
-        with open('becker_execs_1.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([accuracy] + [accuracy_training] + [accuracy_instance] + [particular_accuracies]
-                            + [iterations] + [abortions] + [challenge_num] + [repetitions] + [noisiness] + [k] + [n]
-                            + [limit_step_size] + [limit_iteration] + [termination1] + [termination2] + [termination3]
-                            + [number])
+                                # learn instance and evaluate solution
+                                model = becker.learn()
+                                responses_model = model.eval(challenges)
+                                responses_instance = becker.get_common_responses(responses_repeated)
+                                assert len(responses_model) == len(responses_instance)
+                                accuracy = 1 - tools.approx_dist(instance, model, 2 ** 14)
+                                accuracy_training = 1 - (challenge_num - np.count_nonzero(
+                                    responses_instance == responses_model)) / challenge_num
+                                accuracy_instance = 1 - tools.approx_dist(instance, instance, 2 ** 14)
+                                iterations = becker.iterations
+                                abortions = becker.abortions
+                                challenge_num = challenge_num
+                                causes = becker.termination_causes
+                                termination1 = causes[0]
+                                termination2 = causes[1]
+                                termination3 = causes[2]
+                                particular_accuracies = get_particular_accuracies(instance, model, k, challenges)
 
-        print('learned')
+                                # write results into csv-file
+                                import csv
 
-        """
-        # print results
-        print('accuracy =', accuracy)
-        print('accuracy_training =', accuracy_training)
-        print('accuracy_instance =', accuracy_instance)
-        print('particular_accuracies =', particular_accuracies)
-        print('iterations =', iterations)
-        print('abortions =', abortions)
-        print('challenge_num =', challenge_num)
-        print('repetitions =', repetitions)
-        print('noisiness =', noisiness)
-        print('k =', k)
-        print('n =', n)
-        print('step_size_limit =', limit_step_size)
-        print('iteration_limit =', limit_iteration)
-        print('causes =', causes)
-        """
-print('finished')
+                                with open(path, 'a', newline='') as csvfile:
+                                    writer = csv.writer(csvfile, delimiter=';', quotechar='|',
+                                                        quoting=csv.QUOTE_MINIMAL)
+                                    writer.writerow(
+                                        [accuracy] + [accuracy_training] + [accuracy_instance]
+                                        + [particular_accuracies] + [iterations] + [abortions] + [challenge_num]
+                                        + [repetition] + [noisiness] + [k] + [n] + [limit_step_size]
+                                        + [limit_iteration] + [termination1] + [termination2] + [termination3]
+                                        + [pop_size])
+
+                                print('...learned...')
+
+                                # print results
+                                print('accuracy =', accuracy)
+                                print('accuracy_training =', accuracy_training)
+                                print('accuracy_instance =', accuracy_instance)
+                                print('particular_accuracies =', particular_accuracies)
+                                print('iterations =', iterations)
+                                print('abortions =', abortions)
+                                print('challenge_num =', challenge_num)
+                                print('repetitions =', repetition)
+                                print('noisiness =', noisiness)
+                                print('k =', k)
+                                print('n =', n)
+                                print('pop_size =', pop_size)
+                                print('step_size_limit =', limit_step_size)
+                                print('iteration_limit =', limit_iteration)
+                                print('causes =', causes)
+
+print('___finished___')

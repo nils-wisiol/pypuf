@@ -3,7 +3,7 @@ from scipy import special as sp
 
 class CMA_ES():
 
-    def __init__(self, fitness_function, n, limit_step_size, limit_iteration, prng=np.random.RandomState(),
+    def __init__(self, pop_size, fitness_function, n, limit_step_size, limit_iteration, prng=np.random.RandomState(),
                  abortion_function=None):
         self.prng = prng                                        # pseudo random number generator for random mutations
         self.iterations = 0                                     # number of iterations within the search method
@@ -19,7 +19,7 @@ class CMA_ES():
         # m,    sigma,      lambda,     mu,             x_i,            w_i,        C,            p_c,        p_sigma
         self.mean = np.zeros(self.n)                            # mean vector of distribution
         self.step_size = 1                                      # distance to subsequent mean
-        self.pop_size = np.int32(np.floor(np.log(n)**3 / 1.5))  # number of individuals per generation
+        self.pop_size = pop_size                                # number of individuals per generation
         self.parent_size = np.int32(np.floor(self.pop_size/2))  # number of considered individuals
         self.individuals = np.zeros((self.pop_size, n))         # solution candidates
         self.weights = self.get_weights(self.parent_size)       # array of consideration proportions
@@ -63,7 +63,7 @@ class CMA_ES():
     def update_parameters(self):
         estimation_multinormal = np.sqrt(2) * sp.gamma((self.n + 1) / 2) / sp.gamma((self.n) / 2)
         zero_mean = np.zeros(np.shape(self.mean))
-        desc_range = np.flip(np.array(range(self.pop_size)), 0)
+        desc_range = list(range(self.pop_size, 0, -1))
         # updating parameters
         mutations = self.sample_mutations(zero_mean, self.cov_matrix, self.pop_size, self.prng)
         self.individuals = self.reproduce(self.mean, self.pop_size, self.step_size, mutations)
@@ -89,7 +89,7 @@ class CMA_ES():
     @staticmethod
     def sample_mutations(zero_mean, cov_matrix, pop_size, prng):
         # returns mutations for a new generation of individuals as 2D array (corresponds to y_i)
-        return prng.multivariate_normal(zero_mean, cov_matrix, pop_size, check_valid='raise')
+        return prng.multivariate_normal(zero_mean, cov_matrix, pop_size)
 
     @staticmethod
     def reproduce(mean, pop_size, step_size, mutations):
@@ -129,6 +129,7 @@ class CMA_ES():
         factor = np.exp((c_d_sigma) * ((np.linalg.norm(path_ss) / estimation_multinormal) - 1))
         return step_size * factor
 
+    # helping methods
     @staticmethod
     def get_favorite_mutations(sorted_mutations, parent_size, priorities):
         # returns the weighted sum of the fittest individuals mutations (corresponds to y_w)

@@ -1,14 +1,19 @@
 import numpy as np
-from scipy import special as sp, linalg as li
+from scipy.special import gamma
+from scipy.linalg import norm
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.learner.evolution_strategies.cma_es import CMA_ES
 
 class Reliability_based_CMA_ES():
+    """
+        This class provides a learner based on Evolution Strategies, which automatically generates a model with similar
+        behavior as an LTFArray, whose behavior was evaluated by a set of repeated Challenge-Response-Pairs.
+        Thus, this class corresponds to the side-channel modeling attack of Becker.
+        The blueprint of the LTFArray and the CRPs are defined in the constructor, as well as termination criteria for
+        the utilized evolution strategies algorithm using covariance matrix adaptation (see Hansen et. al.) and a
+        pseudo random number generator.
+    """
 
-    # recommended properties of parameters:
-    #   pop_size=30
-    #   parent_size=10 (>= 0.3*pop_size)
-    #   priorities: linearly low decreasing
     def __init__(self, k, n, transform, combiner, challenges, responses_repeated, repetitions, step_size_limit,
                  iteration_limit, prng=np.random.RandomState()):
         self.k = k                                          # number of XORed LTFs
@@ -21,6 +26,7 @@ class Reliability_based_CMA_ES():
         self.different_LTFs = np.zeros((self.k, self.n))    # all currently learned LTFs
         self.num_of_LTFs = 0                                # number of different learned LTFs
         # parameters for CMA_ES
+        self.pop_size = np.int32(np.floor(np.log(n) ** 3 / 1.5))  # number of individuals per generation (CMA_ES)
         self.prng = prng                                    # pseudo random number generator (CMA_ES)
         self.step_size_limit = step_size_limit              # intended scale of step-size to achieve (CMA_ES)
         self.iteration_limit = iteration_limit              # maximum number of iterations within learning (CMA_ES)
@@ -39,12 +45,12 @@ class Reliability_based_CMA_ES():
             raise Exception('The reliabilities of the responses from the instance to learn are to high!')
         fitness_function = self.get_fitness_function(self.challenges, measured_rels, epsilon, self.transform,
                                                      self.combiner)
-        normalize = np.sqrt(2) * sp.gamma((self.n) / 2) / sp.gamma((self.n - 1) / 2)
+        normalize = np.sqrt(2) * gamma((self.n) / 2) / gamma((self.n - 1) / 2)
         # learn new particular LTF
         while self.num_of_LTFs < self.k:
             abortion_function = self.get_abortion_function(self.different_LTFs, self.num_of_LTFs, self.challenges,
                                                            self.transform, self.combiner)
-            cma_es = CMA_ES(fitness_function, self.n, self.step_size_limit, self.iteration_limit, self.prng,
+            cma_es = CMA_ES(self.pop_size, fitness_function, self.n, self.step_size_limit, self.iteration_limit, self.prng,
                             abortion_function)
             new_LTF = cma_es.evolutionary_search()
             self.iterations += cma_es.iterations
@@ -61,7 +67,7 @@ class Reliability_based_CMA_ES():
                 # include normalized new_LTF, if it is different from previous ones
                 if self.is_different_LTF(new_LTF, self.different_LTFs, self.num_of_LTFs, self.challenges,
                                          self.transform, self.combiner):
-                    self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / li.norm(new_LTF)  # normalize weights
+                    self.different_LTFs[self.num_of_LTFs] = new_LTF * normalize / norm(new_LTF)  # normalize weights
                     self.num_of_LTFs += 1
         # polarize the learned combined LTF
         common_responses = self.get_common_responses(self.responses_repeated)
@@ -162,7 +168,6 @@ class Reliability_based_CMA_ES():
         #   and instance for all individuals
         pop_size = np.shape(reliabilities)[0]
         correlations = np.zeros(pop_size)
-        ones = np.full(np.shape(reliabilities)[1], 1)
         for i in range(pop_size):
             if np.var(reliabilities[i, :]) == 0:    # avoid divide by zero
                 correlations[i] = -1
