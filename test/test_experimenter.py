@@ -69,7 +69,7 @@ class TestExperimenter(unittest.TestCase):
                 overall_desired_stability=0.8,
                 minimum_vote_count=1,
                 iterations=2,
-                bias=False
+                bias=None
             )
             experiments.append(experiment)
         experimenter = Experimenter('test_mv_experimenter', experiments)
@@ -107,7 +107,7 @@ class TestExperimenter(unittest.TestCase):
                 overall_desired_stability=0.8,
                 minimum_vote_count=1,
                 iterations=2,
-                bias=False
+                bias=None
             )
             experiments.append(experiment)
 

@@ -20,7 +20,7 @@ class TestAppendLast(unittest.TestCase):
             append_last(arr, item)
 
     def test_proper_dimension(self):
-        """This function checks if the function recognize that the array have no dimensions."""
+        """The function recognizes that the array has dimension zero."""
         arr = zeros((), dtype=dtype('int64'))
         item = 30
         with self.assertRaisesRegex(AssertionError, 'arr must have at least one dimension.'):
