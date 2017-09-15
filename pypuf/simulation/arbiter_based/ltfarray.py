@@ -4,7 +4,7 @@ model is the core of each simulation class.
 """
 from numpy import sum as np_sum
 from numpy import prod, shape, sign, array, transpose, concatenate, dstack, swapaxes, sqrt, amax,\
-    vectorize, tile
+    vectorize, tile, append
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -622,28 +622,38 @@ class LTFArray(Simulation):
         """
         return random_instance.normal(loc=mu, scale=sigma, size=(k, n))
 
-    def __init__(self, weight_array, transform, combiner, bias=False):
+    def __init__(self, weight_array, transform, combiner, bias=None):
         """
         Initializes an LTFArray based on given weight_array and
         combiner function with appropriate transformation of challenges.
         The bias is committed through the (n+1)th value in weight_array.
         So the parameter bias only states if the given weight_array has
         n+1 values (or not) while the challenges still has length n.
+        :param bias: None, float or a two dimensional array of float with shape (k, 1)
+                     This bias value or array of bias values will be appended to the weight_array.
+                     Use a single value if you want the same bias for all weight_vectors.
         """
         (self.k, self.n) = shape(weight_array)
         self.weight_array = weight_array
         self.transform = transform
         self.combiner = combiner
         self.bias = bias
+        # If it is a float append the same value to all PUFs
+        if isinstance(self.bias, float):
+            self.weight_array = tools.append_last(self.weight_array, self.bias)
+        # If it is an array append a value to each PUF
+        elif isinstance(self.bias, type(array([]))):
+            dimensions = len(shape(self.bias))
+            assert dimensions == 2, 'bias is an {0} dimensional array. Only two dimensions are allowed'.format(
+                dimensions)
+            self.weight_array = append(self.weight_array, self.bias, axis=1)
 
     def eval(self, inputs):
         """
-        evaluates a given array of challenges regarding bias
+        evaluates a given array of challenges
         :param inputs: array of challenges
         :return: array of responses
         """
-        if self.bias:
-            inputs = tools.append_last(inputs, 1)
         return sign(self.val(inputs))
 
     def val(self, inputs):
@@ -667,7 +677,11 @@ class LTFArray(Simulation):
         :return: array of int shape(N,k)
                  Array of responses for the N different challenges.
         """
-        return ph.eval(inputs, self.weight_array)
+        if self.bias is not None:
+            responses = ph.eval(tools.append_last(inputs, 1), self.weight_array)
+        else:
+            responses = ph.eval(inputs, self.weight_array)
+        return responses
 
 
 class NoisyLTFArray(LTFArray):
@@ -685,11 +699,14 @@ class NoisyLTFArray(LTFArray):
         return sqrt(n) * sigma_weight * noisiness
 
     def __init__(self, weight_array, transform, combiner, sigma_noise,
-                 random_instance=RandomState(), bias=False):
+                 random_instance=RandomState(), bias=None):
         """
         Initializes LTF array like in LTFArray and uses the provided
         PRNG instance for drawing noise values. If no PRNG provided, a
         fresh `numpy.random.RandomState` instance is used.
+        :param bias: None, float or a two dimensional array of float with shape (k, 1)
+                     This bias value or array of bias values will be appended to the weight_array.
+                     Use a single value if you want the same bias for all weight_vectors.
         """
         super().__init__(weight_array, transform, combiner, bias)
         self.sigma_noise = sigma_noise
@@ -719,7 +736,7 @@ class SimulationMajorityLTFArray(LTFArray):
     """
 
     def __init__(self, weight_array, transform, combiner, sigma_noise,
-                 random_instance_noise=RandomState(), bias=False, vote_count=1):
+                 random_instance_noise=RandomState(), bias=None, vote_count=1):
         """
         :param weight_array: array of floats with shape(k,n)
                             Array of weights which represents the PUF stage delays.
@@ -732,8 +749,9 @@ class SimulationMajorityLTFArray(LTFArray):
                             Standard deviation of noise distribution.
         :param random_instance_noise: RandomState
                                       This pseudo-random number generator is used to generate noise.
-        :param bias: boolean
-                     This value is used to turn on input/output distort of this simulation.
+        :param bias: None, float or a two dimensional array of float with shape (k, 1)
+                     This bias value or array of bias values will be appended to the weight_array.
+                     Use a single value if you want the same bias for all weight_vectors.
         :param vote_count: positive odd int
                            Number which defines the number of evaluations of PUFs in oder to majority vote the output.
         """

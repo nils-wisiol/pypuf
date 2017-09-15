@@ -87,11 +87,96 @@ class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
             overall_desired_stability=0.8,
             minimum_vote_count=1,
             iterations=2,
-            bias=False
+            bias=None
         )
         experiment.execute(queue, logger_name)
 
         self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
                                 'No vote_count was found.')
+
+        queue.put_nowait(None)
+        listener.join()
+
+    def test_run_and_analyze_bias_list(self):
+        """
+        This method runs the experiment with a bias list and checks if a number of votes was found in order to satisfy
+        an overall desired stability.
+        """
+        logger_name = 'log'
+
+        # Setup multiprocessing logging
+        queue = multiprocessing.Queue(-1)
+        listener = multiprocessing.Process(target=log_listener,
+                                           args=(queue, setup_logger, logger_name,))
+        listener.start()
+
+        n = 8
+        experiment = ExperimentMajorityVoteFindVotes(
+            log_name=logger_name,
+            n=n,
+            k=2,
+            challenge_count=2 ** 8,
+            seed_instance=0xC0DEBA5E,
+            seed_instance_noise=0xdeadbeef,
+            transformation=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            mu=0,
+            sigma=1,
+            sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+            seed_challenges=0xf000,
+            desired_stability=0.95,
+            overall_desired_stability=0.8,
+            minimum_vote_count=1,
+            iterations=2,
+            bias=[0.001, 0.002]
+        )
+
+        experiment.execute(queue, logger_name)
+
+        self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
+                                'No vote_count was found.')
+
+        queue.put_nowait(None)
+        listener.join()
+
+    def test_run_and_analyze_bias_value(self):
+        """
+        This method runs the experiment with a bias value and checks if a number of votes was found in order to
+        satisfy an overall desired stability.
+        """
+        logger_name = 'log'
+
+        # Setup multiprocessing logging
+        queue = multiprocessing.Queue(-1)
+        listener = multiprocessing.Process(target=log_listener,
+                                           args=(queue, setup_logger, logger_name,))
+        listener.start()
+
+        n = 8
+        experiment = ExperimentMajorityVoteFindVotes(
+            log_name=logger_name,
+            n=n,
+            k=2,
+            challenge_count=2 ** 8,
+            seed_instance=0xC0DEBA5E,
+            seed_instance_noise=0xdeadbeef,
+            transformation=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            mu=0,
+            sigma=1,
+            sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+            seed_challenges=0xf000,
+            desired_stability=0.95,
+            overall_desired_stability=0.8,
+            minimum_vote_count=1,
+            iterations=2,
+            bias=0.56
+        )
+
+        experiment.execute(queue, logger_name)
+
+        self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
+                                'No vote_count was found.')
+
         queue.put_nowait(None)
         listener.join()

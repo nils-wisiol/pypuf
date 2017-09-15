@@ -88,7 +88,7 @@ def main(args):
                 overall_desired_stability=args.stab_all,
                 minimum_vote_count=1,
                 iterations=iterations,
-                bias=False
+                bias=None
             )
             experiments.append(exp)
 
