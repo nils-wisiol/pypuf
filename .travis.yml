@@ -11,4 +11,4 @@ script:
   # command to run tests
   - python -m unittest
   # command to run python code check
-  - find . -name "*.py" -print0 | xargs -0 pylint --disable=R
+  - python linter.py

@@ -1,3 +1,7 @@
+[MASTER]
+# This is used in order to fix numpy false positives.
+extension-pkg-whitelist=numpy
+
 [MISCELLANEOUS]
 
 # List of note tags to take in consideration, separated by a comma.
@@ -7,24 +11,22 @@ notes=FIXME,XXX
 [BASIC]
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,ex,Run,_,n,N
+good-names=i,j,k,ex,Run,_,n,N,mu
+
+# Naming hint for function names
+function-name-hint=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
+
+# Regular expression matching correct function names
+function-rgx=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
+
+# Naming hint for method names
+method-name-hint=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
+
+# Regular expression matching correct method names
+method-rgx=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
 
 
 [FORMAT]
 
 # Maximum number of characters on a single line.
 max-line-length=120
-
-
-[SIMILARITIES]
-
-# Minimum lines number of a similarity.
-min-similarity-lines=15
-
-[DESIGN]
-
-# Maximum number of arguments for function / method
-max-args=10
-
-# Maximum number of attributes for a class (see R0902).
-max-attributes=18
