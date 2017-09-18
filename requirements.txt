@@ -1,4 +1,6 @@
 numpy
 scipy
 polymath
+pylint
+pep8
 pypuf_helper
