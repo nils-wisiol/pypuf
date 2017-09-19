@@ -1,4 +1,4 @@
-from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
+from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double, ones
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.learner.base import Learner
@@ -85,7 +85,7 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState(), logger=None):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit = 10000, bias=False):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -105,7 +105,7 @@ class LogisticRegression(Learner):
         self.weights_mu = weights_mu
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
-        self.iteration_limit = 10000
+        self.iteration_limit = iteration_limit
         self.convergence_decimals = 3
         self.sign_combined_model_responses = None
         self.sigmoid_derivative = full(self.training_set.N, None, double)
@@ -115,8 +115,16 @@ class LogisticRegression(Learner):
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
         self.converged = False
         self.logger = logger
+        self.bias = True
 
-        assert self.n == len(self.training_set.challenges[0])
+
+        if self.bias:
+            s = self.transformed_challenges.shape 
+            newTransformOut = ones((s[0], s[1] , s[2]+1)) 
+            newTransformOut[:, :, :-1] = self.transformed_challenges[:, :, :]
+            self.transformed_challenges = newTransformOut
+
+        #assert self.n == len(self.training_set.challenges[0]) why do we need this? It does not work with bias=True
 
     @property
     def training_set(self):
@@ -189,7 +197,7 @@ class LogisticRegression(Learner):
         ])
         return ret
 
-    def learn(self):
+    def learn(self, initWeightArray = None):
         """
         Compute a model according to the given LTF Array parameters and training set.
         Note that this function can take long to return.
@@ -205,7 +213,7 @@ class LogisticRegression(Learner):
                     self.iteration_count,
                     distance,
                     norm(updater.step),
-                    ','.join(map(str, model.weight_array.flatten()))
+                    0#','.join(map(str, model.weight_array.flatten()))
                 )
             )
 
@@ -214,10 +222,15 @@ class LogisticRegression(Learner):
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng),
-            transform=self.transformation,
-            combiner=self.combiner,
-        )
+                weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng),
+                transform=self.transformation,
+                combiner=self.combiner,
+                bias = self.bias
+            )
+
+        if initWeightArray is not None:
+            model.weight_array = initWeightArray
+            
 
         updater = self.RPropModelUpdate(model)
         converged = False

@@ -171,6 +171,9 @@ class TrainingSet():
 
     def __init__(self, instance, N):
         self.instance = instance
-        self.challenges = array(list(sample_inputs(instance.n, N)))
+        n = instance.n
+        if instance.bias:
+            n = n - 1
+        self.challenges = array(list(sample_inputs(n, N)))
         self.responses = instance.eval(self.challenges)
         self.N = N

@@ -4,6 +4,8 @@ from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
 
+import numpy as np
+
 
 class LTFArray(Simulation):
     """
@@ -497,6 +499,7 @@ class LTFArray(Simulation):
         self.transform = transform
         self.combiner = combiner
         self.bias = bias
+        
 
     def eval(self, inputs):
         """
@@ -504,26 +507,32 @@ class LTFArray(Simulation):
         :param inputs: list of challenges
         :return: list of responses
         """
-        if self.bias:
-            inputs = tools.iter_append_last(inputs, 1)
+        #if self.bias:
+            #inputs = tools.iter_append_last(inputs, 1)
+           
         return sign(self.val(inputs))
 
     def val(self, inputs):
-        return self.combiner(self.ltf_eval(self.transform(inputs, self.k)))
+        transformOut = self.transform(inputs, self.k)
+        if self.bias:
+            s = transformOut.shape 
+            newTransformOut = np.ones((s[0], s[1] , s[2]+1)) 
+            newTransformOut[:, :, :-1] = transformOut[:, :, :]
+            transformOut = newTransformOut
+            #inputs = tools.iter_append_last(inputs, 1)
+        return self.combiner(self.ltf_eval(transformOut))
 
     def ltf_eval(self, inputs):
         """
         :return: array
         """
-        return transpose(
-            array([
-                dot(
-                    inputs[:,l],
-                    self.weight_array[l]
-                )
-                for l in range(self.k)
-            ])
-        )
+
+        #if self.bias:
+        #    result = array([dot(inputs[:,l], self.weight_array[l,:-1])+self.weight_array[l,-1] for l in range(self.k)])
+        #else:
+        result = array([dot(inputs[:,l], self.weight_array[l]) for l in range(self.k)])
+
+        return transpose(result)
 
 
 class NoisyLTFArray(LTFArray):
