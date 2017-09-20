@@ -1,3 +1,4 @@
+"""This module tests the different experiment classes."""
 import unittest
 import os
 import glob
@@ -9,21 +10,31 @@ from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFin
 
 
 class TestBase(unittest.TestCase):
+    """
+    Every experiment needs logs in order to work. This class is used to delete all logs before after an experiment
+    test."
+    """
     def setUp(self):
         # Remove all log files
         paths = list(glob.glob('*.log'))
-        for p in paths:
-            os.remove(p)
+        for path in paths:
+            os.remove(path)
 
     def tearDown(self):
         # Remove all log files
         paths = list(glob.glob('*.log'))
-        for p in paths:
-            os.remove(p)
+        for path in paths:
+            os.remove(path)
 
 
 class TestExperimentLogisticRegression(TestBase):
+    """
+    This class tests the logistic regression experiment.
+    """
     def test_run_and_analyze(self):
+        """
+        This method only runs the experiment.
+        """
         logger_name = 'log'
 
         # Setup multiprocessing logging
@@ -32,16 +43,24 @@ class TestExperimentLogisticRegression(TestBase):
                                            args=(queue, setup_logger, logger_name,))
         listener.start()
 
-        self.lr16_4 = ExperimentLogisticRegression('exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
-                                                   LTFArray.combiner_xor)
-        self.lr16_4.execute(queue, logger_name)
+        lr16_4 = ExperimentLogisticRegression('exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
+                                              LTFArray.combiner_xor)
+        lr16_4.execute(queue, logger_name)
 
         queue.put_nowait(None)
         listener.join()
 
 
 class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
+    """
+    This class is used to test the Experiment which searches for a number of votes which is needed to achieve an
+    overall desired stability.
+    """
     def test_run_and_analyze(self):
+        """
+        This method run the experiment and checks if a number of votes was found in oder to satisfy an
+        overall desired stability.
+        """
         logger_name = 'log'
 
         # Setup multiprocessing logging

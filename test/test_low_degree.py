@@ -1,3 +1,6 @@
+"""
+This module tests the low degree learner.
+"""
 import unittest
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -7,7 +10,7 @@ from pypuf.tools import TrainingSet
 
 class TestLowDegree(unittest.TestCase):
     """
-        This module tests the low degree learner.
+    This module tests the low degree learner.
     """
     n = 8
     k = 2
@@ -17,7 +20,7 @@ class TestLowDegree(unittest.TestCase):
 
     def test_learn_xor(self):
         """"
-            Stupid test which gains code coverage
+        Stupid test which gains code coverage
         """
         instance_prng = RandomState(seed=TestLowDegree.seed_instance)
 
