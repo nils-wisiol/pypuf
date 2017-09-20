@@ -1,11 +1,19 @@
+"""
+This module is a command line tool which provides an interface for experiments which are designed to learn an arbiter
+PUF LTFarray simulation with the logistic regression learning algorithm. If you want to use this tool you will have to
+define nine parameters which define the experiment.
+"""
+from sys import argv, stderr
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experimenter import Experimenter
-from sys import argv, stderr
 
 
 def main(args):
-
+    """
+    This method includes the main functionality of the module it parses the argument vector and executes the learning
+    attempts on the PUF instances.
+    """
     if len(args) < 10 or len(args) > 11:
         stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
         stderr.write('Usage:\n')
@@ -37,7 +45,8 @@ def main(args):
         stderr.write('                                  the i-th Arbiter chain gets the coefficients \n')
         stderr.write('                                  of the polynomial c^(i+1) as challenge.\n')
         stderr.write('                                  For now only challenges with length n=64 are accepted.\n')
-        stderr.write('                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
+        stderr.write(
+            '                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
         stderr.write('                                       is applied and thereafter the ATF transform.\n')
         stderr.write('                  - random -- Each Arbiter chain gets a random challenge derived from the\n')
         stderr.write('                              original challenge using a PRNG.\n')
@@ -48,13 +57,12 @@ def main(args):
         stderr.write('                               bits (even n only)\n')
         stderr.write('               N: number of challenge response pairs in the training set\n')
         stderr.write('        restarts: number of repeated initializations the learner\n')
-        stderr.write('                  use float number x, 0<x<1 to repeat until given accuracy\n')
         stderr.write('       instances: number of repeated initializations the instance\n')
         stderr.write('                  The number total learning attempts is restarts*instances.\n')
         stderr.write('   seed_instance: random seed used for LTF array instance\n')
         stderr.write('      seed_model: random seed used for the model in first learning attempt\n')
         stderr.write('      [log_name]: path to the logfile which contains results from all instances. The tool '
-                                        'will add a ".log" to log_name. The default path is ./sim_learn.log\n')
+                     'will add a ".log" to log_name. The default path is ./sim_learn.log\n')
         quit(1)
 
     n = int(args[1])
@@ -62,13 +70,7 @@ def main(args):
     transformation_name = args[3]
     combiner_name = args[4]
     N = int(args[5])
-
-    if float(args[6]) < 1:
-        restarts = float('inf')
-        convergence = float(args[6])
-    else:
-        restarts = int(args[6])
-        convergence = 1.1
+    restarts = int(args[6])
 
     instances = int(args[7])
 
@@ -105,15 +107,15 @@ def main(args):
     # create different experiment instances
     experiments = []
     for j in range(instances):
-        for r in range(restarts):
-            l_name = '%s_%i_%i' % (log_name, j, r)
+        for start_number in range(restarts):
+            l_name = '%s_%i_%i' % (log_name, j, start_number)
             experiment = ExperimentLogisticRegression(
                 log_name=l_name,
                 n=n,
                 k=k,
                 N=N,
                 seed_instance=seed_instance + j,
-                seed_model=seed_model + j + r,
+                seed_model=seed_model + j + start_number,
                 transformation=transformation,
                 combiner=combiner
             )
@@ -141,11 +143,6 @@ def main(args):
         result = log_file.readline()
 
     log_file.close()
-
-
-
-
-
 
 if __name__ == '__main__':
     main(argv)
