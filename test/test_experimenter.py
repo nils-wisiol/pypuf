@@ -1,3 +1,4 @@
+"""This module test the experimenter class which is used to distribute experiments over several cores."""
 import unittest
 import os
 import glob
@@ -9,19 +10,23 @@ from pypuf.experiments.experimenter import Experimenter
 
 
 class TestExperimenter(unittest.TestCase):
+    """
+    This class is used to test the experimenter class.
+    """
     def setUp(self):
         # Remove all log files
         paths = list(glob.glob('*.log'))
-        for p in paths:
-            os.remove(p)
+        for path in paths:
+            os.remove(path)
 
     def tearDown(self):
         # Remove all log files
         paths = list(glob.glob('*.log'))
-        for p in paths:
-            os.remove(p)
+        for path in paths:
+            os.remove(path)
 
     def test_lr_experiments(self):
+        """This method runs the experimenter for four logistic regression experiments."""
         lr16_4_1 = ExperimentLogisticRegression('test_lr_experiments1', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
@@ -42,6 +47,7 @@ class TestExperimenter(unittest.TestCase):
         experimenter.run()
 
     def test_mv_experiments(self):
+        """This method runs the experimenter with five ExperimentMajorityVoteFindVotes experiments."""
         experiments = []
         for i in range(5):
             n = 8
@@ -132,13 +138,13 @@ class TestExperimenter(unittest.TestCase):
 
     def test_file_handle(self):
         """
-        This test check if process file handles are deleted. Some Systems have have limit of open file handles. 
-        :return: 
+        This test check if process file handles are deleted. Some Systems have have limit of open file handles.
         """
         class ExperimentDummy(Experiment):
-            def __init__(self, log_name):
-                super().__init__(log_name)
-
+            """
+            This is an empty experiment class which can be used to run a huge amount of experiments with an
+            experimenter.
+            """
             def run(self):
                 pass
 

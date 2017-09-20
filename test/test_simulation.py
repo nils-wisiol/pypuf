@@ -1,3 +1,7 @@
+"""
+This module is used to test the different simulation models.
+"""
+
 import unittest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf import tools
@@ -7,14 +11,15 @@ from numpy.random import RandomState
 
 
 class TestCombiner(unittest.TestCase):
-
+    """This class tests the different combiner functions with predefined input and outputs."""
     def test_combine_xor(self):
+        """This function tests the xor combiner function with one pair of input and output."""
         assert_array_equal(
             LTFArray.combiner_xor(
                 [
-                    [ 1.,  1., -3.,  1.],
-                    [-1., -1., -1.,  1.],
-                    [-2., -2.,  2.,  1.]
+                    [1., 1., -3., 1.],
+                    [-1., -1., -1., 1.],
+                    [-2., -2., 2., 1.]
                 ]
             ),
             [
@@ -25,6 +30,7 @@ class TestCombiner(unittest.TestCase):
         )
 
     def test_combine_ip_mod2(self):
+        """This function tests the inner product mod 2 combiner function with two pairs of input and output."""
         assert_array_equal(
             LTFArray.combiner_ip_mod2(
                 array([
@@ -56,110 +62,116 @@ class TestCombiner(unittest.TestCase):
 
 
 class TestInputTransformation(unittest.TestCase):
-
+    """This class tests the different functions used to transform the input of a LTFArray simulation."""
     def test_id(self):
-        test_cs = [
+        """
+        This method test the identity function for the predefined inputs (challenges). If every challenge is duplicated
+        k times the function works correct.
+        """
+        test_challenges = [
             [
-                [-1,  1,  1, -1, -1],
+                [-1, 1, 1, -1, -1],
                 [-1, -1, -1, -1, -1],
-                [ 1,  1, -1, -1, -1],
+                [1, 1, -1, -1, -1],
             ],
             [
-                [ 1,  1,  1, -1, -1],
+                [1, 1, 1, -1, -1],
                 [-1, -1, -1, -1, -1],
-                [-1,  1, -1, -1, -1],
+                [-1, 1, -1, -1, -1],
             ],
             [
-                [-1,  1,  1, -1, -1],
+                [-1, 1, 1, -1, -1],
                 [-1, -1, -1, -1, -1],
-                [-1,  1, -1, -1, -1],
+                [-1, 1, -1, -1, -1],
             ]
         ]
-        for cs in test_cs:
+        for challenges in test_challenges:
             assert_array_equal(
-                LTFArray.transform_id(cs, k=4),
+                LTFArray.transform_id(challenges, k=4),
                 [
                     [
-                        cs[0],
-                        cs[0],
-                        cs[0],
-                        cs[0]
+                        challenges[0],
+                        challenges[0],
+                        challenges[0],
+                        challenges[0]
                     ],
                     [
-                        cs[1],
-                        cs[1],
-                        cs[1],
-                        cs[1]
+                        challenges[1],
+                        challenges[1],
+                        challenges[1],
+                        challenges[1]
                     ],
                     [
-                        cs[2],
-                        cs[2],
-                        cs[2],
-                        cs[2]
+                        challenges[2],
+                        challenges[2],
+                        challenges[2],
+                        challenges[2]
                     ]
                 ]
             )
 
     def test_atf(self):
+        """This method tests the atf transformation with predefined input and output."""
         test_array = array([
-                [-1,  1,  1, -1, -1],
-                [-1, -1, -1, -1, -1],
-                [ 1,  1, -1, -1, -1],
-                [ 1,  1,  1, -1, -1],
-                [-1, -1, -1, -1, -1],
-                [-1,  1, -1, -1, -1],
+            [-1, 1, 1, -1, -1],
+            [-1, -1, -1, -1, -1],
+            [1, 1, -1, -1, -1],
+            [1, 1, 1, -1, -1],
+            [-1, -1, -1, -1, -1],
+            [-1, 1, -1, -1, -1],
         ])
         assert_array_equal(
             LTFArray.transform_atf(test_array, k=3),
             [
                 [
-                    [-1,  1,  1,  1, -1],
-                    [-1,  1,  1,  1, -1],
-                    [-1,  1,  1,  1, -1],
+                    [-1, 1, 1, 1, -1],
+                    [-1, 1, 1, 1, -1],
+                    [-1, 1, 1, 1, -1],
                 ],
                 [
-                    [-1,  1, -1,  1, -1],
-                    [-1,  1, -1,  1, -1],
-                    [-1,  1, -1,  1, -1],
+                    [-1, 1, -1, 1, -1],
+                    [-1, 1, -1, 1, -1],
+                    [-1, 1, -1, 1, -1],
                 ],
                 [
-                    [-1, -1, -1,  1, -1],
-                    [-1, -1, -1,  1, -1],
-                    [-1, -1, -1,  1, -1],
+                    [-1, -1, -1, 1, -1],
+                    [-1, -1, -1, 1, -1],
+                    [-1, -1, -1, 1, -1],
                 ],
                 [
-                    [ 1,  1,  1,  1, -1],
-                    [ 1,  1,  1,  1, -1],
-                    [ 1,  1,  1,  1, -1],
+                    [1, 1, 1, 1, -1],
+                    [1, 1, 1, 1, -1],
+                    [1, 1, 1, 1, -1],
                 ],
                 [
-                    [-1,  1, -1,  1, -1],
-                    [-1,  1, -1,  1, -1],
-                    [-1,  1, -1,  1, -1],
+                    [-1, 1, -1, 1, -1],
+                    [-1, 1, -1, 1, -1],
+                    [-1, 1, -1, 1, -1],
                 ],
                 [
-                    [ 1, -1, -1,  1, -1],
-                    [ 1, -1, -1,  1, -1],
-                    [ 1, -1, -1,  1, -1],
+                    [1, -1, -1, 1, -1],
+                    [1, -1, -1, 1, -1],
+                    [1, -1, -1, 1, -1],
                 ]
             ]
         )
 
     def test_shift(self):
+        """This method tests the shift transformation with predefined input and output."""
         test_array = array([
-                [-1,  1,  1, -1, -1],
-                [-1, -1, -1, -1, -1],
-                [ 1,  1, -1, -1, -1],
-                [ 1,  1, -1, -1, -1],
-                [ 1,  2,  3,  4,  5],
+            [-1, 1, 1, -1, -1],
+            [-1, -1, -1, -1, -1],
+            [1, 1, -1, -1, -1],
+            [1, 1, -1, -1, -1],
+            [1, 2, 3, 4, 5],
         ])
         assert_array_equal(
             LTFArray.transform_shift(test_array, k=3),
             [
                 [
-                    [-1,  1,  1, -1, -1],
-                    [ 1,  1, -1, -1, -1],
-                    [ 1, -1, -1, -1,  1],
+                    [-1, 1, 1, -1, -1],
+                    [1, 1, -1, -1, -1],
+                    [1, -1, -1, -1, 1],
                 ],
                 [
                     [-1, -1, -1, -1, -1],
@@ -167,14 +179,14 @@ class TestInputTransformation(unittest.TestCase):
                     [-1, -1, -1, -1, -1],
                 ],
                 [
-                    [ 1,  1, -1, -1, -1],
-                    [ 1, -1, -1, -1,  1],
-                    [-1, -1, -1,  1,  1],
+                    [1, 1, -1, -1, -1],
+                    [1, -1, -1, -1, 1],
+                    [-1, -1, -1, 1, 1],
                 ],
                 [
-                    [ 1,  1, -1, -1, -1],
-                    [ 1, -1, -1, -1,  1],
-                    [-1, -1, -1,  1,  1],
+                    [1, 1, -1, -1, -1],
+                    [1, -1, -1, -1, 1],
+                    [-1, -1, -1, 1, 1],
                 ],
                 [
                     [1, 2, 3, 4, 5],
@@ -185,78 +197,84 @@ class TestInputTransformation(unittest.TestCase):
         )
 
     def test_secure_lightweight(self):
+        """This method tests the secure lightweight transformation with predefined input and output."""
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1],
-            [-1,  1,  1, -1, -1,  1],
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
         ])
         assert_array_equal(
             LTFArray.transform_lightweight_secure(test_array, k=3),
             [
                 [
-                    [-1, -1, -1,  1,  1, -1],
-                    [-1, -1,  1,  1, -1, -1],
-                    [-1,  1,  1, -1, -1, -1],
+                    [-1, -1, -1, 1, 1, -1],
+                    [-1, -1, 1, 1, -1, -1],
+                    [-1, 1, 1, -1, -1, -1],
                 ],
                 [
-                    [-1, -1, -1, -1,  1,  1],
-                    [-1, -1, -1,  1,  1, -1],
-                    [-1, -1,  1,  1, -1, -1],
+                    [-1, -1, -1, -1, 1, 1],
+                    [-1, -1, -1, 1, 1, -1],
+                    [-1, -1, 1, 1, -1, -1],
                 ],
             ]
         )
 
     def test_shift_secure_lightweight(self):
+        """This method tests the shift secure lightweight transformation with predefined input and output."""
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1],
+            [1, -1, -1, 1, -1, 1],
         ])
         assert_array_equal(
             LTFArray.transform_shift_lightweight_secure(test_array, k=3),
             [
                 [
-                    [-1, -1, -1,  1,  1, -1],
-                    [ 1, -1,  1, -1, -1, -1],
-                    [-1, -1, -1, -1, -1,  1],
+                    [-1, -1, -1, 1, 1, -1],
+                    [1, -1, 1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1, 1],
                 ],
             ]
         )
 
     def test_1_n_bent(self):
+        """This method tests the one to n bent transformation with predefined inputs and outputs."""
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1],
-            [-1,  1,  1, -1, -1,  1],
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
         ])
         assert_array_equal(
             LTFArray.transform_1_n_bent(test_array, k=3),
             [
                 [
-                    [ 1, -1,  1, -1,  1, -1],
-                    [ 1, -1, -1,  1, -1,  1],
-                    [ 1, -1, -1,  1, -1,  1],
+                    [1, -1, 1, -1, 1, -1],
+                    [1, -1, -1, 1, -1, 1],
+                    [1, -1, -1, 1, -1, 1],
                 ],
                 [
-                    [ 1, -1,  1, -1,  1, -1],
-                    [-1,  1,  1, -1, -1,  1],
-                    [-1,  1,  1, -1, -1,  1],
+                    [1, -1, 1, -1, 1, -1],
+                    [-1, 1, 1, -1, -1, 1],
+                    [-1, 1, 1, -1, -1, 1],
                 ],
             ]
         )
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1],
-            [-1,  1,  1, -1, -1,  1],
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
         ])
         assert_array_equal(
             LTFArray.transform_1_n_bent(test_array, k=1),
             [
                 [
-                    [ 1, -1,  1, -1,  1, -1],
+                    [1, -1, 1, -1, 1, -1],
                 ],
                 [
-                    [ 1, -1,  1, -1,  1, -1],
+                    [1, -1, 1, -1, 1, -1],
                 ],
             ]
         )
 
-    def test_transform_stack(self):
+    def test_generate_stacked_transform(self):
+        """
+        This method tests the stacked transformation generation of identity and shift with predefined input and output.
+        """
         test_array = array([
             [1, -1, 1, -1],
             [-1, -1, 1, -1],
@@ -283,10 +301,11 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
-    def test_transform_permutations(self):
+    def test_generate_random_permutations(self):
+        """This method tests the random permutation transformation generation ith predefined inputs and outputs."""
         test_array = array([
-            [1,2,3,4],
-            [10,20,30,40],
+            [1, 2, 3, 4],
+            [10, 20, 30, 40],
         ])
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
@@ -316,21 +335,24 @@ class TestInputTransformation(unittest.TestCase):
             )(test_array, k=3),
             [
                 [
-                    [4*1*2*3, 1*2*3, 2*3, 3],
-                    [1*4*3*2, 4*3*2, 3*2, 2],
-                    [3*1*4*2, 1*4*2, 4*2, 2],
+                    [4 * 1 * 2 * 3, 1 * 2 * 3, 2 * 3, 3],
+                    [1 * 4 * 3 * 2, 4 * 3 * 2, 3 * 2, 2],
+                    [3 * 1 * 4 * 2, 1 * 4 * 2, 4 * 2, 2],
                 ],
                 [
-                    [40*10*20*30, 10*20*30, 20*30, 30],
-                    [10*40*30*20, 40*30*20, 30*20, 20],
-                    [30*10*40*20, 10*40*20, 40*20, 20],
+                    [40 * 10 * 20 * 30, 10 * 20 * 30, 20 * 30, 30],
+                    [10 * 40 * 30 * 20, 40 * 30 * 20, 30 * 20, 20],
+                    [30 * 10 * 40 * 20, 10 * 40 * 20, 40 * 20, 20],
                 ],
             ],
         )
 
-    def test_transform_concat(self):
+    def test_generate_concatenated_transform(self):
+        """
+        This method tests the concatenation of 1 to n bent and identity transformation with predefined input and output.
+        """
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
+            [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
         ])
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
@@ -340,41 +362,42 @@ class TestInputTransformation(unittest.TestCase):
             )(test_array, k=3),
             [
                 [
-                    [ 1, -1,  1, -1,  1, -1, -1,  1,  1, -1, -1],
-                    [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
-                    [ 1, -1, -1,  1, -1,  1, -1,  1,  1, -1, -1],
+                    [1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1],
+                    [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
+                    [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
                 ],
             ]
         )
 
-
     def test_1_1_bent(self):
+        """This method test the one to one bent transformation with predefined input and output."""
         test_array = array([
-            [ 1, -1, -1,  1, -1,  1],
-            [-1,  1,  1, -1, -1,  1],
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
         ])
         assert_array_equal(
             LTFArray.transform_1_1_bent(test_array, k=3),
             [
                 [
-                    [ 1, -1, -1,  1, -1,  1],
-                    [ 1, -1, -1,  1, -1,  1],
-                    [ 1, -1, -1,  1, -1,  1],
+                    [1, -1, -1, 1, -1, 1],
+                    [1, -1, -1, 1, -1, 1],
+                    [1, -1, -1, 1, -1, 1],
                 ],
                 [
-                    [ 1,  1,  1, -1, -1,  1],
-                    [-1,  1,  1, -1, -1,  1],
-                    [-1,  1,  1, -1, -1,  1],
+                    [1, 1, 1, -1, -1, 1],
+                    [-1, 1, 1, -1, -1, 1],
+                    [-1, 1, 1, -1, -1, 1],
                 ],
             ]
         )
 
     def test_polynomial(self):
+        """This method tests the polynomial transformation with predefined input and output for k=4 PUFs."""
         test_array = array([
-            [-1, -1,  1,  1,  1, -1,  1, -1, -1, -1, -1, -1, -1,  1,  1,  1,  1,
-             1,  1, -1,  1, -1, -1,  1,  1, -1,  1, -1, -1,  1, -1,  1,  1,  1,
-             1,  1, -1,  1,  1,  1,  1,  1, -1,  1,  1,  1,  1,  1, -1,  1, -1,
-             1, -1, -1, -1,  1,  1,  1, -1,  1,  1, -1,  1,  1]
+            [-1, -1, 1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1,
+             1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
+             1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
+             1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
         ])
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=4),
@@ -397,11 +420,12 @@ class TestInputTransformation(unittest.TestCase):
         )
 
     def test_polynomial_k1(self):
+        """This method tests the polynomial transformation with predefined input and output for k=1 PUF."""
         test_array = array([
-            [-1, -1,  1,  1,  1, -1,  1, -1, -1, -1, -1, -1, -1,  1,  1,  1,  1,
-             1,  1, -1,  1, -1, -1,  1,  1, -1,  1, -1, -1,  1, -1,  1,  1,  1,
-             1,  1, -1,  1,  1,  1,  1,  1, -1,  1,  1,  1,  1,  1, -1,  1, -1,
-             1, -1, -1, -1,  1,  1,  1, -1,  1,  1, -1,  1,  1]
+            [-1, -1, 1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1,
+             1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
+             1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
+             1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
         ])
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=1),
@@ -415,6 +439,7 @@ class TestInputTransformation(unittest.TestCase):
         )
 
     def test_permutation_atf(self):
+        """This method tests the permuation atf transformation with predefined input and output for k=4 PUFs."""
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
@@ -440,7 +465,10 @@ class TestInputTransformation(unittest.TestCase):
 
 
 class TestLTFArray(unittest.TestCase):
-
+    """
+    This class is used to test the LTFArray class. For this purpose this class provides a set of instance parameter
+    in oder to test several configurations.
+    """
     test_set = [
         # n, k, mu, sigma, bias
         (64, 4, 0, 1, False),
@@ -465,29 +493,32 @@ class TestLTFArray(unittest.TestCase):
             bias = test_parameters[4]
             weight_array = LTFArray.normal_weights(n, k, mu, sigma)
 
-            input_len = n-1 if bias else n
-            inputs = RandomState(seed=0xBAADA555).choice([-1,+1], (N, input_len))  # bad ass testing
+            input_len = n - 1 if bias else n
+            inputs = RandomState(seed=0xBAADA555).choice([-1, +1], (N, input_len))  # bad ass testing
 
             biased_ltf_array = LTFArray(
-                weight_array = weight_array,
-                transform = LTFArray.transform_id,
-                combiner = LTFArray.combiner_xor,
-                bias = bias,
+                weight_array=weight_array,
+                transform=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+                bias=bias,
             )
             ltf_array = LTFArray(
-                weight_array = weight_array,
-                transform = LTFArray.transform_id,
-                combiner = LTFArray.combiner_xor,
-                bias = False,
+                weight_array=weight_array,
+                transform=LTFArray.transform_id,
+                combiner=LTFArray.combiner_xor,
+                bias=False,
             )
             biased_eval = biased_ltf_array.eval(inputs)
             inputs = tools.append_last(inputs, 1)\
                 if biased_ltf_array.bias else inputs
-            eval = ltf_array.eval(inputs)
+            ltf_array_evaled_output = ltf_array.eval(inputs)
 
-            assert_array_equal(biased_eval, eval)
+            assert_array_equal(biased_eval, ltf_array_evaled_output)
 
     def test_random_weights(self):
+        """
+        This method tests if the shape of the LTFArray generated weights are as expected.
+        """
         for test_parameters in self.test_set:
             n = test_parameters[0]
             k = test_parameters[1]
@@ -502,12 +533,12 @@ class TestLTFArray(unittest.TestCase):
 
         N = 100  # number of random inputs per test set
 
-        def ltf_eval_slow(x, w):
+        def ltf_eval_slow(challenge, weights):
             """
-            evaluate a single input x with a single ltf specified by weights w
+            evaluate a single challenge with a single ltf specified by weights
             """
-            assert len(x) == len(w)
-            return dot(x, w)
+            assert len(challenge) == len(weights)
+            return dot(challenge, weights)
 
         for test_parameters in self.test_set:
             n = test_parameters[0]
@@ -525,9 +556,9 @@ class TestLTFArray(unittest.TestCase):
 
             fast_evaluation_result = around(ltf_array.ltf_eval(LTFArray.transform_id(inputs, k)), decimals=8)
             slow_evaluation_result = []
-            for c in inputs:
+            for challenge in inputs:
                 slow_evaluation_result.append(
-                    [ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k)]
+                    [ltf_eval_slow(challenge, ltf_array.weight_array[l]) for l in range(k)]
                 )
             slow_evaluation_result = around(slow_evaluation_result, decimals=8)
 
@@ -537,13 +568,11 @@ class TestLTFArray(unittest.TestCase):
 
 
 class TestNoisyLTFArray(TestLTFArray):
-
+    """This class is used to test the NoisyLTFArray class."""
     def test_ltf_eval(self):
         """
         Test ltf_eval for correct evaluation of LTFs.
         """
-
-        #random.normal(loc=0, scale=self.sigma_noise, size=(1, self.k))
 
         weight_prng_1 = RandomState(seed=0xBADA55)
         weight_prng_2 = RandomState(seed=0xBADA55)
@@ -559,7 +588,7 @@ class TestNoisyLTFArray(TestLTFArray):
             sigma = test_parameters[3]
 
             transformed_inputs = LTFArray.transform_id(
-                RandomState(seed=0xBAADA555).choice([-1,+1], (N, n)),  # bad ass testing
+                RandomState(seed=0xBAADA555).choice([-1, +1], (N, n)),  # bad ass testing
                 k
             )
 
@@ -570,7 +599,8 @@ class TestNoisyLTFArray(TestLTFArray):
             )
 
             noisy_ltf_array = NoisyLTFArray(
-                weight_array=LTFArray.normal_weights(n, k, mu, sigma, weight_prng_2),  # weight_prng_2 was seeded identically to weight_prng_1
+                weight_array=LTFArray.normal_weights(n, k, mu, sigma, weight_prng_2),
+                # weight_prng_2 was seeded identically to weight_prng_1
                 transform=LTFArray.transform_id,
                 combiner=LTFArray.combiner_xor,
                 sigma_noise=1,
@@ -580,13 +610,19 @@ class TestNoisyLTFArray(TestLTFArray):
             evaled_ltf_array = ltf_array.ltf_eval(transformed_inputs)
             assert_array_equal(
                 around(evaled_ltf_array + noise_prng_2.normal(loc=0, scale=1,
-                                                               size=(len(evaled_ltf_array), k)), decimals=10),
+                                                              size=(len(evaled_ltf_array), k)), decimals=10),
                 around(noisy_ltf_array.ltf_eval(transformed_inputs), decimals=10)
             )
 
 
 class TestSimulationMajorityLTFArray(unittest.TestCase):
+    """This class is used to test the SimulationMajorityLTFArray class."""
     def test_majority_voting(self):
+        """This method is used to test if majority vote works.
+        The first test checks for unequal PUF responses with a LTFArray without noise and a SimulationMajorityLTFArray
+        instance with noise. The second test checks if majority voting works and the instance with and without noise
+        generate equal resonses.
+        """
         weight_prng1 = RandomState(seed=0xBADA55)
         noise_prng = RandomState(seed=0xC0FFEE)
         crp_count = 16  # number of random inputs per test set
@@ -653,6 +689,13 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
 
         def get_functions_with_prefix(prefix, obj):
+            """
+            This function return all functions with a prefix.
+            :param prefix: string
+            :param obj: object
+                        Object to investigate
+            :return list of strings
+            """
             return [func for func in dir(obj) if func.startswith(prefix)]
 
         combiners = get_functions_with_prefix('combiner_', SimulationMajorityLTFArray)
