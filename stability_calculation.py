@@ -1,15 +1,19 @@
+"""
+This module provides the ability to calculate a list of stabilities for randomly chosen challenges of randomly chosen
+MV XOR Arbiter PUF.
+"""
+from sys import argv, stderr
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, SimulationMajorityLTFArray, NoisyLTFArray
 from pypuf import tools
 from numpy.random import RandomState
-from sys import argv, stderr
 
 
-def stability_figure_data(n, k, r, sigma_noise_ratio, num, reps, random):
+def stability_figure_data(n, k, vote_count, sigma_noise_ratio, num, reps, random):
     """
     Returns a list of stabilities for randomly chosen challenges of randomly chosen MV XOR Arbiter PUF.
     :param n: Length of arbiter chains
     :param k: Number of arbiter chains
-    :param r: Number of votes for each chain
+    :param vote_count: Number of votes for each chain
     :param sigma_noise_ratio: sigma_noise to sigma_model ratio of the arbiter chains
     :param num: number of challenges to compute stability for
     :param reps: number of samples per challenge to base the stability computation on
@@ -23,7 +27,7 @@ def stability_figure_data(n, k, r, sigma_noise_ratio, num, reps, random):
                                              LTFArray.combiner_xor,
                                              sigma_noise,
                                              random_instance_noise=random,
-                                             vote_count=r)
+                                             vote_count=vote_count)
 
     stabilities = tools.approx_stabilities(instance_mv, num, reps, random)
     print('{' + ','.join(map(str, stabilities)) + '}')
