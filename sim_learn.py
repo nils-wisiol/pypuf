@@ -1,18 +1,75 @@
+"""
+This module is a command line tool which provides an interface for experiments which are designed to learn an arbiter
+PUF LTFarray simulation with the logistic regression learning algorithm. If you want to use this tool you will have to
+define nine parameters which define the experiment.
+
+Example usage "python sim_learn.py n k transformation combiner N restarts instances seed_instance seed_model"
+
+n: int
+          Number of stages of a PUF
+k: int
+          Number of PUFs which are involved
+transformation: string
+                Name of the transformation which is used to transform input before it is used in LTFs
+                    - id  -- does nothing at all
+                    - atf -- convert according to "natural" Arbiter chain
+                             implementation
+                    - mm  -- designed to achieve maximum PTF expansion length
+                             only implemented for k=2 and even n
+                    - lightweight_secure -- design by Majzoobi et al. 2008
+                                            only implemented for even n
+                    - shift_lightweight_secure -- design like Majzoobi
+                                                  et al. 2008, but with the shift
+                                                  operation executed first
+                                                  only implemented for even n
+                    - soelter_lightweight_secure -- design like Majzoobi
+                                                    et al. 2008, but one bit different
+                                                    only implemented for even n
+                    - 1_n_bent -- one LTF gets "bent" input, the others id
+                    - 1_1_bent -- one bit gets "bent" input, the others id,
+                                  this is proven to have maximum PTF
+                                  length for the model
+                    - polynomial -- challenges are interpreted as polynomials
+                                    from GF(2^64). From the initial challenge c,
+                                    the i-th Arbiter chain gets the coefficients
+                                    of the polynomial c^(i+1) as challenge.
+                                    For now only challenges with length n=64 are accepted.
+
+combiner: string
+          Name of the combiner function which is used to combine the output bits to a single bit
+            - xor     -- output the parity of all output bits
+            - ip_mod2 -- output the inner product mod 2 of all output
+N: int
+   Number of challenges
+restarts: int or float
+          Number of repeated initializations of the learner
+          Use a float number x, 0<x<1 to repeat learning until given accuracy.
+instances: int
+           Number of repeated initializations the instance
+           The number total learning attempts is restarts*instances.
+seed_instance: int
+               Random seed used for LTF array instance
+seed_model: int
+            Random seed used for the model in first learning attempt
+"""
+import time
+from sys import argv, stderr
 from numpy import amin, amax, mean, array, append
 from numpy.random import RandomState
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
-import time
-from sys import argv, stdout, stderr
 
 
 def main(args):
-
+    """
+    This method includes the main functionality of the module it parses the argument vector and executes the learning
+    attempts on the PUF instances
+    """
     if len(args) != 10:
         stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
         stderr.write('Usage:\n')
-        stderr.write('sim_learn.py n k transformation combiner N restarts seed_instance seed_model\n')
+        stderr.write('sim_learn.py n k transformation combiner N restarts instances seed_instance seed_model\n')
         stderr.write('               n: number of bits per Arbiter chain\n')
         stderr.write('               k: number of Arbiter chains\n')
         stderr.write('  transformation: used to transform input before it is used in LTFs\n')
@@ -40,7 +97,8 @@ def main(args):
         stderr.write('                                  the i-th Arbiter chain gets the coefficients \n')
         stderr.write('                                  of the polynomial c^(i+1) as challenge.\n')
         stderr.write('                                  For now only challenges with length n=64 are accepted.\n')
-        stderr.write('                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
+        stderr.write(
+            '                  - permutation_atf -- for each Arbiter chain first a pseudorandom permutation \n')
         stderr.write('                                       is applied and thereafter the ATF transform.\n')
         stderr.write('                  - random -- Each Arbiter chain gets a random challenge derived from the\n')
         stderr.write('                              original challenge using a PRNG.\n')
@@ -107,7 +165,7 @@ def main(args):
     training_times = array([])
     iterations = array([])
 
-    for j in range(instances):
+    for _ in range(instances):
 
         stderr.write('----------- Choosing new instance. ---------\n')
 
@@ -130,7 +188,7 @@ def main(args):
         dist = 1
 
         while i < restarts and 1 - dist < convergence:
-            stderr.write('\r%5i/%5i         ' % (i+1, restarts if restarts < float('inf') else 0))
+            stderr.write('\r%5i/%5i         ' % (i + 1, restarts if restarts < float('inf') else 0))
             start = time.time()
             model = lr_learner.learn()
             end = time.time()
@@ -155,9 +213,9 @@ def main(args):
                     '%1.5f' % (1 - dist),
                 ]
             ) + '\n')
-            #stderr.write('training time:                % 5.3fs' % (end - start))
-            #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
-            #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
+            # stderr.write('training time:                % 5.3fs' % (end - start))
+            # stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
+            # stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
             i += 1
 
     stderr.write('\r              \r')
@@ -167,9 +225,9 @@ def main(args):
     stderr.write('test accuracy: %s\n' % accuracy)
     stderr.write('\n\n')
     stderr.write('min/avg/max training time  : % 9.3fs /% 9.3fs /% 9.3fs\n' % (
-    amin(training_times), mean(training_times), amax(training_times)))
+        amin(training_times), mean(training_times), amax(training_times)))
     stderr.write('min/avg/max iteration count: % 9.3f  /% 9.3f  /% 9.3f \n' % (
-    amin(iterations), mean(iterations), amax(iterations)))
+        amin(iterations), mean(iterations), amax(iterations)))
     stderr.write(
         'min/avg/max test accuracy  : % 9.3f  /% 9.3f  /% 9.3f \n' % (amin(accuracy), mean(accuracy), amax(accuracy)))
     stderr.write('\n\n')
