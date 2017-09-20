@@ -1,3 +1,4 @@
+"""This module tests the logistic regression learner."""
 import unittest
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -7,7 +8,7 @@ from pypuf.tools import TrainingSet
 
 class TestLogisticRegression(unittest.TestCase):
     """
-        This module tests the logistic regression learner.
+    This module tests the logistic regression learner.
     """
     n = 8
     k = 2
@@ -17,7 +18,7 @@ class TestLogisticRegression(unittest.TestCase):
 
     def test_learn_xor(self):
         """"
-            Stupid test which gains code coverage
+        Stupid test which gains code coverage
         """
         instance_prng = RandomState(seed=TestLogisticRegression.seed_instance)
         model_prng = RandomState(seed=TestLogisticRegression.seed_model)
@@ -44,7 +45,7 @@ class TestLogisticRegression(unittest.TestCase):
 
     def test_learn_ip_mod2(self):
         """"
-            Stupid test which gains code coverage
+        Stupid test which gains code coverage
         """
         instance_prng = RandomState(seed=TestLogisticRegression.seed_instance)
         model_prng = RandomState(seed=TestLogisticRegression.seed_model)
