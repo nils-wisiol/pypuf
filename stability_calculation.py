@@ -18,7 +18,6 @@ def stability_figure_data(n, k, vote_count, sigma_noise_ratio, num, reps, random
     :param num: number of challenges to compute stability for
     :param reps: number of samples per challenge to base the stability computation on
     :param random: random seed for all PRNG used here
-    :return:
     """
     sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, 1, sigma_noise_ratio)
     weights = LTFArray.normal_weights(n, k, random_instance=random)
