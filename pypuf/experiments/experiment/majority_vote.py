@@ -27,7 +27,7 @@ class ExperimentMajorityVoteFindVotes(Experiment):
                               The seed which is used to initialize the pseudo-random number generator
                               which is used to generate the stage weights for the arbiter PUF simulation.
         :param seed_instance_noise: int
-                                    The random seed which is used to initialize the pseudo-random number
+                                    The seed which is used to initialize the pseudo-random number
                                     generator which is used to generate the noise for the arbiter PUF simulation.
         :param transformation: A function: array of int with shape(N,k,n), int number of PUFs k -> shape(N,k,n)
                                The function transforms input challenges in order to increase resistance against attacks.
@@ -40,8 +40,7 @@ class ExperimentMajorityVoteFindVotes(Experiment):
                       Standard deviation of the stage weight distribution of the PUF instance simulation.
         :param sigma_noise_ratio: float
                                   The noisiness factor which is used to scale sigma_noise. The value sigma_noise
-                                  is the standard deviation of the stage weight distribution of the PUF instance
-                                  simulation.
+                                  is the standard deviation of the noise distribution of the PUF instance simulation.
         
         :param seed_challenges: int
                                 The seed which is used to initialize the pseudo-random number generator which
