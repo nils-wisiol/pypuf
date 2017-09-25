@@ -1,3 +1,7 @@
+"""
+This module provides an abstract class which can be used by a pypuf.experiments.experimenter.Experimenter object in
+order to be executed.
+"""
 import abc
 import time
 import logging
@@ -40,13 +44,15 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-
-
     def execute(self, queue, logger_name):
         """
         Executes the experiment at hand by
         (1) calling run() and measuring the run time of run() and
         (2) calling analyze().
+        :param queue: multiprocessing.queue
+                      Multiprocessing safe queue which is used to serialize the logging
+        :param logger_name: string
+                        Name of the experimenter result logger
         """
         self.result_logger = setup_result_logger(queue, logger_name)
         file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
@@ -57,12 +63,14 @@ class Experiment(object):
         self.measured_time = time.time() - start_time
         self.analyze()
 
+
 def setup_result_logger(queue, logger_name):
     """
     This method setups a connection to the experimenter result logger.
-    :param queue: Multiprocessing safe queue which is used to serialize the logging
-    :param logger_name: Name of the experimenter result logger
-    :return:
+    :param queue: multiprocessing.queue
+                  Multiprocessing safe queue which is used to serialize the logging
+    :param logger_name: string
+                        Name of the experimenter result logger
     """
     handler = logging.handlers.QueueHandler(queue)
     root = logging.getLogger(logger_name)
