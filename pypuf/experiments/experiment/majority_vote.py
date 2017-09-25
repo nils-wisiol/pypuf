@@ -1,3 +1,8 @@
+"""
+This module provides an experiment class which implements an experiment in order to find an approximately  minimal
+number of votes for a Majority Vote Arbiter PUF which satisfy the chosen desired_stability and
+overall_desired_stability.
+"""
 import numpy as np
 from numpy.random import RandomState
 from pypuf import tools
@@ -41,7 +46,6 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         :param sigma_noise_ratio: float
                                   The noisiness factor which is used to scale sigma_noise. The value sigma_noise
                                   is the standard deviation of the noise distribution of the PUF instance simulation.
-        
         :param seed_challenges: int
                                 The seed which is used to initialize the pseudo-random number generator which
                                 is used to generate challenges.
@@ -165,7 +169,7 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         """
         Calculate the stability for random chosen challenges.
         :param instance: SimulationMajorityLTFArray
-                         A simulation of a Majority Vote Arbiter PUF. 
+                         A simulation of a Majority Vote Arbiter PUF.
         :param challenge_prng: RandomState
                                Pseudo-random number generator which is used to generate challenges.
         """

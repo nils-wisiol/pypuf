@@ -1,5 +1,8 @@
+"""
+This module provides an experiment class which learns an instance of LTFArray simulation PUF with the logistic
+regression learner.
+"""
 from numpy.random import RandomState
-from numpy import amin, amax, mean, array, append
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -9,10 +12,31 @@ from pypuf import tools
 
 class ExperimentLogisticRegression(Experiment):
     """
-        This Experiment uses the logistic regression learner on an LTFArray PUF simulation.
+    This Experiment uses the logistic regression learner on an LTFArray PUF simulation.
     """
 
     def __init__(self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner):
+        """
+        :param log_name: string
+                         Prefix of the path or name of the experiment log file.
+        :param n: int
+                  Number of stages of the PUF
+        :param k: int
+                  Number different LTFArrays
+        :param N: int
+                  Number of challenges which are generated in order to learn the PUF simulation.
+        :param seed_instance: int
+                              The seed which is used to initialize the pseudo-random number generator
+                              which is used to generate the stage weights for the arbiter PUF simulation.
+        :param seed_model: int
+                           The seed which is used to initialize the pseudo-random number generator
+                           which is used to generate the stage weights for the learner arbiter PUF simulation.
+        :param transformation: A function: array of int with shape(N,k,n), int number of PUFs k -> shape(N,k,n)
+                               The function transforms input challenges in order to increase resistance against attacks.
+        :param combiner: A function: array of int with shape(N,k,n) -> array of in with shape(N)
+                         The functions combines the outputs of k PUFs to one bit results,
+                         in oder to increase resistance against attacks.
+        """
         super().__init__(
             log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
                 log_name,
@@ -68,18 +92,18 @@ class ExperimentLogisticRegression(Experiment):
 
         self.result_logger.info(
             # seed_instance  seed_model i      n      k      N      trans  comb   iter   time   accuracy  model values
-            '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%f\t' '%f\t'    '%s' % (
-                self.seed_instance,
-                self.seed_model,
-                0,  # restart count, kept for compatibility to old log files
-                self.n,
-                self.k,
-                self.N,
-                self.transformation.__name__,
-                self.combiner.__name__,
-                self.learner.iteration_count,
-                self.measured_time,
-                1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.n)),
-                ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
-            )
+            '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%f\t' '%f\t'    '%s',
+            self.seed_instance,
+            self.seed_model,
+            0,  # restart count, kept for compatibility to old log files
+            self.n,
+            self.k,
+            self.N,
+            self.transformation.__name__,
+            self.combiner.__name__,
+            self.learner.iteration_count,
+            self.measured_time,
+            1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.n)),
+            ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
+
         )
