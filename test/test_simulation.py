@@ -282,7 +282,7 @@ class TestInputTransformation(unittest.TestCase):
         assert_array_equal(
             LTFArray.generate_stacked_transform(
                 transform_1=LTFArray.transform_id,
-                kk=2,
+                puf_count=2,
                 transform_2=LTFArray.transform_shift
             )(test_array, k=4),
             [
@@ -310,8 +310,8 @@ class TestInputTransformation(unittest.TestCase):
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
-                nn=4,
-                kk=3,
+                challenge_length=4,
+                puf_count=3,
             )(test_array, k=3),
             [
                 [
@@ -329,8 +329,8 @@ class TestInputTransformation(unittest.TestCase):
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
-                nn=4,
-                kk=3,
+                challenge_length=4,
+                puf_count=3,
                 atf=True,
             )(test_array, k=3),
             [
@@ -357,7 +357,7 @@ class TestInputTransformation(unittest.TestCase):
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
                 transform_1=LTFArray.transform_1_n_bent,
-                nn=6,
+                bit_number_transform_1=6,
                 transform_2=LTFArray.transform_id,
             )(test_array, k=3),
             [

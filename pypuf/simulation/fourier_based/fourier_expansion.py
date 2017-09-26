@@ -1,9 +1,18 @@
+# TODO REMOVE THIS EXCEPTION!
+# pylint: disable-msg=C0103
+"""
+This module provides an model to simulate a PUF based on fourier coefficients.
+"""
 from pypuf.simulation.base import Simulation
 from pypuf import tools
 import numpy as np
 
 
 class FourierCoefficient:
+    """
+    TODO write a doc string
+    FourierCoefficient
+    """
     def __init__(self, s, val):
         self.s = s
         self.val = val
@@ -17,10 +26,18 @@ class FourierExpansion(Simulation):
     """
 
     def __init__(self, fourier_coefficients):
+        """
+        TODO write a doc string
+        __init__
+        """
         self.fourier_coefficients = fourier_coefficients
         self.n = len(fourier_coefficients[0].s)
 
     def eval(self, inputs):
+        """
+        TODO write a doc string
+        eval
+        """
         vals = np.array(
             [coefficient.val * tools.chi_vectorized(coefficient.s, inputs)
              for coefficient in self.fourier_coefficients]
@@ -35,7 +52,15 @@ class FourierExpansionSign(FourierExpansion):
     """
 
     def eval(self, inputs):
+        """
+        TODO write a doc string
+        eval
+        """
         return np.sign(super(FourierExpansionSign, self).eval(inputs))
 
     def val(self, inputs):
+        """
+        TODO write a doc string
+        val
+        """
         return super(FourierExpansionSign, self).eval(inputs)
