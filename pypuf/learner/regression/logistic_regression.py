@@ -40,7 +40,8 @@ class LogisticRegression(Learner):
         def update(self, grad):
             """
             Compute update step according to "Resilient Backpropagation" by
-            Riedmiller, Martin, and Heinrich Braun. "A direct adaptive method for faster backpropagation learning: The RPROP algorithm."
+            Riedmiller, Martin, and Heinrich Braun. "A direct adaptive method for faster
+            backpropagation learning: The RPROP algorithm."
             Neural Networks, 1993., IEEE International Conference on. IEEE, 1993.
 
             Implementation following the neat implementation used in
@@ -61,9 +62,12 @@ class LogisticRegression(Learner):
                 self.step_size[l] = amin((self.step_size[l], self.step_size_max), 0)
                 self.step_size[l] = amax((self.step_size[l], self.step_size_min), 0)
 
-                self.step[l][step_indicator > 0] = -(self.step_size[l][step_indicator > 0] * sign(grad_l[step_indicator > 0]))
-                self.step[l][step_indicator < 0] = -self.last_step_size[l][step_indicator < 0]
-                self.step[l][step_indicator == 0] = -self.step_size[l][step_indicator == 0] * sign(grad_l[step_indicator == 0])
+                self.step[l][step_indicator > 0] = \
+                    -(self.step_size[l][step_indicator > 0] * sign(grad_l[step_indicator > 0]))
+                self.step[l][step_indicator < 0] = \
+                    -self.last_step_size[l][step_indicator < 0]
+                self.step[l][step_indicator == 0] = \
+                    -self.step_size[l][step_indicator == 0] * sign(grad_l[step_indicator == 0])
 
                 self.last_gradient[l] = grad_l
                 self.last_gradient[l][step_indicator < 0] = 0
@@ -71,7 +75,18 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState(), logger=None):
+    def __init__(
+            self,
+            t_set,
+            n,
+            k,
+            transformation=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            weights_mu=0,
+            weights_sigma=1,
+            weights_prng=RandomState(),
+            logger=None
+    ):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -79,7 +94,8 @@ class LogisticRegression(Learner):
         :param n: Input length
         :param k: Number of parallel LTFs in the LTF Array
         :param transformation: Input transformation used by the LTF Array
-        :param combiner: Combiner Function used by the LTF Array (Note that not all combiner functions are supported by this class.)
+        :param combiner: Combiner Function used by the LTF Array (Note that not all combiner functions are supported by
+            this class.)
         :param weights_mu: mean of the Gaussian that is used to choose the initial model
         :param weights_sigma: standard deviation of the Gaussian that is used to choose the initial model
         :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
@@ -137,7 +153,8 @@ class LogisticRegression(Learner):
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
         self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
-                                  # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
+                                  # equivalent to self.set.responses *
+                                  #     (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
         def model_gradient_xor(l):
             #         Prod_i < w_i x_i >    /  < w_l x_l >          = Prod_(i \neq j)  < w_i x_i >
@@ -200,7 +217,13 @@ class LogisticRegression(Learner):
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng),
+            weight_array=LTFArray.normal_weights(
+                self.n,
+                self.k,
+                self.weights_mu,
+                self.weights_sigma,
+                self.weights_prng
+            ),
             transform=self.transformation,
             combiner=self.combiner,
         )
@@ -224,7 +247,11 @@ class LogisticRegression(Learner):
             ).all()
 
             # check accuracy
-            distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
+            distance = (
+                           self.training_set.N - count_nonzero(
+                               self.training_set.responses == self.sign_combined_model_responses
+                           )
+                       ) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
 
             # log
