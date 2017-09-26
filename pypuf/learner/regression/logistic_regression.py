@@ -14,21 +14,7 @@ class LogisticRegression(Learner):
     models that fit the LTF Array as defined in the constructor.
     """
 
-    class ModelUpdate(object):
-        """
-        Model update according to the naive algorithm. Works, but is really slow to converge.
-        """
-
-        def __init__(self, model):
-            model = model
-
-        def update(self, gradient):
-            """
-            Use the gradient scaled with a constant to determine the update step.
-            """
-            return -.3 * gradient
-
-    class RPropModelUpdate(ModelUpdate):
+    class RPropModelUpdate():
         """
         Model update according to the Resilient Backpropagation algorithm. For details, see update() method.
         """
