@@ -21,6 +21,8 @@ class LogisticRegression(Learner):
     models that fit the LTF Array as defined in the constructor.
     """
 
+    MAX_RESPONSE_ABS_VALUE = 50
+
     class RPropModelUpdate():
         """
         Model update according to the Resilient Backpropagation algorithm. For details, see update() method.
@@ -149,12 +151,10 @@ class LogisticRegression(Learner):
         self.sign_combined_model_responses = sign(combined_model_responses)
 
         # cap the absolute value of this to avoid overflow errors
-        MAX_RESPONSE_ABS_VALUE = 50
-        combined_model_responses = sign(combined_model_responses) * \
-                                   minimum(
-                                       full(len(combined_model_responses), MAX_RESPONSE_ABS_VALUE, double),
-                                       abs(combined_model_responses)
-                                   )
+        combined_model_responses = sign(combined_model_responses) * minimum(
+            full(len(combined_model_responses), self.MAX_RESPONSE_ABS_VALUE, double),
+            abs(combined_model_responses)
+        )
 
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
