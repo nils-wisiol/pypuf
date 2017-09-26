@@ -1,4 +1,10 @@
-from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
+"""
+Module for Learning Arbiter PUFs with Logistic Regression.
+Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
+of the 17th ACM conference on Computer and communications security. ACM, 2010.
+"""
+from numpy import sign, dot, exp, array, seterr, minimum, full, count_nonzero, amin, amax, dtype
+from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.learner.base import Learner
@@ -20,11 +26,17 @@ class LogisticRegression(Learner):
         """
 
         def __init__(self, model):
-            model = model
+            """
+            :param model: pypuf.simulation.arbiter_based.ltfarray.LTFArray
+                          Model which is used to model a PUF.
+            """
+            self.model = model
 
         def update(self, gradient):
             """
             Use the gradient scaled with a constant to determine the update step.
+            :param gradient: array of float
+            :return: array of float
             """
             return -.3 * gradient
 
@@ -34,27 +46,32 @@ class LogisticRegression(Learner):
         """
 
         def __init__(self, model, eta_minus=0.5, eta_plus=1.2):
-
+            """
+            :param model: pypuf.simulation.arbiter_based.ltfarray.LTFArray
+            :param eta_minus: float
+            :param eta_plus: float
+            """
             self.n = n = model.n
             self.k = k = model.k
 
             self.eta_minus = eta_minus
             self.eta_plus = eta_plus
-            self.delta_min = 10**-4
-            self.delta_max = 10**+1
+            self.delta_min = 10 ** -4
+            self.delta_max = 10 ** +1
             self.last_gradient = full((k, n), 1.0)
             self.last_step_size = full((k, n), 0.0)
             self.step_size = full((k, n), 1.0)
             self.step = full((k, n), 0.0)
-            self.step_size_max = full(self.n, self.delta_max, double)
-            self.step_size_min = full(self.n, self.delta_min, double)
+            self.step_size_max = full(self.n, self.delta_max, dtype('float64'))
+            self.step_size_min = full(self.n, self.delta_min, dtype('float64'))
 
             super().__init__(model)
 
-        def update(self, grad):
+        def update(self, gradient):
             """
             Compute update step according to "Resilient Backpropagation" by
-            Riedmiller, Martin, and Heinrich Braun. "A direct adaptive method for faster backpropagation learning: The RPROP algorithm."
+            Riedmiller, Martin, and Heinrich Braun. "A direct adaptive method for faster backpropagation learning:
+            The RPROP algorithm."
             Neural Networks, 1993., IEEE International Conference on. IEEE, 1993.
 
             Implementation following the neat implementation used in
@@ -64,9 +81,10 @@ class LogisticRegression(Learner):
 
             For their original code, please see http://www.pcp.in.tum.de/code/lr.zip,
             predictor.py:299
+            :param gradient array of float
+            :return: array of float
             """
-
-            for l, grad_l in enumerate(grad):
+            for l, grad_l in enumerate(gradient):
                 step_indicator = sign(grad_l * self.last_gradient[l])
 
                 self.step_size[l][step_indicator > 0] *= self.eta_plus
@@ -75,9 +93,12 @@ class LogisticRegression(Learner):
                 self.step_size[l] = amin((self.step_size[l], self.step_size_max), 0)
                 self.step_size[l] = amax((self.step_size[l], self.step_size_min), 0)
 
-                self.step[l][step_indicator > 0] = -(self.step_size[l][step_indicator > 0] * sign(grad_l[step_indicator > 0]))
+                self.step[l][step_indicator > 0] = -(
+                    self.step_size[l][step_indicator > 0] * sign(grad_l[step_indicator > 0])
+                )
                 self.step[l][step_indicator < 0] = -self.last_step_size[l][step_indicator < 0]
-                self.step[l][step_indicator == 0] = -self.step_size[l][step_indicator == 0] * sign(grad_l[step_indicator == 0])
+                self.step[l][step_indicator == 0] = -self.step_size[l][step_indicator == 0] * sign(
+                    grad_l[step_indicator == 0])
 
                 self.last_gradient[l] = grad_l
                 self.last_gradient[l][step_indicator < 0] = 0
@@ -85,7 +106,8 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0, weights_sigma=1, weights_prng=RandomState(), logger=None):
+    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
+                 weights_sigma=1, weights_prng=RandomState(), logger=None):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -93,10 +115,13 @@ class LogisticRegression(Learner):
         :param n: Input length
         :param k: Number of parallel LTFs in the LTF Array
         :param transformation: Input transformation used by the LTF Array
-        :param combiner: Combiner Function used by the LTF Array (Note that not all combiner functions are supported by this class.)
+        :param combiner: Combiner Function used by the LTF Array
+                         (Note that not all combiner functions are supported by this class.)
         :param weights_mu: mean of the Gaussian that is used to choose the initial model
         :param weights_sigma: standard deviation of the Gaussian that is used to choose the initial model
         :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
+        :param logger: logging.Logger
+                       Logger which is used to log detailed information of learn iterations.
         """
         self.iteration_count = 0
         self.training_set = t_set
@@ -108,7 +133,7 @@ class LogisticRegression(Learner):
         self.iteration_limit = 10000
         self.convergence_decimals = 2
         self.sign_combined_model_responses = None
-        self.sigmoid_derivative = full(self.training_set.N, None, double)
+        self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
         self.min_distance = 1
         self.transformation = transformation
         self.combiner = combiner
@@ -120,18 +145,26 @@ class LogisticRegression(Learner):
 
     @property
     def training_set(self):
+        """
+        This function returns the trainingset which is used to learn a PUF instance.
+        :return: pypuf.tools.TrainingSet
+        """
         return self.__training_set
 
     @training_set.setter
     def training_set(self, val):
+        """
+        Sets the traningset which is used to learn a PUF instance.
+        :param val: pypuf.tools.TrainingSet
+        """
+        # pylint: disable-msg=W0201
         self.__training_set = val
 
     def gradient(self, model):
         """
         Compute the gradient of the given model.
-
-        :param model:
-        :return:
+        :param model: pypuf.simulation.arbiter_based.LTFArray
+        :return: array of float
         """
 
         # compute model responses
@@ -140,37 +173,50 @@ class LogisticRegression(Learner):
         self.sign_combined_model_responses = sign(combined_model_responses)
 
         # cap the absolute value of this to avoid overflow errors
-        MAX_RESPONSE_ABS_VALUE = 50
-        combined_model_responses = sign(combined_model_responses) * \
-                                   minimum(
-                                       full(len(combined_model_responses), MAX_RESPONSE_ABS_VALUE, double),
-                                       abs(combined_model_responses)
-                                   )
+        max_response_abs_value = 50
+        max_response_abs_value_array = full(len(combined_model_responses), max_response_abs_value, dtype('float64'))
+        combined_model_responses = sign(combined_model_responses) * minimum(max_response_abs_value_array,
+                                                                            max_response_abs_value,
+                                                                            np_abs(combined_model_responses))
 
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
         self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
-                                  # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
+
+        # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
         def model_gradient_xor(l):
+            """
+            Caculates the gradient of the xored response at index l.
+            :param l int
+                     Index for weight array and challange array.
+            :return array of float
+            """
             #         Prod_i < w_i x_i >    /  < w_l x_l >          = Prod_(i \neq j)  < w_i x_i >
-            return combined_model_responses / model_responses[:,l]
+            return combined_model_responses / model_responses[:, l]
 
         def model_gradient_ip_mod2(l):
+            """
+            Caculates the gradient of the ip_mod2 combined responses at index l.
+            :param l int
+                     Index for weight array and challange array.
+            :return array of float
+            """
             if l % 2 == 0:  # for even l, the min operation takes place with the next value
-                neighbor = model_responses[:,l+1]
+                neighbor = model_responses[:, l + 1]
             else:  # for odd l, the min operation takes place with the previous value
-                neighbor = model_responses[:,l-1]
+                neighbor = model_responses[:, l - 1]
 
-            max = amax((model_responses[:,l], neighbor), 0)
+            maximum = amax((model_responses[:, l], neighbor), 0)
 
             return array([
                 0
-                if max[i] == neighbor[i] else
-                combined_model_responses[i] / max[i]
+                if maximum[i] == neighbor[i] else
+                combined_model_responses[i] / maximum[i]
                 for i in range(self.training_set.N)
             ])
+
         # in a multiprocessing scenario the object references would not be the same!
         if compare_functions(self.combiner, LTFArray.combiner_xor):
             model_gradient = model_gradient_xor
@@ -182,8 +228,8 @@ class LogisticRegression(Learner):
         ret = array([
             # sum over all challenges to the l-th Arbiter chain
             dot(
-                self.sigmoid_derivative * model_gradient(l), # gradient
-                self.transformed_challenges[:,l]  # all challenges to the l-th Arbiter chain
+                self.sigmoid_derivative * model_gradient(l),  # gradient
+                self.transformed_challenges[:, l]  # all challenges to the l-th Arbiter chain
             )
             for l in range(self.k)
         ])
@@ -193,11 +239,15 @@ class LogisticRegression(Learner):
         """
         Compute a model according to the given LTF Array parameters and training set.
         Note that this function can take long to return.
-        :return: The computed model.
+        :return: pypuf.simulation.arbiter_based.LTFArray
+                 The computed model.
         """
 
         # log format
         def log_state():
+            """
+            This method is used to log a snapshot of learning variables while running.
+            """
             if self.logger is None:
                 return
             self.logger.debug(
@@ -214,7 +264,8 @@ class LogisticRegression(Learner):
 
         # we start with a random model
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng),
+            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma,
+                                                 self.weights_prng),
             transform=self.transformation,
             combiner=self.combiner,
         )
@@ -234,8 +285,9 @@ class LogisticRegression(Learner):
             # check convergence
             converged = norm(updater.step) < 10**-self.convergence_decimals
 
+            none_zero_count = count_nonzero(self.training_set.responses == self.sign_combined_model_responses)
             # check accuracy
-            distance = (self.training_set.N - count_nonzero(self.training_set.responses == self.sign_combined_model_responses)) / self.training_set.N
+            distance = self.training_set.N - none_zero_count / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
 
             # log
