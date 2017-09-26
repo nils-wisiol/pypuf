@@ -159,9 +159,9 @@ class LogisticRegression(Learner):
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
+        # This is equivalent to
+        # self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
         self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
-                                  # equivalent to self.set.responses *
-                                  #     (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
         def model_gradient_xor(l):
             """ Compute Gradient for XOR Combiner Model (cf. LTFArray.combiner_xor) """
