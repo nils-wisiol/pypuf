@@ -110,7 +110,7 @@ class LogisticRegression(Learner):
         :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
         """
         self.iteration_count = 0
-        self.training_set = t_set
+        self.__training_set = t_set
         self.n = n
         self.k = k
         self.weights_mu = weights_mu
