@@ -1,3 +1,10 @@
+"""
+Module for Learning Arbiter PUFs with Logistic Regression.
+
+Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
+of the 17th ACM conference on Computer and communications security. ACM, 2010.
+"""
+
 from numpy import sign, dot, around, exp, array, seterr, minimum, abs, full, count_nonzero, amin, amax, double
 from numpy.random import RandomState
 from numpy.linalg import norm
@@ -157,21 +164,23 @@ class LogisticRegression(Learner):
                                   #     (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
         def model_gradient_xor(l):
+            """ Compute Gradient for XOR Combiner Model (cf. LTFArray.combiner_xor) """
             #         Prod_i < w_i x_i >    /  < w_l x_l >          = Prod_(i \neq j)  < w_i x_i >
-            return combined_model_responses / model_responses[:,l]
+            return combined_model_responses / model_responses[:, l]
 
         def model_gradient_ip_mod2(l):
+            """ Compute Gradient for Inner Product Mod 2 Combiner (cf. LTFArray.LTFArray.combiner_ip_mod2) """
             if l % 2 == 0:  # for even l, the min operation takes place with the next value
-                neighbor = model_responses[:,l+1]
+                neighbor = model_responses[:, l+1]
             else:  # for odd l, the min operation takes place with the previous value
-                neighbor = model_responses[:,l-1]
+                neighbor = model_responses[:, l-1]
 
-            max = amax((model_responses[:,l], neighbor), 0)
+            max_value = amax((model_responses[:, l], neighbor), 0)
 
             return array([
                 0
-                if max[i] == neighbor[i] else
-                combined_model_responses[i] / max[i]
+                if max_value[i] == neighbor[i] else
+                combined_model_responses[i] / max_value[i]
                 for i in range(self.training_set.N)
             ])
         # in a multiprocessing scenario the object references would not be the same!
@@ -185,8 +194,8 @@ class LogisticRegression(Learner):
         ret = array([
             # sum over all challenges to the l-th Arbiter chain
             dot(
-                self.sigmoid_derivative * model_gradient(l), # gradient
-                self.transformed_challenges[:,l]  # all challenges to the l-th Arbiter chain
+                self.sigmoid_derivative * model_gradient(l),  # gradient
+                self.transformed_challenges[:, l]  # all challenges to the l-th Arbiter chain
             )
             for l in range(self.k)
         ])
@@ -199,8 +208,8 @@ class LogisticRegression(Learner):
         :return: The computed model.
         """
 
-        # log format
         def log_state():
+            """ output the current state to self.logger.debug """
             if self.logger is None:
                 return
             self.logger.debug(
@@ -248,10 +257,10 @@ class LogisticRegression(Learner):
 
             # check accuracy
             distance = (
-                           self.training_set.N - count_nonzero(
-                               self.training_set.responses == self.sign_combined_model_responses
-                           )
-                       ) / self.training_set.N
+                self.training_set.N - count_nonzero(
+                    self.training_set.responses == self.sign_combined_model_responses
+                )
+            ) / self.training_set.N
             self.min_distance = min(distance, self.min_distance)
 
             # log
