@@ -65,24 +65,28 @@ pypuf ships to important interfaces `Learner` and `Simulation` that can then int
 
 This example creates a 64 bit 2-XOR XOR Arbiter PUF `instance` and a Logistic Regression learner `learner_lr` to learn it. After learning, the model's accuracy is tested and the result is printed.
 
+To run, use `python3 example.py`.
+
 ````python
-from pypuf import simulation, learner, tools
+from pypuf import tools
+from pypuf.learner.regression.logistic_regression import LogisticRegression
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 # create a simulation with random (Gaussian) weights
 # for 64-bit 4-XOR 
-instance = simulation.LTFArray(
-    weight_array=simulation.LTFArray.normal_weights(n=64, k=2),
-    transform=simulation.LTFArray.transform_atf,
-    combiner=simulation.LTFArray.combiner_xor,
+instance = LTFArray(
+    weight_array=LTFArray.normal_weights(n=64, k=2),
+    transform=LTFArray.transform_atf,
+    combiner=LTFArray.combiner_xor,
 )
 
 # create the learner
-lr_learner = learner.LogisticRegression(
-    training_set=tools.TrainingSet(instance=instance, N=12000),
+lr_learner = LogisticRegression(
+    t_set=tools.TrainingSet(instance=instance, N=12000),
     n=64,
     k=2,
-    transformation=simulation.LTFArray.transform_atf,
-    combiner=simulation.LTFArray.combiner_xor,
+    transformation=LTFArray.transform_atf,
+    combiner=LTFArray.combiner_xor,
 )
 
 # learn and test the model
