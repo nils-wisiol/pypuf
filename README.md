@@ -4,7 +4,32 @@ Physically Unclonable Functions (PUFs) are of research interest in the field of 
 
 ## Installation
 
-pypuf solely needs python3.4+, `numpy`, and `scipy`. Hence, we do not rely on a virtual environment as of now.
+Currently pypuf relies heavily on `numpy` and is tested for Python versions 3.4, 3.5, and 3.6. Some operations also require the [polymath](https://github.com/taudor/polymath) package and/or the [scipy](https://www.scipy.org/) package.
+
+### Recommended Installation
+
+The recommended way to run pypuf is to use a virtual environment. It can be created using the following steps. Please make sure that virtualenv, python, the python development files, and a compiler toolchain are available on your system. (On Debian: `apt install build-essential python3 python3-dev virtualenv`.) In your pypuf clone directory,
+
+    # create and enter virtual environment
+    virtualenv -p python3 env
+    source env/bin/activate
+
+    # upgrade pip
+    python3 -m pip install --upgrade pip
+
+    # install requirements (polynmath needs c99)
+    pip3 install numpy  # workaround for (a polymath issue)[https://github.com/taudor/polymath/issues/1]
+    CC="gcc -std=c99" pip3 install -r requirements.txt
+
+Afterwards, you can confirm a correct setup by running the tests:
+
+    python3 -m unittest
+
+If you encounter any trouble, please refer to our continuous integration at [travis-ci](https://travis-ci.org/nils-wisiol/pypuf) to see a working example or raise an issue on GitHub.
+
+### Lazy Installations
+
+You can run pypuf installing numpy and scipy from your distribution's repository. This will prevent you from using any features that rely on `polymath` and is hence not recommended. It is an easier way however to get started quickly. After installing `python3`, `numpy`, and `scipy` run the example to make sure everything is setup okay. (Unit tests for features relying on `polymath` will fail in this scenario!)
 
 ## Idea
 
