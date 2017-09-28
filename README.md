@@ -68,7 +68,7 @@ Another component of the simulation is the Fourier expansion of a Boolean functi
 
 ### Learning
 
-pypuf currently ships a logistic regression algorithm that was proposed to learn (XOR) Arbiter PUFs by [Sölter](https://www.researchgate.net/profile/Jan_Soelter/publication/259580784_Cryptanalysis_of_electrical_PUFs_via_machine_learning_algorithms/links/00b4952cc03621836c000000/Cryptanalysis-of-electrical-PUFs-via-machine-learning-algorithms.pdf) and [Rührmair et al](https://eprint.iacr.org/2010/251.pdf).
+pypuf currently ships a logistic regression algorithm that was proposed to learn (XOR) Arbiter PUFs by [Sölter](https://www.researchgate.net/profile/Jan_Soelter/publication/259580784_Cryptanalysis_of_electrical_PUFs_via_machine_learning_algorithms/links/00b4952cc03621836c000000/Cryptanalysis-of-electrical-PUFs-via-machine-learning-algorithms.pdf) and [Rührmair et al](https://eprint.iacr.org/2010/251.pdf), utilizing the RPROP backpropagation.
 Additionally pypuf aims for the provision of PAC learning algorithms currently represented only by   the Low Degree Algorithm introduced by [Mansour](http://www.cs.columbia.edu/~rocco/Teaching/S12/Readings/Mansour-survey.pdf).
 ## Usage
 
