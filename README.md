@@ -137,7 +137,7 @@ If you're using pypuf in your research, please let us know so we can link to you
  * Is your contribution GPLv3 compatible?
  * Update README.md accordingly
  * Document new code, update code comments for changed code
- * Provide tests for your code
+ * Provide tests for your code (to run the tests locally, use `python3 -m unittest`)
  * Do not use `numpy.random` directly; always use an `numpy.random.RandomState` instance.
 
 ## Authors
