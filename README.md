@@ -76,7 +76,11 @@ pypuf is primarily designed as an API. However, it provides a subset of its feat
 
 ### Command Line Interface
 
-`sim_learn` is a command line interface that simulates an LTF array and tries to learn it using logistic regression. For simulation and learning, a couple of parameters can be chosen on the command line. Start `sim_learn` without parameters to get detailed usage information.	
+`sim_learn` is a command line interface that simulates an LTF array and tries to learn it using logistic regression. For simulation and learning, a couple of parameters can be chosen on the command line. Start `sim_learn` without parameters to get detailed usage information.
+
+`mv_num_of_votes` is a command line interface that allows to compute the minimum number of required votes in a Majority Vote XOR Arbiter PUF such that a certain stability is achieved. For details, please refer to [Why Attackers Lose](https://eprint.iacr.org/2017/932.pdf).
+
+`stability_calculation` is a command line interface that allows to generate a stability histogram for a simulated PUF, i.e. to determine an approximation of how the probability to see the 'correct' answer is distributed among the challenge space. For details, please refer to [Why Attackers Lose](https://eprint.iacr.org/2017/932.pdf).
 
 #### Example Usage
 
