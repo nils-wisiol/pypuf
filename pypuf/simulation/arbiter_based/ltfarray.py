@@ -1,8 +1,11 @@
+import time
 from numpy import sum, prod, shape, sign, dot, array, tile, transpose, concatenate, dstack, swapaxes, sqrt, amax,\
-    vectorize, tile
+    vectorize, tile, around, set_printoptions
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
+from numpy.testing import assert_array_equal
+import pypuf_helper as ph
 
 
 class LTFArray(Simulation):
@@ -18,7 +21,7 @@ class LTFArray(Simulation):
         :param r: a list with a number of vectors of single LTF results
         :return: a list of full results, one for each
         """
-        return prod(r, 1)
+        return ph.combiner_xor(r)
 
     @staticmethod
     def combiner_ip_mod2(r):
@@ -43,10 +46,8 @@ class LTFArray(Simulation):
         Input transformation that does nothing.
         :return:
         """
-        return array([
-                tile(c, (k, 1))  # same unmodified challenge for all k LTFs
-                for c in cs
-            ])
+        # Old numpy version
+        return ph.transform_id(cs, k)
 
     @staticmethod
     def transform_atf(cs, k):
@@ -515,15 +516,7 @@ class LTFArray(Simulation):
         """
         :return: array
         """
-        return transpose(
-            array([
-                dot(
-                    inputs[:,l],
-                    self.weight_array[l]
-                )
-                for l in range(self.k)
-            ])
-        )
+        return ph.eval(inputs, self.weight_array)
 
 
 class NoisyLTFArray(LTFArray):

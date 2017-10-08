@@ -12,15 +12,15 @@ class TestCombiner(unittest.TestCase):
         assert_array_equal(
             LTFArray.combiner_xor(
                 [
-                    [ 1,  1, -3,  1],
-                    [-1, -1, -1,  1],
-                    [-2, -2,  2,  1]
+                    [ 1.,  1., -3.,  1.],
+                    [-1., -1., -1.,  1.],
+                    [-2., -2.,  2.,  1.]
                 ]
             ),
             [
-                -3,
-                -1,
-                8
+                -3.,
+                -1.,
+                8.
             ]
         )
 
@@ -523,13 +523,13 @@ class TestLTFArray(unittest.TestCase):
                 combiner=LTFArray.combiner_xor,
             )
 
-            fast_evaluation_result = around(ltf_array.ltf_eval(LTFArray.transform_id(inputs, k)), decimals=10)
+            fast_evaluation_result = around(ltf_array.ltf_eval(LTFArray.transform_id(inputs, k)), decimals=8)
             slow_evaluation_result = []
             for c in inputs:
                 slow_evaluation_result.append(
                     [ltf_eval_slow(c, ltf_array.weight_array[l]) for l in range(k)]
                 )
-            slow_evaluation_result = around(slow_evaluation_result, decimals=10)
+            slow_evaluation_result = around(slow_evaluation_result, decimals=8)
 
             self.assertTupleEqual(shape(slow_evaluation_result), (N, k))
             self.assertTupleEqual(shape(fast_evaluation_result), (N, k))
