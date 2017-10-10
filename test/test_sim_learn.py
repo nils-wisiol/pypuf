@@ -78,3 +78,30 @@ class TestSimLearn(unittest.TestCase):
         log_file = open(log_name + '.log', 'r')
         self.assertEqual(line_count(log_file), instance_count, 'Unexpected number of results')
         log_file.close()
+
+    def test_number_of_reults(self):
+        """
+        This test checks the number of results to match a previous calculated value.
+        """
+        instance_count = 7
+        restarts = 13
+        expected_number_of_result = instance_count * restarts
+        log_name = 'test_log'
+        sim_learn.main(
+            ["sim_learn", "8", "2", "id", "xor", "10", str(restarts), str(instance_count), "1234", "1234", log_name]
+        )
+
+        def line_count(file_object):
+            """
+            :param file_object:
+            :return: number of lines
+            """
+            count = 0
+            while file_object.readline() != '':
+                count = count + 1
+            return count
+
+        # Check if the number of results is correct
+        log_file = open(log_name + '.log', 'r')
+        self.assertEqual(line_count(log_file), expected_number_of_result, 'Unexpected number of results')
+        log_file.close()
