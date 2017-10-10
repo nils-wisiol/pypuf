@@ -105,18 +105,19 @@ def main(args):
     # create different experiment instances
     experiments = []
     for j in range(instances):
-        l_name = log_name + str(j)
-        experiment = ExperimentLogisticRegression(
-            log_name=l_name,
-            n=n,
-            k=k,
-            N=N,
-            seed_instance=seed_instance + j,
-            seed_model=seed_model + j,
-            transformation=transformation,
-            combiner=combiner
-        )
-        experiments.append(experiment)
+        for r in range(restarts):
+            l_name = '%s_%i_%i' % (log_name, j, r)
+            experiment = ExperimentLogisticRegression(
+                log_name=l_name,
+                n=n,
+                k=k,
+                N=N,
+                seed_instance=seed_instance + j,
+                seed_model=seed_model + j + r,
+                transformation=transformation,
+                combiner=combiner
+            )
+            experiments.append(experiment)
 
     experimenter = Experimenter(log_name, experiments)
     # run the instances
