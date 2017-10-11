@@ -16,7 +16,8 @@ def run_input_trans_comparison(
         instance_sample_size=100,
         seed_instance=0x15eed,
         initial_seed_model=0x5eed,
-        log_file_prefix = None
+        log_file_prefix = None,
+        iteration_limit=1000,
         ):
     """
     This function runs experiments to compare different input transformations regarding their
@@ -53,6 +54,7 @@ def run_input_trans_comparison(
                         seed_instance=seed_instance,
                         transformation=transformation,
                         combiner=combiner,
+                        iteration_limit=iteration_limit,
                     )
                 )
                 seed_model += 1
@@ -71,6 +73,8 @@ if __name__ == '__main__':
                         required=True, help="<Required> List of transformations")
     parser.add_argument("-N", "--crpcount", nargs="+", type=int,
                         required=True, help="<Required> List of CRP counts.")
+    parser.add_argument("-i", "--iteration-limit", type=int, default=1000,
+                        help="Cancel learning after this number of iterations.")
     parser.add_argument("-h", "--help", action='help', default=argparse.SUPPRESS,
                         help="Usage: python3 input_trans_comparison.py 64 2 10 \"0xbeef\" "
                              "-t \"id\" \"polynomial\" -N 10 100")
@@ -91,4 +95,5 @@ if __name__ == '__main__':
         Ns=args.crpcount,
         instance_sample_size=args.samples,
         initial_seed_model=int(args.modelseed, 16),
+        iteration_limit=int(args.iteration_limit),
     )
