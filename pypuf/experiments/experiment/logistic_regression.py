@@ -1,5 +1,4 @@
 from numpy.random import RandomState
-from numpy import amin, amax, mean, array, append
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -12,7 +11,7 @@ class ExperimentLogisticRegression(Experiment):
         This Experiment uses the logistic regression learner on an LTFArray PUF simulation.
     """
 
-    def __init__(self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner):
+    def __init__(self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, iteration_limit=1000):
         super().__init__(
             log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
                 log_name,
@@ -34,6 +33,7 @@ class ExperimentLogisticRegression(Experiment):
         self.model_prng = RandomState(seed=self.seed_model)
         self.combiner = combiner
         self.transformation = transformation
+        self.iteration_limit = iteration_limit
         self.instance = None
         self.learner = None
         self.model = None
@@ -57,6 +57,7 @@ class ExperimentLogisticRegression(Experiment):
             combiner=self.combiner,
             weights_prng=self.model_prng,
             logger=self.progress_logger,
+            iteration_limit=self.iteration_limit,
         )
         self.model = self.learner.learn()
 
