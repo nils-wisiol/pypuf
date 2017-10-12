@@ -506,7 +506,7 @@ class LTFArray(Simulation):
         :return: list of responses
         """
         if self.bias:
-            inputs = tools.iter_append_last(inputs, 1)
+            inputs = tools.append_last(inputs, 1)
         return sign(self.val(inputs))
 
     def val(self, inputs):
