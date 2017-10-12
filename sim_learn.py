@@ -48,7 +48,6 @@ def main(args):
         stderr.write('                               bits (even n only)\n')
         stderr.write('               N: number of challenge response pairs in the training set\n')
         stderr.write('        restarts: number of repeated initializations the learner\n')
-        stderr.write('                  use float number x, 0<x<1 to repeat until given accuracy\n')
         stderr.write('       instances: number of repeated initializations the instance\n')
         stderr.write('                  The number total learning attempts is restarts*instances.\n')
         stderr.write('   seed_instance: random seed used for LTF array instance\n')
@@ -62,16 +61,8 @@ def main(args):
     transformation_name = args[3]
     combiner_name = args[4]
     N = int(args[5])
-
-    if float(args[6]) < 1:
-        restarts = float('inf')
-        convergence = float(args[6])
-    else:
-        restarts = int(args[6])
-        convergence = 1.1
-
+    restarts = int(args[6])
     instances = int(args[7])
-
     seed_instance = int(args[8], 16)
     seed_model = int(args[9], 16)
 
