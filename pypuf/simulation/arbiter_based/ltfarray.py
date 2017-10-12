@@ -46,7 +46,6 @@ class LTFArray(Simulation):
         Input transformation that does nothing.
         :return:
         """
-        # Old numpy version
         return ph.transform_id(cs, k)
 
     @staticmethod

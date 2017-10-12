@@ -55,7 +55,7 @@ def append_last(array_like, x):
     :param x: element to be appended
     :return: initial array_like with appended element x
     """
-    append_array = zeros((array_like.shape[0],1), dtype=int)
+    append_array = zeros((array_like.shape[0], 1), dtype=int)
     append_array += x
     return append(array_like, append_array, axis=1)
 
