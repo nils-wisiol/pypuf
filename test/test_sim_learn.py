@@ -1,8 +1,22 @@
 import unittest
+import os
+import glob
 import sim_learn
 
 
 class TestSimLearn(unittest.TestCase):
+    def setUp(self):
+        # Remove all log files
+        paths = list(glob.glob('*.log'))
+        for p in paths:
+            os.remove(p)
+
+    def tearDown(self):
+        # Remove all log files
+        paths = list(glob.glob('*.log'))
+        for p in paths:
+            os.remove(p)
+
     def test_id(self):
         sim_learn.main(["sim_learn", "8", "2", "id", "xor", "20", "1", "2", "1234", "1234"])
 
@@ -45,4 +59,22 @@ class TestSimLearn(unittest.TestCase):
     def test_permutation_atf(self):
         sim_learn.main(["sim_learn", "8", "2", "permutation_atf", "xor", "10", "1", "2", "1234", "1234"])
 
+    def test_log_name(self):
+        instance_count = 2
+        log_name = 'test_log'
+        sim_learn.main(["sim_learn", "8", "2", "id", "xor", "10", "1", str(instance_count), "1234", "1234", log_name])
 
+        def line_count(file_object):
+            """
+            :param file_object:
+            :return: number of lines
+            """
+            count = 0
+            while file_object.readline() != '':
+                count = count + 1
+            return count
+
+        # Check if the number of results is correct
+        log_file = open(log_name + '.log', 'r')
+        self.assertEqual(line_count(log_file), instance_count, 'Unexpected number of results')
+        log_file.close()

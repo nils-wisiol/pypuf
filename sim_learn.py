@@ -1,18 +1,15 @@
-from numpy import amin, amax, mean, array, append
-from numpy.random import RandomState
-from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf import tools
-import time
-from sys import argv, stdout, stderr
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
+from pypuf.experiments.experimenter import Experimenter
+from sys import argv, stderr
 
 
 def main(args):
 
-    if len(args) != 10:
+    if len(args) < 10 or len(args) > 11:
         stderr.write('LTF Array Simulator and Logistic Regression Learner\n')
         stderr.write('Usage:\n')
-        stderr.write('sim_learn.py n k transformation combiner N restarts seed_instance seed_model\n')
+        stderr.write('sim_learn.py n k transformation combiner N restarts seed_instance seed_model [log_name]\n')
         stderr.write('               n: number of bits per Arbiter chain\n')
         stderr.write('               k: number of Arbiter chains\n')
         stderr.write('  transformation: used to transform input before it is used in LTFs\n')
@@ -56,6 +53,8 @@ def main(args):
         stderr.write('                  The number total learning attempts is restarts*instances.\n')
         stderr.write('   seed_instance: random seed used for LTF array instance\n')
         stderr.write('      seed_model: random seed used for the model in first learning attempt\n')
+        stderr.write('      [log_name]: path to the logfile which contains results from all instances. The tool '
+                                        'will add a ".log" to log_name. The default path is ./sim_learn.log\n')
         quit(1)
 
     n = int(args[1])
@@ -76,10 +75,6 @@ def main(args):
     seed_instance = int(args[8], 16)
     seed_model = int(args[9], 16)
 
-    # reproduce 'random' numbers and avoid interference with other random numbers drawn
-    instance_prng = RandomState(seed=seed_instance)
-    model_prng = RandomState(seed=seed_model)
-
     transformation = None
     combiner = None
 
@@ -95,6 +90,10 @@ def main(args):
         stderr.write('Combiner %s unknown or currently not implemented\n' % combiner_name)
         quit()
 
+    log_name = 'sim_learn'
+    if len(args) == 11:
+        log_name = args[10]
+
     stderr.write('Learning %s-bit %s XOR Arbiter PUF with %s CRPs and %s restarts.\n\n' % (n, k, N, restarts))
     stderr.write('Using\n')
     stderr.write('  transformation:       %s\n' % transformation)
@@ -103,76 +102,49 @@ def main(args):
     stderr.write('  model random seed:    0x%x\n' % seed_model)
     stderr.write('\n')
 
-    accuracy = array([])
-    training_times = array([])
-    iterations = array([])
-
+    # create different experiment instances
+    experiments = []
     for j in range(instances):
+        for r in range(restarts):
+            l_name = '%s_%i_%i' % (log_name, j, r)
+            experiment = ExperimentLogisticRegression(
+                log_name=l_name,
+                n=n,
+                k=k,
+                N=N,
+                seed_instance=seed_instance + j,
+                seed_model=seed_model + j + r,
+                transformation=transformation,
+                combiner=combiner
+            )
+            experiments.append(experiment)
 
-        stderr.write('----------- Choosing new instance. ---------\n')
+    experimenter = Experimenter(log_name, experiments)
+    # run the instances
+    experimenter.run()
 
-        instance = LTFArray(
-            weight_array=LTFArray.normal_weights(n, k, random_instance=instance_prng),
-            transform=transformation,
-            combiner=combiner,
-        )
+    # output format
+    str_format = '{:<15}\t{:<10}\t{:<8}\t{:<8}\t{:<8}\t{:<8}\t{:<18}\t{:<15}\t{:<6}\t{:<8}\t{:<8}\t{:<8}'
+    headline = str_format.format(
+        'seed_instance', 'seed_model', 'i', 'n', 'k', 'N', 'trans', 'comb', 'iter', 'time', 'accuracy',
+        'model_values\n'
+    )
+    # print the result headline
+    stderr.write(headline)
 
-        lr_learner = LogisticRegression(
-            tools.TrainingSet(instance=instance, N=N),
-            n,
-            k,
-            transformation=transformation,
-            combiner=combiner,
-            weights_prng=model_prng,
-        )
+    log_file = open(log_name + '.log', 'r')
 
-        i = 0
-        dist = 1
+    # print the results
+    result = log_file.readline()
+    while result != '':
+        stderr.write(str_format.format(*result.split('\t')))
+        result = log_file.readline()
 
-        while i < restarts and 1 - dist < convergence:
-            stderr.write('\r%5i/%5i         ' % (i+1, restarts if restarts < float('inf') else 0))
-            start = time.time()
-            model = lr_learner.learn()
-            end = time.time()
-            training_times = append(training_times, end - start)
-            dist = tools.approx_dist(instance, model, min(10000, 2 ** n))
-            accuracy = append(accuracy, 1 - dist)
-            iterations = append(iterations, lr_learner.iteration_count)
-            # output test result in machine-friendly format
-            # seed_ltf seed_model idx_restart n k N transformation combiner iteration_count time accuracy
-            stderr.write(' '.join(
-                [
-                    '0x%x' % seed_instance,
-                    '0x%x' % seed_model,
-                    '%5d' % i,
-                    '%3d' % n,
-                    '%2d' % k,
-                    '%6d' % N,
-                    '%s' % transformation_name,
-                    '%s' % combiner_name,
-                    '%4d' % lr_learner.iteration_count,
-                    '%9.3f' % (end - start),
-                    '%1.5f' % (1 - dist),
-                ]
-            ) + '\n')
-            #stderr.write('training time:                % 5.3fs' % (end - start))
-            #stderr.write('min training distance:        % 5.3f' % lr_learner.min_distance)
-            #stderr.write('test distance (1000 samples): % 5.3f\n' % dist)
-            i += 1
+    log_file.close()
 
-    stderr.write('\r              \r')
-    stderr.write('\n\n')
-    stderr.write('training times: %s\n' % training_times)
-    stderr.write('iterations: %s\n' % iterations)
-    stderr.write('test accuracy: %s\n' % accuracy)
-    stderr.write('\n\n')
-    stderr.write('min/avg/max training time  : % 9.3fs /% 9.3fs /% 9.3fs\n' % (
-    amin(training_times), mean(training_times), amax(training_times)))
-    stderr.write('min/avg/max iteration count: % 9.3f  /% 9.3f  /% 9.3f \n' % (
-    amin(iterations), mean(iterations), amax(iterations)))
-    stderr.write(
-        'min/avg/max test accuracy  : % 9.3f  /% 9.3f  /% 9.3f \n' % (amin(accuracy), mean(accuracy), amax(accuracy)))
-    stderr.write('\n\n')
+
+
+
 
 
 if __name__ == '__main__':
