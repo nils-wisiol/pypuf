@@ -481,7 +481,7 @@ class TestLTFArray(unittest.TestCase):
                 bias = False,
             )
             biased_eval = biased_ltf_array.eval(inputs)
-            inputs = tools.iter_append_last(inputs, 1)\
+            inputs = tools.append_last(inputs, 1)\
                 if biased_ltf_array.bias else inputs
             eval = ltf_array.eval(inputs)
 

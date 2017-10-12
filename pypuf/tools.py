@@ -48,6 +48,17 @@ def iter_append_last(array_iterator, x):
     for array in array_iterator:
         yield append(array, x)
 
+def append_last(array_like, x):
+    """
+    Returns an array for a given array array_like and appends on the axis 1 the element x.
+    :param array_like: matrix with initial values
+    :param x: element to be appended
+    :return: initial array_like with appended element x
+    """
+    append_array = zeros((array_like.shape[0],1), dtype=int)
+    append_array += x
+    return append(array_like, append_array, axis=1)
+
 
 def approx_dist(a, b, num, random_instance=RandomState()):
     """
