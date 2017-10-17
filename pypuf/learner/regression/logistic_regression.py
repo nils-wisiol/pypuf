@@ -3,7 +3,7 @@ Module for Learning Arbiter PUFs with Logistic Regression.
 Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
 of the 17th ACM conference on Computer and communications security. ACM, 2010.
 """
-from numpy import sign, dot, exp, array, seterr, minimum, full, amin, amax, dtype
+from numpy import sign, dot, exp, array, seterr, minimum, full, amin, amax, dtype, abs, sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
@@ -130,10 +130,11 @@ class LogisticRegression(Learner):
         self.weights_mu = weights_mu
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
-        self.iteration_limit = 10000
-        self.convergence_decimals = 2
+        self.iteration_limit = 2000
+        self.convergence_decimals = 2.5
         self.sign_combined_model_responses = None
         self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
+        self.distance = 1
         self.transformation = transformation
         self.combiner = combiner
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
@@ -233,7 +234,7 @@ class LogisticRegression(Learner):
         ])
         return ret
 
-    def learn(self):
+    def learn(self, weight_init=None):
         """
         Compute a model according to the given LTF Array parameters and training set.
         Note that this function can take long to return.
@@ -251,7 +252,7 @@ class LogisticRegression(Learner):
             self.logger.debug(
                 '%i\t%f\t%f\t%s' % (
                     self.iteration_count,
-                    distance,
+                    self.distance,
                     norm(updater.step),
                     ','.join(map(str, model.weight_array.flatten()))
                 )
@@ -261,16 +262,20 @@ class LogisticRegression(Learner):
         seterr(all='raise')
 
         # we start with a random model
+        if weight_init is None:
+            weights = LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma, self.weights_prng)
+        else:
+            weights = weight_init
+
         model = LTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, self.weights_mu, self.weights_sigma,
-                                                 self.weights_prng),
+            weight_array=weights,
             transform=self.transformation,
             combiner=self.combiner,
         )
 
         updater = self.RPropModelUpdate(model)
         converged = False
-        distance = 1
+        self.distance = 1
         self.iteration_count = 0
         log_state()
         while not converged and self.iteration_count < self.iteration_limit:
@@ -284,7 +289,10 @@ class LogisticRegression(Learner):
             converged = norm(updater.step) < 10**-self.convergence_decimals
 
             # log
-            log_state()
+            log_state()  # check accuracy
+
+            self.distance = sum(abs((self.training_set.responses - self.sign_combined_model_responses) / 2)) \
+                            / self.training_set.N
 
         if not converged:
             self.converged = False
