@@ -4,7 +4,7 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
@@ -85,19 +85,26 @@ def iter_append_last(array_iterator, item):
         yield append(array_obj, item)
 
 
-def append_last(array_like, item):
+def append_last(arr, item):
     """
-    Returns an array for a given array array_like and appends on the axis 1 the element x.
-    :param array_like: two dimensional array of type
+    Returns an array for a given array arr and appends on the lowest level the element item.
+    :param arr: n dimensional array of type
                        Matrix with initial values
     :param item: type
                  element to be appended
-    :return: two dimensional array of type
-             initial array_like with appended element item
+    :return: n dimensional array of type
+             initial arr with appended element item
     """
-    append_array = zeros((array_like.shape[0], 1), dtype=int)
-    append_array += item
-    return append(array_like, append_array, axis=1)
+    assert arr.dtype == dtype(type(item)), 'The elements of arr and item must be of the same type.'
+    dimension = list(shape(arr))
+    assert len(dimension) >= 1, 'arr must have at least one dimension.'
+    # the lowest level should contain one item
+    dimension[-1] = 1
+    # create an array white shape(array) where the lowest level contains only one item
+    item_arr = full(dimension, item)
+    # the item should be appended at the lowest level
+    axis = len(dimension) - 1
+    return append(arr, item_arr, axis=axis)
 
 
 def approx_dist(instance1, instance2, num, random_instance=RandomState()):
