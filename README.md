@@ -140,6 +140,11 @@ If you're using pypuf in your research, please let us know so we can link to you
  * Provide tests for your code (to run the tests locally, use `python3 -m unittest`)
  * Do not use `numpy.random` directly; always use an `numpy.random.RandomState` instance.
 
+### Contribution Guidelines
+* If you want to rework or add a new part to the pypuf framework you should first open an issue
+  and describe your planned changes. You should consider the feedback and alter your design in
+  order to increase the chance that your code gets merged.
+
 ## Authors
 
 Significant contribution to this project are due to (in chronological order):
