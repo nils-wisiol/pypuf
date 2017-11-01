@@ -16,7 +16,8 @@ class ExperimentLogisticRegression(Experiment):
     """
 
     def __init__(
-            self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_chl_distance=0xB055,
+            self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_challenge=0x5A551,
+            seed_chl_distance=0xB055,
     ):
         """
         :param log_name: string
@@ -38,6 +39,9 @@ class ExperimentLogisticRegression(Experiment):
         :param combiner: A function: array of int with shape(N,k,n) -> array of in with shape(N)
                          The functions combines the outputs of k PUFs to one bit results,
                          in oder to increase resistance against attacks.
+        :param seed_challenge: int default is 0x5A551
+                               The seed which is used to initialize the pseudo-random number generator
+                               which is used to draft challenges for the TrainingSet.
         :param seed_chl_distance: int default is 0xB055
                                   The seed which is used to initialize the pseudo-random number generator
                                   which is used to draft challenges for the accuracy calculation.
@@ -63,6 +67,8 @@ class ExperimentLogisticRegression(Experiment):
         self.model_prng = RandomState(seed=self.seed_model)
         self.combiner = combiner
         self.transformation = transformation
+        self.seed_challenge = seed_challenge
+        self.challenge_prng = RandomState(self.seed_challenge)
         self.seed_chl_distance = seed_chl_distance
         self.distance_prng = RandomState(self.seed_chl_distance)
         self.instance = None
@@ -81,7 +87,7 @@ class ExperimentLogisticRegression(Experiment):
             combiner=self.combiner,
         )
         self.learner = LogisticRegression(
-            tools.TrainingSet(instance=self.instance, N=self.N),
+            tools.TrainingSet(instance=self.instance, N=self.N, random_instance=self.challenge_prng),
             self.n,
             self.k,
             transformation=self.transformation,
