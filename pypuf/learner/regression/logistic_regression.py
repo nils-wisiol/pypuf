@@ -175,7 +175,6 @@ class LogisticRegression(Learner):
         max_response_abs_value = 50
         max_response_abs_value_array = full(len(combined_model_responses), max_response_abs_value, dtype('float64'))
         combined_model_responses = sign(combined_model_responses) * minimum(max_response_abs_value_array,
-                                                                            max_response_abs_value,
                                                                             np_abs(combined_model_responses))
 
         # compute the derivative from
