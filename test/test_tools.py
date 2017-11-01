@@ -1,7 +1,9 @@
 """This module is used to test the functions which are implemented in pypuf.tools."""
 import unittest
 from numpy import zeros, dtype, array_equal
-from pypuf.tools import append_last
+from numpy.random import RandomState
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.tools import append_last, TrainingSet
 
 
 class TestAppendLast(unittest.TestCase):
@@ -55,3 +57,29 @@ class TestAppendLast(unittest.TestCase):
             arr_res = append_last(arr, item)
             # check for equality
             self.assertTrue(array_equal(arr_res, arr_check), 'The arrays should be equal.')
+
+    def test_training_set_challenges(self):
+        """The TrainingSet should generate the same challenges for equal seeds."""
+        n = 8
+        k = 1
+        transformation = LTFArray.transform_id
+        combiner = LTFArray.combiner_xor
+        N = 1000
+        instance_prng = RandomState(0x4EFEA)
+        weight_array = LTFArray.normal_weights(n, k, random_instance=instance_prng)
+
+        instance = LTFArray(
+            weight_array=weight_array,
+            transform=transformation,
+            combiner=combiner,
+        )
+
+        challenge_seed = 0xAB17D
+
+        training_set_1 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+        training_set_2 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+
+        self.assertTrue(
+            array_equal(training_set_1.challenges, training_set_2.challenges),
+            'The challenges are not equal.',
+        )
