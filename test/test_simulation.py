@@ -3,6 +3,7 @@ This module is used to test the different simulation models.
 """
 
 import unittest
+from test.utility import get_functions_with_prefix
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
@@ -818,16 +819,6 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
 
-        def get_functions_with_prefix(prefix, obj):
-            """
-            This function return all functions with a prefix.
-            :param prefix: string
-            :param obj: object
-                        Object to investigate
-            :return list of strings
-            """
-            return [func for func in dir(obj) if func.startswith(prefix)]
-
         combiners = get_functions_with_prefix('combiner_', SimulationMajorityLTFArray)
         transformations = get_functions_with_prefix('transform_', SimulationMajorityLTFArray)
 
@@ -835,8 +826,8 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             for combiner in combiners:
                 mv_noisy_ltf_array = SimulationMajorityLTFArray(
                     weight_array=weight_array,
-                    transform=getattr(SimulationMajorityLTFArray, transformation),
-                    combiner=getattr(SimulationMajorityLTFArray, combiner),
+                    transform=transformation,
+                    combiner=combiner,
                     sigma_noise=1,
                     random_instance_noise=noise_prng,
                     vote_count=vote_count,
