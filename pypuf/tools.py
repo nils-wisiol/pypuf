@@ -260,14 +260,16 @@ class TrainingSet():
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N):
+    def __init__(self, instance, N, random_instance=RandomState()):
         """
         :param instance: pypuf.simulation.base.Simulation
                          Instance which is used to generate responses for random challenges.
         :param N: int
                   Number of desired challenges
+        :param random_instance: numpy.random.RandomState
+                                PRNG which is used to draft challenges.
         """
         self.instance = instance
-        self.challenges = array(list(sample_inputs(instance.n, N)))
+        self.challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
         self.responses = instance.eval(self.challenges)
         self.N = N
