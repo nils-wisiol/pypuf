@@ -1,10 +1,7 @@
 """This module tests the different experiment classes."""
 import unittest
-import os
-import glob
-import multiprocessing
+from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
-from pypuf.experiments.experimenter import log_listener, setup_logger
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
 
@@ -14,64 +11,46 @@ class TestBase(unittest.TestCase):
     Every experiment needs logs in order to work. This class is used to delete all logs before after an experiment
     test."
     """
+
     def setUp(self):
         # Remove all log files
-        paths = list(glob.glob('*.log'))
-        for path in paths:
-            os.remove(path)
+        remove_test_logs()
 
     def tearDown(self):
         # Remove all log files
-        paths = list(glob.glob('*.log'))
-        for path in paths:
-            os.remove(path)
+        remove_test_logs()
 
 
 class TestExperimentLogisticRegression(TestBase):
     """
     This class tests the logistic regression experiment.
     """
-    def test_run_and_analyze(self):
+    @logging
+    def test_run_and_analyze(self, logger):
         """
         This method only runs the experiment.
         """
-        logger_name = 'log'
-
-        # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
-        listener.start()
-
-        lr16_4 = ExperimentLogisticRegression('exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
-                                              LTFArray.combiner_xor)
-        lr16_4.execute(queue, logger_name)
-
-        queue.put_nowait(None)
-        listener.join()
+        lr16_4 = ExperimentLogisticRegression(
+            LOG_PATH+'exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
+            LTFArray.combiner_xor,
+        )
+        lr16_4.execute(logger.queue, logger.logger_name)
 
 
-class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
+class TestExperimentMajorityVoteFindVotes(TestBase):
     """
     This class is used to test the Experiment which searches for a number of votes which is needed to achieve an
     overall desired stability.
     """
-    def test_run_and_analyze(self):
+    @logging
+    def test_run_and_analyze(self, logger):
         """
         This method run the experiment and checks if a number of votes was found in oder to satisfy an
         overall desired stability.
         """
-        logger_name = 'log'
-
-        # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
-        listener.start()
-
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger_name,
+            log_name=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -89,30 +68,20 @@ class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
             iterations=2,
             bias=None
         )
-        experiment.execute(queue, logger_name)
+        experiment.execute(logger.queue, logger.logger_name)
 
         self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
                                 'No vote_count was found.')
 
-        queue.put_nowait(None)
-        listener.join()
-
-    def test_run_and_analyze_bias_list(self):
+    @logging
+    def test_run_and_analyze_bias_list(self, logger):
         """
         This method runs the experiment with a bias list and checks if a number of votes was found in order to satisfy
         an overall desired stability.
         """
-        logger_name = 'log'
-
-        # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
-        listener.start()
-
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger_name,
+            log_name=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -131,30 +100,20 @@ class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
             bias=[0.001, 0.002]
         )
 
-        experiment.execute(queue, logger_name)
+        experiment.execute(logger.queue, logger.logger_name)
 
         self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
                                 'No vote_count was found.')
 
-        queue.put_nowait(None)
-        listener.join()
-
-    def test_run_and_analyze_bias_value(self):
+    @logging
+    def test_run_and_analyze_bias_value(self, logger):
         """
         This method runs the experiment with a bias value and checks if a number of votes was found in order to
         satisfy an overall desired stability.
         """
-        logger_name = 'log'
-
-        # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
-        listener.start()
-
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger_name,
+            log_name=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -173,10 +132,7 @@ class TestExperimentMajorityVoteFindVotes(unittest.TestCase):
             bias=0.56
         )
 
-        experiment.execute(queue, logger_name)
+        experiment.execute(logger.queue, logger.logger_name)
 
         self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
                                 'No vote_count was found.')
-
-        queue.put_nowait(None)
-        listener.join()
