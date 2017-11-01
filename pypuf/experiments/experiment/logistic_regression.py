@@ -15,7 +15,9 @@ class ExperimentLogisticRegression(Experiment):
     This Experiment uses the logistic regression learner on an LTFArray PUF simulation.
     """
 
-    def __init__(self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner):
+    def __init__(
+            self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_chl_distance=0xB055,
+    ):
         """
         :param log_name: string
                          Prefix of the path or name of the experiment log file.
@@ -36,6 +38,9 @@ class ExperimentLogisticRegression(Experiment):
         :param combiner: A function: array of int with shape(N,k,n) -> array of in with shape(N)
                          The functions combines the outputs of k PUFs to one bit results,
                          in oder to increase resistance against attacks.
+        :param seed_chl_distance: int default is 0xB055
+                                  The seed which is used to initialize the pseudo-random number generator
+                                  which is used to draft challenges for the accuracy calculation.
         """
         super().__init__(
             log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
@@ -58,6 +63,8 @@ class ExperimentLogisticRegression(Experiment):
         self.model_prng = RandomState(seed=self.seed_model)
         self.combiner = combiner
         self.transformation = transformation
+        self.seed_chl_distance = seed_chl_distance
+        self.distance_prng = RandomState(self.seed_chl_distance)
         self.instance = None
         self.learner = None
         self.model = None
@@ -103,7 +110,12 @@ class ExperimentLogisticRegression(Experiment):
             self.combiner.__name__,
             self.learner.iteration_count,
             self.measured_time,
-            1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.n)),
+            1.0 - tools.approx_dist(
+                self.instance,
+                self.model,
+                min(10000, 2 ** self.n),
+                random_instance=self.distance_prng,
+            ),
             ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
 
         )
