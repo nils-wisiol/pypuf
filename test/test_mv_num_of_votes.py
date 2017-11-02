@@ -3,7 +3,7 @@ This module is used to test the command line tool which searches the number of v
 SimulationMajorityLTFArrays in order to satisfy a overall desired stability.
 """
 import unittest
-from test.utility import remove_test_logs, LOG_PATH
+from test.utility import remove_test_logs, LOG_PATH, mute
 import mv_num_of_votes
 
 
@@ -17,6 +17,7 @@ class TestMvNumOfVotes(unittest.TestCase):
         # Remove all log files
         remove_test_logs()
 
+    @mute
     def test_8_1_puf(self):
         """
         This method checks the output log of mv_num_of_votes for a stability greater equal the

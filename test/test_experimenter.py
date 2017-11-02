@@ -1,7 +1,7 @@
 """This module test the experimenter class which is used to distribute experiments over several cores."""
 import unittest
 import glob
-from test.utility import remove_test_logs, LOG_PATH
+from test.utility import remove_test_logs, LOG_PATH, mute
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -21,6 +21,7 @@ class TestExperimenter(unittest.TestCase):
         # Remove all log files
         remove_test_logs()
 
+    @mute
     def test_lr_experiments(self):
         """This method runs the experimenter for four logistic regression experiments."""
         lr16_4_1 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments1', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
@@ -42,6 +43,7 @@ class TestExperimenter(unittest.TestCase):
         experimenter = Experimenter(LOG_PATH+'test_lr_experiments', experiments)
         experimenter.run()
 
+    @mute
     def test_mv_experiments(self):
         """This method runs the experimenter with five ExperimentMajorityVoteFindVotes experiments."""
         experiments = []
@@ -71,6 +73,7 @@ class TestExperimenter(unittest.TestCase):
         experimenter = Experimenter(LOG_PATH+'test_mv_experiments', experiments)
         experimenter.run()
 
+    @mute
     def test_multiprocessing_logs(self):
         """
         This test checks for the predicted amount for result.
@@ -133,6 +136,7 @@ class TestExperimenter(unittest.TestCase):
         self.assertEqual(line_count(log_file), n*2, 'Unexpected number of results')
         log_file.close()
 
+    @mute
     def test_file_handle(self):
         """
         This test check if process file handles are deleted. Some Systems have have limit of open file handles.

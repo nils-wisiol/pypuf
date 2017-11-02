@@ -126,28 +126,9 @@ def main(args):
             )
             experiments.append(experiment)
 
-    experimenter = Experimenter(log_name, experiments)
     # run the instances
+    experimenter = Experimenter(log_name, experiments)
     experimenter.run()
-
-    # output format
-    str_format = '{:<15}\t{:<10}\t{:<8}\t{:<8}\t{:<8}\t{:<8}\t{:<18}\t{:<15}\t{:<6}\t{:<8}\t{:<8}\t{:<8}'
-    headline = str_format.format(
-        'seed_instance', 'seed_model', 'i', 'n', 'k', 'N', 'trans', 'comb', 'iter', 'time', 'accuracy',
-        'model_values\n'
-    )
-    # print the result headline
-    sys.stderr.write(headline)
-
-    log_file = open(log_name + '.log', 'r')
-
-    # print the results
-    result = log_file.readline()
-    while result != '':
-        sys.stderr.write(str_format.format(*result.split('\t')))
-        result = log_file.readline()
-
-    log_file.close()
 
 
 if __name__ == '__main__':
