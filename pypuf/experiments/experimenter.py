@@ -21,6 +21,7 @@ import logging
 import sys
 import traceback
 import os
+from datetime import datetime, timedelta
 
 
 class Experimenter(object):
@@ -63,7 +64,9 @@ class Experimenter(object):
         # list of active jobs
         active_jobs = []
 
-        for exp in self.experiments:
+        start_time = datetime.now()
+
+        for (i, exp) in enumerate(self.experiments):
 
             # define experiment process
             def run_experiment(experiment, queue, semaphore, logger_name):
@@ -110,6 +113,23 @@ class Experimenter(object):
             job.start()
             active_jobs = list_active_jobs()
             active_jobs.append(job)
+
+            # output status
+            number_of_started_jobs = i + 1  # including finished ones!
+            progress = (number_of_started_jobs - len(active_jobs)) / len(self.experiments)
+            elapsed_time = datetime.now() - start_time
+            sys.stdout.write(
+                "%s %i jobs total, %i finished, %i running, %i queued, progress %.2f, remaining time: %s\n" %
+                (
+                    datetime.now().strftime('%c'),
+                    len(self.experiments),
+                    number_of_started_jobs - len(active_jobs),
+                    len(active_jobs),
+                    len(self.experiments) - number_of_started_jobs,
+                    progress,
+                    timedelta(seconds=(elapsed_time / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                )
+            )
 
         # wait for all processes to be finished
         for job in active_jobs:
