@@ -36,6 +36,54 @@ class TestExperimentLogisticRegression(TestBase):
         )
         lr16_4.execute(logger.queue, logger.logger_name)
 
+    @logging
+    def test_fix_result(self, logger):
+        """
+        This test the experiment to have a deterministic result.
+        """
+        n = 8
+        k = 2
+        N = 255
+        seed_instance = 0xBAE55E
+        seed_model = 0x5C6AE1E
+        seed_challenge = 0xB0661E
+        seed_distance = 0xB0C
+        combiners = get_functions_with_prefix('combiner_', LTFArray)
+        transformations = get_functions_with_prefix('transform_', LTFArray)
+
+        for transformation in transformations:
+            for combiner in combiners:
+                def get_exp(name, trans=transformation, comb=combiner):
+                    """Experiment creation shortcut
+                    :param name: string
+                                 Name of the experiment
+                    """
+                    return ExperimentLogisticRegression(
+                        LOG_PATH + name,
+                        n,
+                        k,
+                        N,
+                        seed_instance,
+                        seed_model,
+                        trans,
+                        comb,
+                        seed_challenge=seed_challenge,
+                        seed_chl_distance=seed_distance,
+                    )
+                experiment_1 = get_exp('exp1')
+                experiment_2 = get_exp('exp2')
+                # Execute experiments
+                experiment_1.execute(logger.queue, logger.logger_name)
+                experiment_2.execute(logger.queue, logger.logger_name)
+                # Open logs
+                exp_1_result_log = open(experiment_1.log_name + '.log', 'r')
+                exp_2_result_log = open(experiment_2.log_name + '.log', 'r')
+                # Compare logs
+                self.assertTrue(exp_1_result_log.read() == exp_2_result_log.read(), 'The results must be equal.')
+                # Close logs
+                exp_1_result_log.close()
+                exp_2_result_log.close()
+
 
 class TestExperimentMajorityVoteFindVotes(TestBase):
     """
