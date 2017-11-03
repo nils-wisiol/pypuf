@@ -6,6 +6,7 @@ from pypuf.learner.regression.logistic_regression import LogisticRegression
 import pypuf.tools
 from itertools import permutations
 import numpy as np
+import sys
 
 
 #Print the LR debug/ progress messages partially.
@@ -79,11 +80,19 @@ class LightweightMetaLearner():
         numXors = self.puf_instance.k
 
         #This .mat file was created in Matlab with a simple brute-force search. 
-        loaded = sio.loadmat('shiftMatrix_5')
+        #loaded = sio.loadmat('shiftMatrix_5')
         #shiftMatrix is a 5x5 matrix. 
         #shiftMatrix[0, 1] = 32  means arbiter0 can take the place of arbiter1 if its feature vector is shifted by 32.
-        shiftMatrix = loaded['shiftMatrix']
+        #shiftMatrix = loaded['shiftMatrix']
 
+
+        if self.puf_instance.n == 65:
+            loaded = sio.loadmat('lwShiftMatrix_64_10')
+        elif self.puf_instance.n == 129:
+            loaded = sio.loadmat('lwShiftMatrix_128_10')
+        else:
+            sys.exit('Only 64 and 128 are valid for the number of stages.')
+        shiftMatrix = loaded['shiftOverviewData'][:,:,0].astype('int64')
 
 
         # create the learner
@@ -168,8 +177,7 @@ class LightweightMetaLearner():
             correctPermAccuracyIndex = np.where(sortedAccIndices == correctPermIndex)[0][0]
             print('The correct permutation should be found in trial #' + str(correctPermAccuracyIndex+1))
             print(correctPermInitCorrList)
-        else:
-            print('Surprisingly, we have not found the correct index for the permutation?!?')
+
 
         sortedAccuracyList = [accuracyList[index] for index in sortedAccIndices]
 
@@ -223,7 +231,7 @@ class LightweightMetaLearner():
         result[1] = numOfOptiTrials
         result[2] = initialModelAccuracy
         result[3] = optimizedModelAccuracy
-        result[4] = correctPermAccuracyIndex+1
+        result[4] = correctPermAccuracyIndex+1  
 
         return  result
 

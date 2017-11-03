@@ -36,6 +36,7 @@ for iteration in range(numAttackedInstances):
         bias =  True
     )
 
+    #If you want to actually simulate the attack set skipActualOptimizeLearning to False!
     meta = LightweightMetaLearner(instance, training_set = tools.TrainingSet(instance=instance, N=trainingSetSize), 
                                   validation_set = tools.TrainingSet(instance=instance, N=5000), maxNumberOptimizingTrials = -1,
                                   skipActualOptimizeLearning = True)
