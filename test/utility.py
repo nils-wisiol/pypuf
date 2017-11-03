@@ -40,10 +40,21 @@ class TestLogger(object):
 
     def shutdown_multiprocessing_logger(self):
         """This method shutdown the multiprocessing logging"""
-        self.queue.put_nowait(None)
-        self.listener.terminate()
-        self.listener = None
-        self.queue = None
+        if self.listener.exitcode is None:
+            self.queue.put_nowait(None)
+            self.listener.join()
+
+    def read_result_log(self):
+        """
+        This function is used to read from the result log. For this purpose the logger process have to be stopped.
+        :return: string
+                 Content of the result log.
+        """
+        self.shutdown_multiprocessing_logger()
+        result_log = open(self.logger_name+'.log', 'r')
+        result = result_log.read()
+        result_log.close()
+        return result
 
 
 def logging(function):
