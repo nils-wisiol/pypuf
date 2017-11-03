@@ -99,6 +99,47 @@ class TestExperimentLogisticRegression(TestBase):
                 experiment_2 = get_exp('exp2', k, transformation, combiner)
                 check_experiments(experiment_1, experiment_2)
 
+    @logging
+    def test_fix_convergence(self, logger):
+        """
+        This methods checks the results of a ExperimentLogisticRegression to match a recorded result which was
+        generated with the same parameters.
+        """
+        n = 8
+        k = 2
+        N = 255
+        seed_instance = 0xBAE55E
+        seed_model = 0x5C6AE1E
+        seed_challenge = 0xB0661E
+        seed_distance = 0xB0C
+        experiment = ExperimentLogisticRegression(
+            LOG_PATH + 'exp',
+            n,
+            k,
+            N,
+            seed_instance,
+            seed_model,
+            LTFArray.transform_soelter_lightweight_secure,
+            LTFArray.combiner_xor,
+            seed_challenge=seed_challenge,
+            seed_chl_distance=seed_distance,
+        )
+        experiment.execute(logger.queue, logger.logger_name)
+
+        legacy_result = ['0xbae55e', '0x5c6ae1e', '0', '8', '2', '255', 'transform_soelter_lightweight_secure',
+                         'combiner_xor', '363', '1.000000', '0.00443419669755,-0.00616546911566,0.0186346081194,'
+                                                            '0.0061619719475,0.00795284461334,-0.00443539877583,'
+                                                            '-0.00316047872599,0.00993214368373,0.0507595729459,'
+                                                            '0.415207373134,-0.0517173737839,0.285900582842,'
+                                                            '0.467512016377,0.550102231366,-0.000739711610042,'
+                                                            '-0.467757977178\n']
+        result_str = logger.read_result_log()
+        self.assertFalse(result_str == '', 'The result log was empty.')
+        experiment_result = result_str.split('\t')
+        # remove execution time
+        del experiment_result[9]
+        self.assertTrue(experiment_result == legacy_result, 'You changed the code significant.')
+
 
 class TestExperimentMajorityVoteFindVotes(TestBase):
     """
