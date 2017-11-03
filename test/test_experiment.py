@@ -43,46 +43,61 @@ class TestExperimentLogisticRegression(TestBase):
         """
         n = 8
         k = 2
-        N = 255
+        N = 8
         seed_instance = 0xBAE55E
         seed_model = 0x5C6AE1E
-        seed_challenge = 0xB0661E
-        seed_distance = 0xB0C
+        seed_challenge = 10
+        seed_distance = 11
         combiners = get_functions_with_prefix('combiner_', LTFArray)
         transformations = get_functions_with_prefix('transform_', LTFArray)
 
+        def check_experiments(experiment_1, experiment_2):
+            """
+            This function compares the results of two experiments.
+            :param experiment_1: ExperimentLogisticRegression
+            :param experiment_2: ExperimentLogisticRegression
+            """
+            # Execute experiments
+            experiment_1.execute(logger.queue, logger.logger_name)
+            experiment_2.execute(logger.queue, logger.logger_name)
+            # Open logs
+            exp_1_result_log = open(experiment_1.log_name + '.log', 'r')
+            exp_2_result_log = open(experiment_2.log_name + '.log', 'r')
+            # Save the results
+            result_1 = exp_1_result_log.read()
+            result_2 = exp_2_result_log.read()
+            # Close logs
+            exp_1_result_log.close()
+            exp_2_result_log.close()
+            # Check the results to be not empty
+            self.assertFalse(result_1 == '', 'The experiment log was empty.')
+            self.assertFalse(result_2 == '', 'The experiment log was empty.')
+            # Compare logs
+            self.assertTrue(result_1 == result_2, 'The results must be equal.')
+
+        def get_exp(name, k, trans, comb):
+            """Experiment creation shortcut
+            :param name: string
+                         Name of the experiment
+            """
+            return ExperimentLogisticRegression(
+                LOG_PATH + name,
+                n,
+                k,
+                N,
+                seed_instance,
+                seed_model,
+                trans,
+                comb,
+                seed_challenge=seed_challenge,
+                seed_chl_distance=seed_distance,
+            )
+        # Result check
         for transformation in transformations:
             for combiner in combiners:
-                def get_exp(name, trans=transformation, comb=combiner):
-                    """Experiment creation shortcut
-                    :param name: string
-                                 Name of the experiment
-                    """
-                    return ExperimentLogisticRegression(
-                        LOG_PATH + name,
-                        n,
-                        k,
-                        N,
-                        seed_instance,
-                        seed_model,
-                        trans,
-                        comb,
-                        seed_challenge=seed_challenge,
-                        seed_chl_distance=seed_distance,
-                    )
-                experiment_1 = get_exp('exp1')
-                experiment_2 = get_exp('exp2')
-                # Execute experiments
-                experiment_1.execute(logger.queue, logger.logger_name)
-                experiment_2.execute(logger.queue, logger.logger_name)
-                # Open logs
-                exp_1_result_log = open(experiment_1.log_name + '.log', 'r')
-                exp_2_result_log = open(experiment_2.log_name + '.log', 'r')
-                # Compare logs
-                self.assertTrue(exp_1_result_log.read() == exp_2_result_log.read(), 'The results must be equal.')
-                # Close logs
-                exp_1_result_log.close()
-                exp_2_result_log.close()
+                experiment_1 = get_exp('exp1', k, transformation, combiner)
+                experiment_2 = get_exp('exp2', k, transformation, combiner)
+                check_experiments(experiment_1, experiment_2)
 
 
 class TestExperimentMajorityVoteFindVotes(TestBase):
