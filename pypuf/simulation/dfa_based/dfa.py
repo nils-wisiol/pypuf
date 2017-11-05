@@ -17,9 +17,6 @@ class DFA(Simulation):
         """
         State of a DFA. Is accepting or not, and can evaluate which state comes after this on any given input.
         """
-        accepting = +1
-        input_true = None
-        input_false = None
 
         def __init__(self, accepting=+1, on_true=None, on_false=None):
             """
