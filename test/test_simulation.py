@@ -3,6 +3,7 @@ This module is used to test the different simulation models.
 """
 
 import unittest
+from test.utility import get_functions_with_prefix
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf import tools
 from numpy.testing import assert_array_equal
@@ -471,49 +472,94 @@ class TestLTFArray(unittest.TestCase):
     """
     test_set = [
         # n, k, mu, sigma, bias
-        (64, 4, 0, 1, False),
-        (4, 16, 0, 1, False),
-        (16, 4, 10, .5, False),
-        (64, 4, 0, 1, True),
-        (4, 16, 0, 1, True),
-        (16, 4, 10, .5, True),
+        (64, 4, 0, 1, None),
+        (4, 16, 0, 1, None),
+        (16, 4, 10, .5, None),
+        (64, 4, 0, 1, 1.5),
+        (4, 16, 0, 1, 2.3),
+        (16, 4, 10, .5, array([1.4, 1.0, 0.5, 0.4])),
     ]
 
-    def test_bias(self):
+    def test_bias_influence_value(self):
         """
-        Probabilistic test for checking the bias feature in eval.
+        This method tests the influence of the bias value. The results should be different.
         """
-        N = 100
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
 
-        for test_parameters in self.test_set:
-            n = test_parameters[0]
-            k = test_parameters[1]
-            mu = test_parameters[2]
-            sigma = test_parameters[3]
-            bias = test_parameters[4]
-            weight_array = LTFArray.normal_weights(n, k, mu, sigma)
+        challenges = array(list(tools.all_inputs(n)))
 
-            input_len = n - 1 if bias else n
-            inputs = RandomState(seed=0xBAADA555).choice([-1, +1], (N, input_len))  # bad ass testing
+        weight_array = LTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
+        bias_value = 2.5
 
-            biased_ltf_array = LTFArray(
-                weight_array=weight_array,
-                transform=LTFArray.transform_id,
-                combiner=LTFArray.combiner_xor,
-                bias=bias,
-            )
-            ltf_array = LTFArray(
-                weight_array=weight_array,
-                transform=LTFArray.transform_id,
-                combiner=LTFArray.combiner_xor,
-                bias=False,
-            )
-            biased_eval = biased_ltf_array.eval(inputs)
-            inputs = tools.append_last(inputs, 1)\
-                if biased_ltf_array.bias else inputs
-            ltf_array_evaled_output = ltf_array.eval(inputs)
+        biased_ltf_array = LTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            bias=bias_value,
+        )
+        ltf_array = LTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
 
-            assert_array_equal(biased_eval, ltf_array_evaled_output)
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array]
+        # the bias values should be equal for this test.
+        self.assertTrue(array(bias_array_compared).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))
+
+    def test_bias_influence_array(self):
+        """
+        This method tests the influence of the bias array. The results should be different.
+        """
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
+
+        challenges = array(list(tools.all_inputs(n)))
+
+        weight_array = LTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
+        bias_array = LTFArray.normal_weights(1, k, mu=mu, sigma=sigma*2, random_instance=RandomState(0xBADAFF1))
+
+        biased_ltf_array = LTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            bias=bias_array,
+        )
+        ltf_array = LTFArray(
+            weight_array=weight_array,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
+
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
+        # the bias values should be different for this test. It is possible that they are all equal but this chance is
+        # low.
+        self.assertFalse(array(bias_array_compared).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))
 
     def test_random_weights(self):
         """
@@ -614,6 +660,91 @@ class TestNoisyLTFArray(TestLTFArray):
                 around(noisy_ltf_array.ltf_eval(transformed_inputs), decimals=10)
             )
 
+    def test_bias_influence_array(self):
+        """
+        This method tests the influence of the bias array. The results should be different.
+        """
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
+
+        challenges = array(list(tools.all_inputs(n)))
+
+        weight_array = NoisyLTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
+        bias_array = NoisyLTFArray.normal_weights(1, k, mu=mu, sigma=sigma * 2, random_instance=RandomState(0xBADAFF1))
+
+        biased_ltf_array = NoisyLTFArray(
+            weight_array=weight_array,
+            transform=NoisyLTFArray.transform_id,
+            combiner=NoisyLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            bias=bias_array,
+        )
+        ltf_array = NoisyLTFArray(
+            weight_array=weight_array,
+            transform=NoisyLTFArray.transform_id,
+            combiner=NoisyLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
+        # the bias values should be different for this test. It is possible that they are all equal but this chance is
+        # low.
+        self.assertFalse(array(bias_array_compared).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))
+
+    def test_bias_influence_value(self):
+        """
+        This method tests the influence of the bias value. The results should be different.
+        """
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
+
+        challenges = array(list(tools.all_inputs(n)))
+
+        weight_array = NoisyLTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
+        bias_value = 2.5
+
+        biased_ltf_array = NoisyLTFArray(
+            weight_array=weight_array,
+            transform=NoisyLTFArray.transform_id,
+            combiner=NoisyLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            bias=bias_value,
+        )
+        ltf_array = NoisyLTFArray(
+            weight_array=weight_array,
+            transform=NoisyLTFArray.transform_id,
+            combiner=NoisyLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
+
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array]
+        # the bias values should be equal for this test.
+        self.assertTrue(array(list(bias_array_compared)).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))
+
 
 class TestSimulationMajorityLTFArray(unittest.TestCase):
     """This class is used to test the SimulationMajorityLTFArray class."""
@@ -688,16 +819,6 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
 
-        def get_functions_with_prefix(prefix, obj):
-            """
-            This function return all functions with a prefix.
-            :param prefix: string
-            :param obj: object
-                        Object to investigate
-            :return list of strings
-            """
-            return [func for func in dir(obj) if func.startswith(prefix)]
-
         combiners = get_functions_with_prefix('combiner_', SimulationMajorityLTFArray)
         transformations = get_functions_with_prefix('transform_', SimulationMajorityLTFArray)
 
@@ -705,10 +826,102 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             for combiner in combiners:
                 mv_noisy_ltf_array = SimulationMajorityLTFArray(
                     weight_array=weight_array,
-                    transform=getattr(SimulationMajorityLTFArray, transformation),
-                    combiner=getattr(SimulationMajorityLTFArray, combiner),
+                    transform=transformation,
+                    combiner=combiner,
                     sigma_noise=1,
                     random_instance_noise=noise_prng,
                     vote_count=vote_count,
                 )
                 mv_noisy_ltf_array.eval(inputs)
+
+    def test_bias_influence(self):
+        """
+        This method tests the influence of the bias array. The results should be different.
+        """
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
+
+        challenges = challenges = array(list(tools.all_inputs(n)))
+
+        weight_array = SimulationMajorityLTFArray.normal_weights(n, k, mu=mu, sigma=sigma,
+                                                                 random_instance=RandomState(0xBADA556))
+        bias_array = SimulationMajorityLTFArray.normal_weights(1, k, mu=mu, sigma=sigma * 2,
+                                                               random_instance=RandomState(0xBADAFF1))
+
+        biased_ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=SimulationMajorityLTFArray.transform_id,
+            combiner=SimulationMajorityLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            random_instance_noise=RandomState(0xCCABAD),
+            bias=bias_array,
+        )
+        ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=SimulationMajorityLTFArray.transform_id,
+            combiner=SimulationMajorityLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            random_instance_noise=RandomState(0xCCABAD),
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
+        # the bias values should be different for this test. It is possible that they are all equal but this chance is
+        # low.
+        self.assertFalse(array(bias_array_compared).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))
+
+    def test_bias_influence_value(self):
+        """
+        This method tests the influence of the bias value. The results should be different.
+        """
+        n = 8
+        k = 4
+        mu = 1
+        sigma = 0.5
+
+        challenges = array(list(tools.all_inputs(n)))
+
+        weight_array = SimulationMajorityLTFArray.normal_weights(n, k, mu=mu, sigma=sigma,
+                                                                 random_instance=RandomState(0xBADA556))
+        bias_value = 2.5
+
+        biased_ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=SimulationMajorityLTFArray.transform_id,
+            combiner=SimulationMajorityLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            random_instance_noise=RandomState(0xCCABAD),
+            bias=bias_value,
+        )
+        ltf_array = SimulationMajorityLTFArray(
+            weight_array=weight_array,
+            transform=SimulationMajorityLTFArray.transform_id,
+            combiner=SimulationMajorityLTFArray.combiner_xor,
+            sigma_noise=sigma,
+            random_instance_noise=RandomState(0xCCABAD),
+            bias=None,
+        )
+        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+
+        bias_array = biased_ltf_array.weight_array[:, -1]
+        bias_array_compared = [bias == bias_array[0] for bias in bias_array]
+        # the bias values should be equal for this tests.
+        self.assertTrue(array(bias_array_compared).all())
+
+        biased_responses = biased_ltf_array.eval(challenges)
+        responses = ltf_array.eval(challenges)
+
+        # The arithmetic mean of the res
+        self.assertFalse(array_equal(biased_responses, responses))

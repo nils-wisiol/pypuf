@@ -3,7 +3,7 @@ Module for Learning Arbiter PUFs with Logistic Regression.
 Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
 of the 17th ACM conference on Computer and communications security. ACM, 2010.
 """
-from numpy import sign, dot, exp, array, seterr, minimum, full, count_nonzero, amin, amax, dtype
+from numpy import sign, dot, exp, array, seterr, minimum, full, amin, amax, dtype
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
@@ -134,7 +134,6 @@ class LogisticRegression(Learner):
         self.convergence_decimals = 2
         self.sign_combined_model_responses = None
         self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
-        self.min_distance = 1
         self.transformation = transformation
         self.combiner = combiner
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
@@ -176,7 +175,6 @@ class LogisticRegression(Learner):
         max_response_abs_value = 50
         max_response_abs_value_array = full(len(combined_model_responses), max_response_abs_value, dtype('float64'))
         combined_model_responses = sign(combined_model_responses) * minimum(max_response_abs_value_array,
-                                                                            max_response_abs_value,
                                                                             np_abs(combined_model_responses))
 
         # compute the derivative from
@@ -275,7 +273,7 @@ class LogisticRegression(Learner):
         distance = 1
         self.iteration_count = 0
         log_state()
-        while not converged and distance > .01 and self.iteration_count < self.iteration_limit:
+        while not converged and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
 
             # compute gradient & update model
@@ -285,15 +283,10 @@ class LogisticRegression(Learner):
             # check convergence
             converged = norm(updater.step) < 10**-self.convergence_decimals
 
-            none_zero_count = count_nonzero(self.training_set.responses == self.sign_combined_model_responses)
-            # check accuracy
-            distance = self.training_set.N - none_zero_count / self.training_set.N
-            self.min_distance = min(distance, self.min_distance)
-
             # log
             log_state()
 
-        if not converged and distance > .01:
+        if not converged:
             self.converged = False
         else:
             self.converged = True

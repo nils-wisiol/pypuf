@@ -18,7 +18,7 @@ class ExperimentMajorityVoteFindVotes(Experiment):
 
     def __init__(self, log_name, n, k, challenge_count, seed_instance, seed_instance_noise, transformation,
                  combiner, mu, sigma, sigma_noise_ratio, seed_challenges, desired_stability, overall_desired_stability,
-                 minimum_vote_count, iterations, bias=False):
+                 minimum_vote_count, iterations, bias=None):
         """
         :param log_name: string
                          The prefix of the self.progress_logger.
@@ -60,8 +60,9 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         :param iterations: int
                            The number of evaluations of the SimulationMajorityLTFArray instance which are used
                            to check the desired_stability.
-        :param bias: boolean
-                     The value is used to turn on input/output distort of the  PUF instance simulation.
+        :param bias: None, float or a one dimensional list of float with shape (k)
+                     This bias value or list of bias values will be appended to the weight_array.
+                     Use a single value if you want the same bias for all weight_vectors.
         """
         super().__init__(
             log_name='%s.0x%x_0_%i_%i_%i_%s_%s' % (
@@ -92,6 +93,8 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         self.maximum_vote_count = 0  # Upper bound for binary search calculated in run()
         self.vote_count = 0  # That is calculated during run()
         self.result_overall_stab = 0.0
+        # This saves the first found over all stability which satisfy the overall_desired_stability
+        self.first_result_overall_stab = 0.0
         self.result_vote_count = 0
         self.iterations = iterations
         self.overall_stab = 0.0  # That is the overall_stab for vote_count calculated during run()
@@ -110,15 +113,21 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         # Weight array for the instance which should be learned
         weight_array = LTFArray.normal_weights(self.n, self.k, self.mu, self.sigma, random_instance=instance_prng)
 
+        if isinstance(self.bias, type('list')):
+            self.bias = np.reshape(np.array(self.bias), (self.k, 1))
+
         self.vote_count = 0
         # Search upper bound for binary search
         while self.overall_stab < self.overall_desired_stability:
             self.vote_count = self.vote_count * 2 + 1
             puf_instance = SimulationMajorityLTFArray(weight_array, LTFArray.transform_id,
                                                       LTFArray.combiner_xor, self.sigma_noise,
-                                                      random_instance_noise=noise_prng, vote_count=self.vote_count)
+                                                      random_instance_noise=noise_prng, vote_count=self.vote_count,
+                                                      bias=self.bias)
             self.calculate_stabilities(puf_instance, challenge_prng)
         self.maximum_vote_count = self.vote_count
+        self.first_result_overall_stab = self.overall_stab
+        self.result_vote_count = self.vote_count
 
         # Binary search loop which is used to find the minimum number of votes in oder to satisfy
         # self.desired_stability and overall_desired_stability
@@ -144,6 +153,10 @@ class ExperimentMajorityVoteFindVotes(Experiment):
                 self.result_overall_stab = self.overall_stab
             else:
                 self.minimum_vote_count = self.vote_count + 1
+
+            # If the first result was the best
+            if self.result_overall_stab == 0.0:
+                self.result_overall_stab = self.first_result_overall_stab
 
             self.progress_logger.info(msg)
 
