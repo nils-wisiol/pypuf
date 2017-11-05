@@ -4,3 +4,4 @@ polymath
 pylint
 pep8
 pypuf_helper
+matplotlib
