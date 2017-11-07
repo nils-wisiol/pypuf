@@ -3,27 +3,37 @@ This module is used to test the command line tool which searches the number of v
 SimulationMajorityLTFArrays in order to satisfy a overall desired stability.
 """
 import unittest
+from test.utility import remove_test_logs, LOG_PATH
 import mv_num_of_votes
 
 
 class TestMvNumOfVotes(unittest.TestCase):
     """This class is used to test the mv_num_of_votes commandline tool"""
+    def setUp(self):
+        # Remove all log files
+        remove_test_logs()
+
+    def tearDown(self):
+        # Remove all log files
+        remove_test_logs()
 
     def test_8_1_puf(self):
         """
         This method checks the output log of mv_num_of_votes for a stability greater equal the
         overall_desired_stability.
         """
+        log_name = LOG_PATH+"test_8_1_puf"
         overall_desired_stability = 0.8
-        mv_num_of_votes.main(["0.95", str(overall_desired_stability), "8", "1", "1", "0.33", "250", "1"])
+        mv_num_of_votes.main(["0.95", str(overall_desired_stability), "8", "1", "1", "0.33", "250", "1", "--log_name",
+                              log_name])
 
         # Check if the number of results is correct
-        with open('exp1.0xc0deba5e_0_8_1_250_transform_id_combiner_xor.log', 'r') as log_file:
-            line = log_file.readline()
-            while line != '':
-                stability = float(line.split('\t')[0])
-                if stability >= overall_desired_stability:
-                    break
+        log_file = open(log_name + '.log', 'r')
+        line = log_file.readline()
 
-        # if the line is '' then no stability where found which satisfy overall_desired_stability
-        self.assertNotEqual(line, '', 'stability where found which satisfy overall_desired_stability')
+        # If the line is '' then no stability where found which satisfy overall_desired_stability
+        self.assertNotEqual(line, '', 'no stability where found which satisfy overall_desired_stability')
+        # Get the stability entry
+        stability = float(line.split('\t')[6])
+        # Check the stability
+        self.assertGreaterEqual(stability, overall_desired_stability)
