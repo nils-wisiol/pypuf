@@ -1,7 +1,7 @@
 """This module test the experimenter class which is used to distribute experiments over several cores."""
 import unittest
-import os
 import glob
+from test.utility import remove_test_logs, LOG_PATH
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -15,35 +15,31 @@ class TestExperimenter(unittest.TestCase):
     """
     def setUp(self):
         # Remove all log files
-        paths = list(glob.glob('*.log'))
-        for path in paths:
-            os.remove(path)
+        remove_test_logs()
 
     def tearDown(self):
         # Remove all log files
-        paths = list(glob.glob('*.log'))
-        for path in paths:
-            os.remove(path)
+        remove_test_logs()
 
     def test_lr_experiments(self):
         """This method runs the experimenter for four logistic regression experiments."""
-        lr16_4_1 = ExperimentLogisticRegression('test_lr_experiments1', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
+        lr16_4_1 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments1', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
-        lr16_4_2 = ExperimentLogisticRegression('test_lr_experiments2', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
+        lr16_4_2 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments2', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
-        lr16_4_3 = ExperimentLogisticRegression('test_lr_experiments3', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
+        lr16_4_3 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments3', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
-        lr16_4_4 = ExperimentLogisticRegression('test_lr_experiments4', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
+        lr16_4_4 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments4', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
-        lr16_4_5 = ExperimentLogisticRegression('test_lr_experiments5', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
+        lr16_4_5 = ExperimentLogisticRegression(LOG_PATH+'test_lr_experiments5', 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                 LTFArray.transform_id,
                                                 LTFArray.combiner_xor)
         experiments = [lr16_4_1, lr16_4_2, lr16_4_3, lr16_4_4, lr16_4_5]
-        experimenter = Experimenter('log', experiments)
+        experimenter = Experimenter(LOG_PATH+'test_lr_experiments', experiments)
         experimenter.run()
 
     def test_mv_experiments(self):
@@ -51,7 +47,7 @@ class TestExperimenter(unittest.TestCase):
         experiments = []
         for i in range(5):
             n = 8
-            logger_name = 'test_mv_exp{0}'.format(i)
+            logger_name = LOG_PATH+'test_mv_exp{0}'.format(i)
             experiment = ExperimentMajorityVoteFindVotes(
                 log_name=logger_name,
                 n=n,
@@ -72,7 +68,7 @@ class TestExperimenter(unittest.TestCase):
                 bias=None
             )
             experiments.append(experiment)
-        experimenter = Experimenter('test_mv_experimenter', experiments)
+        experimenter = Experimenter(LOG_PATH+'test_mv_experiments', experiments)
         experimenter.run()
 
     def test_multiprocessing_logs(self):
@@ -82,14 +78,14 @@ class TestExperimenter(unittest.TestCase):
         experiments = []
         n = 28
         for i in range(n):
-            log_name = 'test_multiprocessing_logs{0}'.format(i)
+            log_name = LOG_PATH+'test_multiprocessing_logs{0}'.format(i)
             lr16_4_1 = ExperimentLogisticRegression(log_name, 8, 2, 2 ** 8, 0xbeef, 0xbeef,
                                                     LTFArray.transform_id,
                                                     LTFArray.combiner_xor)
             experiments.append(lr16_4_1)
 
         for i in range(n):
-            log_name = 'test_multiprocessing_logs{0}'.format(i)
+            log_name = LOG_PATH+'test_multiprocessing_logs{0}'.format(i)
             experiment = ExperimentMajorityVoteFindVotes(
                 log_name=log_name,
                 n=8,
@@ -111,7 +107,8 @@ class TestExperimenter(unittest.TestCase):
             )
             experiments.append(experiment)
 
-        experimenter = Experimenter('test_multiprocessing_logs', experiments)
+        experimenter_log_name = LOG_PATH+'test_multiprocessing_logs'
+        experimenter = Experimenter(experimenter_log_name, experiments)
         experimenter.run()
 
         def line_count(file_object):
@@ -124,7 +121,7 @@ class TestExperimenter(unittest.TestCase):
                 count = count + 1
             return count
 
-        paths = list(glob.glob('*.log'))
+        paths = list(glob.glob(LOG_PATH+'*.log'))
         # Check if the number of lines is greater than zero
         for log_path in paths:
             exp_log_file = open(log_path, 'r')
@@ -132,7 +129,7 @@ class TestExperimenter(unittest.TestCase):
             exp_log_file.close()
 
         # Check if the number of results is correct
-        log_file = open('test_multiprocessing_logs.log', 'r')
+        log_file = open(experimenter_log_name+'.log', 'r')
         self.assertEqual(line_count(log_file), n*2, 'Unexpected number of results')
         log_file.close()
 
@@ -154,8 +151,8 @@ class TestExperimenter(unittest.TestCase):
         experiments = []
         n = 1024
         for i in range(n):
-            log_name = 'fail{0}'.format(i)
+            log_name = LOG_PATH+'fail{0}'.format(i)
             experiments.append(ExperimentDummy(log_name))
 
-        experimenter = Experimenter('fail', experiments)
+        experimenter = Experimenter(LOG_PATH+'test_file_handle', experiments)
         experimenter.run()
