@@ -24,10 +24,11 @@ s_ratio: float
          The noisiness factor which is used to scale sigma_noise. The value sigma_noise
          is the standard deviation of the noise distribution of the PUF instance simulation.
 N: int
-   values: range(10, 10001, 10)
    The number of challenges which are used to evaluate the PUF.
 restarts: int
           Number of restarts to the entire process
+[log_name]: string default 'my_num_of_votes'
+            Path to the main log file.
 """
 from sys import stderr, argv
 import argparse
@@ -53,8 +54,10 @@ def main(args):
     parser.add_argument("k_range", help="Number of step size between the number of Arbiter chains", type=int,
                         choices=range(1, 33))
     parser.add_argument("s_ratio", help="Ratio of standard deviation of the noise and weights", type=float)
-    parser.add_argument("N", help="Number of challenges to evaluate", type=int, choices=range(10, 10001, 10))
+    parser.add_argument("N", help="Number of challenges to evaluate", type=int)
     parser.add_argument("restarts", help="Number of restarts to the entire process", type=int)
+    parser.add_argument("--log_name", help="Path to the main log file.", type=str,
+                        default='my_num_of_votes')
     args = parser.parse_args(args)
 
     if args.k_max <= 0:
@@ -70,7 +73,7 @@ def main(args):
     experiments = []
     for i in range(args.restarts):
         for k in range(args.k_range, args.k_max + 1, args.k_range):
-            log_name = 'exp{0}'.format(k)
+            log_name = args.log_name+'{0}'.format(k)
             exp = ExperimentMajorityVoteFindVotes(
                 log_name=log_name,
                 n=n,
@@ -92,7 +95,7 @@ def main(args):
             )
             experiments.append(exp)
 
-    experimenter = Experimenter('mv', experiments)
+    experimenter = Experimenter(args.log_name, experiments)
     experimenter.run()
 
 if __name__ == '__main__':
