@@ -3,7 +3,6 @@ from pypuf import tools
 from numpy import array, sum, zeros, ones, round, roll, mean
 
 transform = LTFArray.transform_lightweight_secure_original
-combiner = LTFArray.combiner_xor
 
 
 def gen_table(n, k, samples):
@@ -11,7 +10,7 @@ def gen_table(n, k, samples):
     matrix_rot = zeros((k, k))
     matrix_rot2 = zeros((k, k))
     matrix_cor = ones((k, k))
-    transformed = LTFArray.transform_lightweight_secure_original(inputs, k)
+    transformed = transform(inputs, k)
     transformed = tools.append_last(transformed, 1)
 
     for source_puf in range(k):
