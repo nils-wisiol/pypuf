@@ -69,7 +69,7 @@ class TestInputTransformation(unittest.TestCase):
         This method test the identity function for the predefined inputs (challenges). If every challenge is duplicated
         k times the function works correct.
         """
-        test_challenges = [
+        test_challenges = array([
             [
                 [-1, 1, 1, -1, -1],
                 [-1, -1, -1, -1, -1],
@@ -85,7 +85,7 @@ class TestInputTransformation(unittest.TestCase):
                 [-1, -1, -1, -1, -1],
                 [-1, 1, -1, -1, -1],
             ]
-        ]
+        ], dtype=tools.RESULT_TYPE)
         for challenges in test_challenges:
             assert_array_equal(
                 LTFArray.transform_id(challenges, k=4),
@@ -120,7 +120,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, 1, -1, -1],
             [-1, -1, -1, -1, -1],
             [-1, 1, -1, -1, -1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_atf(test_array, k=3),
             [
@@ -165,7 +165,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, -1, -1, -1],
             [1, 1, -1, -1, -1],
             [1, 2, 3, 4, 5],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_shift(test_array, k=3),
             [
@@ -202,7 +202,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_lightweight_secure(test_array, k=3),
             [
@@ -223,7 +223,7 @@ class TestInputTransformation(unittest.TestCase):
         """This method tests the shift secure lightweight transformation with predefined input and output."""
         test_array = array([
             [1, -1, -1, 1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_shift_lightweight_secure(test_array, k=3),
             [
@@ -240,7 +240,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_1_n_bent(test_array, k=3),
             [
@@ -259,7 +259,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_1_n_bent(test_array, k=1),
             [
@@ -279,7 +279,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, 1, -1],
             [-1, -1, 1, -1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.generate_stacked_transform(
                 transform_1=LTFArray.transform_id,
@@ -307,7 +307,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, 2, 3, 4],
             [10, 20, 30, 40],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
@@ -354,7 +354,7 @@ class TestInputTransformation(unittest.TestCase):
         """
         test_array = array([
             [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
                 transform_1=LTFArray.transform_1_n_bent,
@@ -375,7 +375,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_1_1_bent(test_array, k=3),
             [
@@ -399,7 +399,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=4),
             [
@@ -427,7 +427,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=1),
             [
@@ -444,7 +444,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ])
+        ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.transform_permutation_atf(test_array, k=4),
             [
@@ -592,7 +592,7 @@ class TestLTFArray(unittest.TestCase):
             mu = test_parameters[2]
             sigma = test_parameters[3]
 
-            inputs = RandomState(seed=0xCAFED00D).choice([-1, +1], (N, n))
+            inputs = tools.random_inputs(n, N, random_instance=RandomState(0xA1))
 
             ltf_array = LTFArray(
                 weight_array=LTFArray.normal_weights(n, k, mu, sigma),
@@ -634,7 +634,7 @@ class TestNoisyLTFArray(TestLTFArray):
             sigma = test_parameters[3]
 
             transformed_inputs = LTFArray.transform_id(
-                RandomState(seed=0xBAADA555).choice([-1, +1], (N, n)),  # bad ass testing
+                tools.random_inputs(n, N, random_instance=RandomState(seed=0xBAADA555)),
                 k
             )
 
@@ -799,6 +799,8 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         ltf_array_result = ltf_array.eval(inputs)
         mv_noisy_ltf_array_result = mv_noisy_ltf_array.eval(inputs)
+        print(ltf_array_result)
+        print(mv_noisy_ltf_array_result)
         # These test checks if the output is different because of noise
         self.assertFalse(array_equal(ltf_array_result, mv_noisy_ltf_array_result), 'These arrays must be different')
 
@@ -858,7 +860,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         mu = 1
         sigma = 0.5
 
-        challenges = challenges = tools.all_inputs(n)
+        challenges = tools.all_inputs(n)
 
         weight_array = SimulationMajorityLTFArray.normal_weights(n, k, mu=mu, sigma=sigma,
                                                                  random_instance=RandomState(0xBADA556))
@@ -937,6 +939,6 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
-
-        # The arithmetic mean of the res
+        print(biased_responses)
+        print(responses)
         self.assertFalse(array_equal(biased_responses, responses))

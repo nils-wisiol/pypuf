@@ -3,8 +3,7 @@ This module provides several different implementations of arbiter PUF simulation
 model is the core of each simulation class.
 """
 from numpy import sum as np_sum
-from numpy import prod, shape, sign, array, transpose, concatenate, dstack, swapaxes, sqrt, amax,\
-    vectorize, tile, append
+from numpy import prod, shape, sign, array, transpose, concatenate, dstack, swapaxes, sqrt, amax, tile, append
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -51,49 +50,55 @@ class LTFArray(Simulation):
     def transform_id(challenges, k):
         """
         Input transformation that does nothing.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
-        return ph.transform_id(challenges, k)
+        tools.assert_result_type(challenges)
+        res = ph.transform_id(challenges, k)
+        tools.assert_result_type(res)
+        return res
 
     @classmethod
     def transform_atf(cls, challenges, k):
         """
         Input transformation that simulates an Arbiter PUF
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
         :return:  array of int shape(N,k,n)
                   Array of transformed challenges.
         """
-
+        tools.assert_result_type(challenges)
         # Transform with ATF monomials
         challenges = transpose(
             array([
-                prod(challenges[:, i:], 1)
+                prod(challenges[:, i:], 1, dtype=tools.RESULT_TYPE)
                 for i in range(len(challenges[0]))
-            ])
+            ], dtype=tools.RESULT_TYPE)
         )
 
         # Same challenge for all k Arbiters
-        return cls.transform_id(challenges, k)
+        res = cls.transform_id(challenges, k)
+        tools.assert_result_type(res)
+        return res
 
     @staticmethod
     def transform_mm(challenges, k):
         """
         Input transformation that transforms nice.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert k == 2, 'MM transform currently only implemented for k=2.'
@@ -112,19 +117,21 @@ class LTFArray(Simulation):
 
         result = swapaxes(dstack((cs_1, cs_2)), 1, 2)
         assert result.shape == (N, 2, n)
+        tools.assert_result_type(result)
         return result
 
     @classmethod
     def transform_lightweight_secure_original(cls, challenges, k):
         """
         Input transform as defined by Majzoobi et al. 2008.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
@@ -136,12 +143,12 @@ class LTFArray(Simulation):
             array([
                 prod(cs_shift_trans[:, :, i:], 2)
                 for i in range(n)
-            ]),
+            ], dtype=tools.RESULT_TYPE),
             (1, 2, 0)
         )
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
-
+        tools.assert_result_type(result)
         return result
 
     @classmethod
@@ -149,13 +156,14 @@ class LTFArray(Simulation):
         """
         Input transform as defined by Majzoobi et al. 2008, but with the shift
         operation executed after and without ATF transform.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
@@ -171,21 +179,23 @@ class LTFArray(Simulation):
         )
 
         assert challenges.shape == (N, n)
-
-        return cls.transform_shift(challenges, k)
+        res = cls.transform_shift(challenges, k)
+        tools.assert_result_type(res)
+        return res
 
     @classmethod
     def transform_shift_lightweight_secure(cls, challenges, k):
         """
         Input transform as defined by Majzoobi et al. 2008, with the shift
         operation executed first and without ATF transform.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
@@ -204,7 +214,7 @@ class LTFArray(Simulation):
         )
 
         assert challenges.shape == (N, k, n)
-
+        tools.assert_result_type(challenges)
         return challenges
 
     @classmethod
@@ -212,13 +222,14 @@ class LTFArray(Simulation):
         """
         Input transformation like defined by Majzoobi et al. (cf. transform_lightweight_secure),
         but differs in one bit. Introduced by Sölter.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n % 2 == 0, 'Sölter\'s Secure Lightweight Input Transformation only defined for even n.'
@@ -235,21 +246,22 @@ class LTFArray(Simulation):
         )
 
         assert challenges.shape == (N, n)
-
-        return cls.transform_shift(challenges, k)
+        res = cls.transform_shift(challenges, k)
+        tools.assert_result_type(res)
+        return res
 
     @staticmethod
     def transform_shift(challenges, k):
         """
         Input transformation that shifts the input bits for each of the k PUFs.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
-
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
 
@@ -259,7 +271,7 @@ class LTFArray(Simulation):
         ]), 0, 1)
 
         assert result.shape == (N, k, n)
-
+        tools.assert_result_type(result)
         return result
 
     @classmethod
@@ -269,13 +281,14 @@ class LTFArray(Simulation):
         of the challenge shifted by i bits to the left, then input into inner product mod 2
         function.
         The other LTF get the original input.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n % 2 == 0, '1-n bent transform only defined for even n.'
@@ -292,8 +305,7 @@ class LTFArray(Simulation):
             )
         )
         assert bent_challenges.shape == (N, n)
-
-        return array([
+        res = array([
             concatenate(
                 (
                     [bent_challenges[j]],  # 'bent' challenge as generated above
@@ -302,7 +314,9 @@ class LTFArray(Simulation):
                 axis=0
             )
             for j in range(N)
-        ])
+        ], dtype=tools.RESULT_TYPE)
+        tools.assert_result_type(res)
+        return res
 
     @classmethod
     def transform_1_1_bent(cls, challenges, k):
@@ -311,13 +325,14 @@ class LTFArray(Simulation):
         the result of IPmod2 of the original challenge, all other input bits will
         remain the same.
         The other LTF get the original input.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert k >= 2, '1-n bent transform currently only implemented for k>=2.'
@@ -325,8 +340,7 @@ class LTFArray(Simulation):
 
         bent_challenge_bits = cls.combiner_ip_mod2(challenges)
         assert bent_challenge_bits.shape == (N,)
-
-        return array([
+        res = array([
             concatenate(
                 (
                     [concatenate(([[bent_challenge_bits[j]], challenges[j][1:]]))],
@@ -336,7 +350,9 @@ class LTFArray(Simulation):
                 axis=0
             )
             for j in range(N)
-        ])
+        ], dtype=tools.RESULT_TYPE)
+        tools.assert_result_type(res)
+        return res
 
     @staticmethod
     def transform_polynomial(challenges, k):
@@ -348,14 +364,14 @@ class LTFArray(Simulation):
         of degree 8, 16, 24, 32, 48, or 64.
         Each Arbiter Chain i receives as input the polynomial c^i
         as element of GF(2^n).
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
-
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         assert n in [8, 16, 24, 32, 48, 64], 'Polynomial transformation is only implemented for challenges with n in ' \
@@ -363,37 +379,42 @@ class LTFArray(Simulation):
         if n == 64:
             irreducible_polynomial = array(
                 [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                dtype=tools.RESULT_TYPE
             )
         elif n == 48:
             irreducible_polynomial = array(
                 [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1]
+                 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1], dtype=tools.RESULT_TYPE
             )
         elif n == 32:
             irreducible_polynomial = array(
-                [1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                [1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                dtype=tools.RESULT_TYPE
             )
         elif n == 24:
-            irreducible_polynomial = array([1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+            irreducible_polynomial = array([1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                                           dtype=tools.RESULT_TYPE)
         elif n == 16:
-            irreducible_polynomial = array([1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1])
+            irreducible_polynomial = array([1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1], dtype=tools.RESULT_TYPE)
         elif n == 8:
-            irreducible_polynomial = array([1, 0, 1, 0, 0, 1, 1, 0, 1])
+            irreducible_polynomial = array([1, 0, 1, 0, 0, 1, 1, 0, 1], dtype=tools.RESULT_TYPE)
+        tools.assert_result_type(irreducible_polynomial)
 
         # Transform challenge to 0,1 array to compute transformation with numpy.
-        vtransform_to_01 = vectorize(tools.transform_challenge_11_to_01)
-        cs_01 = array([vtransform_to_01(c) for c in challenges])
+        cs_01 = array([tools.transform_challenge_11_to_01(c) for c in challenges])
 
         # Compute c^i for each challenge for i from 1 to k.
         challenges = concatenate([
             [tools.poly_mult_div(c, irreducible_polynomial, k) for c in cs_01]
         ])
+        tools.assert_result_type(challenges)
 
         # Transform challenges back to -1,1 notation.
-        result = array([tools.transform_challenge_01_to_11(c) for c in challenges])
+        result = array([tools.transform_challenge_01_to_11(c) for c in challenges], dtype=tools.RESULT_TYPE)
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
+        tools.assert_result_type(result)
         return result
 
     @staticmethod
@@ -401,13 +422,14 @@ class LTFArray(Simulation):
         """
         This transformation performs first a pseudorandom permutation of the challenge k times before applying the
         ATF transformation to each challenge.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
         seed = 0x1234
@@ -425,35 +447,35 @@ class LTFArray(Simulation):
             array([
                 prod(cs_permuted[:, :, i:], 2)
                 for i in range(n)
-            ]),
+            ], dtype=tools.RESULT_TYPE),
             (1, 2, 0)
         )
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
-
+        tools.assert_result_type(result)
         return result
 
     @staticmethod
     def transform_random(challenges, k):
         """
         This input transformation chooses for each Arbiter Chain an random challenge based on the initial challenge.
-        :param challenges: array of int shape(N,n)
+        :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
                   Number of LTFArray PUFs
-        :return:  array of int shape(N,k,n)
+        :return:  array of int8 shape(N,k,n)
                   Array of transformed challenges.
         """
-
+        tools.assert_result_type(challenges)
         N = len(challenges)
         n = len(challenges[0])
 
-        vtransform_to_01 = vectorize(tools.transform_challenge_11_to_01)
-        cs_01 = array([vtransform_to_01(c) for c in challenges])
+        cs_01 = array([tools.transform_challenge_11_to_01(c) for c in challenges], dtype=tools.RESULT_TYPE)
 
-        result = array([RandomState(c).choice((-1, 1), (k, n)) for c in cs_01])
+        result = array([RandomState(c).choice((-1, 1), (k, n)) for c in cs_01], dtype=tools.RESULT_TYPE)
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
+        tools.assert_result_type(result)
         return result
 
     @staticmethod
@@ -474,13 +496,14 @@ class LTFArray(Simulation):
         def transform(challenges, k):
             """
            Method as described in generate_concatenated_transform doc string.
-           :param challenges: array of int shape(N,n)
+           :param challenges: array of int8 shape(N,n)
                               Array of challenges which should be evaluated by the simulation.
            :param k: int
                      Number of LTFArray PUFs
            :return: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                     A function that can perform the desired transformation.
            """
+            tools.assert_result_type(challenges)
             (N, n) = challenges.shape
             transformed_1 = transform_1(challenges, puf_count)
             transformed_2 = transform_2(challenges, k - puf_count)
@@ -524,13 +547,14 @@ class LTFArray(Simulation):
         def transform(challenges, k):
             """
             Method as described in generate_concatenated_transform doc string.
-            :param challenges: array of int shape(N,n)
+            :param challenges: array of int8 shape(N,n)
                                Array of challenges which should be evaluated by the simulation.
             :param k: int
                      Number of LTFArray PUFs
             :return: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                      A function that can perform the desired transformation.
             """
+            tools.assert_result_type(challenges)
             (_, n) = challenges.shape
             assert k == puf_count and n == challenge_length, \
                 'Permutations Input Transform cannot be used for LTFArrays with size other than defined'
@@ -577,13 +601,14 @@ class LTFArray(Simulation):
         def transform(challenges, k):
             """
             Method as described in generate_concatenated_transform doc string.
-            :param challenges: array of int shape(N,n)
+            :param challenges: array of int8 shape(N,n)
                                Array of challenges which should be evaluated by the simulation.
             :param k: int
                       Number of LTFArray PUFs
             :return: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                      A function that can perform the desired transformation.
             """
+            tools.assert_result_type(challenges)
             (N, n) = challenges.shape
             challenges1 = challenges[:, :bit_number_transform_1]
             challenges2 = challenges[:, bit_number_transform_1:]
@@ -650,21 +675,25 @@ class LTFArray(Simulation):
     def eval(self, inputs):
         """
         evaluates a given array of challenges
-        :param inputs: array of challenges
-        :return: array of responses
+        :param inputs: array of int8 challenges
+        :return: array of int8 responses
         """
-        return sign(self.val(inputs))
+        tools.assert_result_type(inputs)
+        res = (sign(self.val(inputs))).astype(tools.RESULT_TYPE)
+        tools.assert_result_type(res)
+        return res
 
     def val(self, inputs):
         """
         This method evaluates a given array of challenges.
         It composes several parts of the LTFArray simulation in order
         to return a array of combined responses. The responses are positive and negative float values.
-        :param inputs: array of int shape(N,n)
+        :param inputs: array of int8 shape(N,n)
                        Array of challenges which should be evaluated by the simulation.
         :return: array of float or int depending on the combiner shape(N)
                  Array of responses for the N different challenges.
         """
+        tools.assert_result_type(inputs)
         return self.combiner(self.ltf_eval(self.transform(inputs, self.k)))
 
     def ltf_eval(self, inputs):
@@ -676,6 +705,7 @@ class LTFArray(Simulation):
         :return: array of int shape(N,k)
                  Array of responses for the N different challenges.
         """
+        tools.assert_result_type(inputs)
         if self.bias is not None:
             responses = ph.eval(tools.append_last(inputs, 1), self.weight_array)
         else:
@@ -818,6 +848,7 @@ class SimulationMajorityLTFArray(LTFArray):
         :return: array of int shape(N)
                  Array of responses for the N different challenges.
         """
+        tools.assert_result_type(inputs)
         return self.combiner(self.majority_vote(self.transform(inputs, self.k)))
 
     def majority_vote(self, transformed_inputs):
