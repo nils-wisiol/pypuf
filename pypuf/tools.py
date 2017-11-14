@@ -4,26 +4,26 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 
+RESULT_TYPE = 'int8'
+
 
 def random_input(n, random_instance=RandomState()):
     """
-    This method generates an array with random interger.
+    This method generates an array with random integer.
     By default a fresh `numpy.random.RandomState`instance is used.
     :param n: int
               Number of bits which should be generated
     :param random_instance: numpy.random.RandomState
                             The PRNG which is used to generate the output bits.
-    :returns: array of int
+    :returns: array of int8
               A pseudo random array of -1 and 1
-
-
     """
-    return random_instance.choice((-1, +1), n)
+    return (random_instance.choice((-1, +1), n)).astype(RESULT_TYPE)
 
 
 def all_inputs(n):
@@ -31,10 +31,10 @@ def all_inputs(n):
     This functions generates a iterator which produces all possible {-1,1}-vectors.
     :param int
            Length of a n bit vector
-    :returns: iterator of {-1,1} int arrays
-              An iterator with all possible different {-1,1}-vectors of length `n`.
+    :returns: array of int8
+              An array with all possible different {-1,1}-vectors of length `n`.
     """
-    return itertools.product((-1, +1), repeat=n)
+    return (array(list(itertools.product((-1, +1), repeat=n)))).astype(RESULT_TYPE)
 
 
 def random_inputs(n, num, random_instance=RandomState()):
@@ -47,11 +47,13 @@ def random_inputs(n, num, random_instance=RandomState()):
                 Number of n bit vector
     :param random_instance: numpy.random.RandomState
                             The PRNG which is used to generate the arrays.
-    :return: iterator of num {-1,1} int arrays
-             An iterator with num random {-1,1} int arrays.
+    :return: array of num {-1,1} int8 arrays
+             An array with num random {-1,1} int arrays.
     """
-    for _ in range(num):
-        yield random_input(n, random_instance)
+    res = zeros((num, n), dtype=RESULT_TYPE)
+    for i in range(num):
+        res[i] = random_input(n, random_instance=random_instance)
+    return res
 
 
 def sample_inputs(n, num, random_instance=RandomState()):
@@ -66,23 +68,10 @@ def sample_inputs(n, num, random_instance=RandomState()):
                 Number of n bit vector
     :param random_instance: numpy.random.RandomState
                             The PRNG which is used to generate the arrays.
-    :return: iterator of num {-1,1} int arrays
-             An iterator with num random {-1,1} int arrays depending on num and n.
+    :return: array of num {-1,1} int8 arrays
+             An array with num random {-1,1} int arrays depending on num and n.
     """
     return random_inputs(n, num, random_instance) if num < 2 ** n else all_inputs(n)
-
-
-def iter_append_last(array_iterator, item):
-    """
-    :param array_iterator: iterator of arbitrary type
-                           Iterator where an item should be appended.
-    :param item: of arbitrary type equal to iterator type
-                 Item which should be appended.
-    :returns: iterator of arbitrary type
-              An iterator for a given iterator of arrays to which an item will be appended.
-    """
-    for array_obj in array_iterator:
-        yield append(array_obj, item)
 
 
 def append_last(arr, item):
@@ -95,7 +84,6 @@ def append_last(arr, item):
     :return: n dimensional array of type
              initial arr with appended element item
     """
-    assert arr.dtype == dtype(type(item)), 'The elements of arr and item must be of the same type.'
     dimension = list(shape(arr))
     assert len(dimension) >= 1, 'arr must have at least one dimension.'
     # the lowest level should contain one item
@@ -121,7 +109,7 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
              Probability (randomly uniform x) for instance1.eval(x) != instance2.eval(x)
     """
     assert instance1.n == instance2.n
-    inputs = array(list(random_inputs(instance1.n, num, random_instance)))
+    inputs = random_inputs(instance1.n, num, random_instance=random_instance)
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
 
 
@@ -129,30 +117,34 @@ def approx_fourier_coefficient(s, training_set):
     """
     Approximate the Fourier coefficient of a function on the subset `s`
     by evaluating the function on `training_set`
-    :param s: list of int
+    :param s: list of int8
                   A {0,1}-array indicating the coefficient's index set
     :param training_set: pypuf.tools.TrainingSet
     :return: float
              The approximated value of the coefficient
     """
+    assert_result_type(s)
+    assert_result_type(training_set.challenges)
     return mean(training_set.responses * chi_vectorized(s, training_set.challenges))
 
 
 def chi_vectorized(s, inputs):
     """
     Parity function of inputs on indices in s.
-    :param s: list of int
+    :param s: list of int8
               A {0,1}-array indicating the index set
-    :param inputs: array of int shape(N,n)
+    :param inputs: array of int8 shape(N,n)
                    {-1,1}-valued inputs to be evaluated.
-    :return: array of int shape(N)
+    :return: array of int8 shape(N)
              chi_s(x) = prod_(i in s) x_i for all x in inputs (`latex formula`)
     """
+    assert_result_type(s)
+    assert_result_type(inputs)
     assert len(s) == len(inputs[0])
     result = inputs[:, s > 0]
     if result.size == 0:
-        return ones(len(inputs))
-    return prod(result, axis=1)
+        return ones(len(inputs), dtype=RESULT_TYPE)
+    return prod(result, axis=1, dtype=RESULT_TYPE)
 
 
 def compare_functions(function1, function2):
@@ -172,34 +164,32 @@ def compare_functions(function1, function2):
 
 def transform_challenge_01_to_11(challenge):
     """
-    This function is meant to be used with the numpy vectorize method.
-    After vectorizing, transform_challenge_01_to_11 can be applied to
-    numpy arrays to transform a challenge from 0,1 notation to -1,1 notation.
-    :param challenge: array of int
+    This function is used to transform a challenge from 0,1 notation to -1,1 notation.
+    :param challenge: array of int8
                       Challenge vector in 0,1 notation
-    :return: array of int
+    :return: array of int8
              Same vector in -1,1 notation
     """
-    if (challenge % 2) == 0:
-        return 1
-    else:
-        return -1
+    assert_result_type(challenge)
+    res = copy(challenge)
+    res[res == 1] = -1
+    res[res == 0] = 1
+    return res
 
 
 def transform_challenge_11_to_01(challenge):
     """
-    This function is meant to be used with the numpy vectorize method.
-    After vectorizing, transform_challenge_11_to_01 can be applied to
-    numpy arrays to transform a challenge from -1,1 notation to 0,1 notation.
-    :param challenge: array of int
+    This function is used to transform a challenge from -1,1 notation to 0,1 notation.
+    :param challenge: array of int8
                       Challenge vector in -1,1 notation
-    :return: array of int
+    :return: array of int8
              Same vector in 0,1 notation
     """
-    if challenge == 1:
-        return 0
-    else:
-        return 1
+    assert_result_type(challenge)
+    res = copy(challenge)
+    res[res == 1] = 0
+    res[res == -1] = 1
+    return res
 
 
 def poly_mult_div(challenge, irreducible_polynomial, k):
@@ -207,26 +197,29 @@ def poly_mult_div(challenge, irreducible_polynomial, k):
     Return the list of polynomials
         [challenge^2, challenge^3, ..., challenge^(k+1)] mod irreducible_polynomial
     based on the challenge challenge and the irreducible polynomial irreducible_polynomial.
-    :param challenge: array of int
+    :param challenge: array of int8
                       Challenge vector in 0,1 notation
-    :param irreducible_polynomial: array of int
+    :param irreducible_polynomial: array of int8
                                    Vector in 0,1 notation
     :param k: int
               Number of PUFs
-    :return: array of int
+    :return: array of int8
              Array of polynomials
     """
     import polymath as pm
-
+    assert_result_type(challenge)
+    assert_result_type(irreducible_polynomial)
     c_original = challenge
     res = None
     for i in range(k):
         challenge = pm.polymul(challenge, c_original)
         challenge = pm.polymodpad(challenge, irreducible_polynomial)
         if i == 0:
-            res = array([challenge])
+            res = array([challenge], dtype=RESULT_TYPE)
         else:
             res = vstack((res, challenge))
+    res = res.astype(RESULT_TYPE)
+    assert_result_type(res)
     return res
 
 
@@ -249,9 +242,16 @@ def approx_stabilities(instance, num, reps, random_instance=RandomState()):
     challenges = sample_inputs(instance.n, num, random_instance)
     responses = zeros((reps, num))
     for i in range(reps):
-        challenges, unpacked_challenges = itertools.tee(challenges)
-        responses[i, :] = instance.eval(array(list(unpacked_challenges)))
+        responses[i, :] = instance.eval(challenges)
     return 0.5 + 0.5 * np_abs(np_sum(responses, axis=0)) / reps
+
+
+def assert_result_type(arr):
+    """
+    This function checks the type of the array to match the RESULT_TYPE
+    :param arr: array of arbitrary type
+    """
+    assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
 
 
 class TrainingSet():
@@ -270,6 +270,6 @@ class TrainingSet():
                                 PRNG which is used to draft challenges.
         """
         self.instance = instance
-        self.challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        self.challenges = sample_inputs(instance.n, N, random_instance=random_instance)
         self.responses = instance.eval(self.challenges)
         self.N = N

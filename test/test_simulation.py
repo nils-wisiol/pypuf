@@ -489,7 +489,7 @@ class TestLTFArray(unittest.TestCase):
         mu = 1
         sigma = 0.5
 
-        challenges = array(list(tools.all_inputs(n)))
+        challenges = tools.all_inputs(n)
 
         weight_array = LTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
         bias_value = 2.5
@@ -529,7 +529,7 @@ class TestLTFArray(unittest.TestCase):
         mu = 1
         sigma = 0.5
 
-        challenges = array(list(tools.all_inputs(n)))
+        challenges = tools.all_inputs(n)
 
         weight_array = LTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
         bias_array = LTFArray.normal_weights(1, k, mu=mu, sigma=sigma*2, random_instance=RandomState(0xBADAFF1))
@@ -669,7 +669,7 @@ class TestNoisyLTFArray(TestLTFArray):
         mu = 1
         sigma = 0.5
 
-        challenges = array(list(tools.all_inputs(n)))
+        challenges = tools.all_inputs(n)
 
         weight_array = NoisyLTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
         bias_array = NoisyLTFArray.normal_weights(1, k, mu=mu, sigma=sigma * 2, random_instance=RandomState(0xBADAFF1))
@@ -712,7 +712,7 @@ class TestNoisyLTFArray(TestLTFArray):
         mu = 1
         sigma = 0.5
 
-        challenges = array(list(tools.all_inputs(n)))
+        challenges = tools.all_inputs(n)
 
         weight_array = NoisyLTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
         bias_value = 2.5
@@ -795,7 +795,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             combiner=LTFArray.combiner_xor
         )
 
-        inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
+        inputs = tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))
 
         ltf_array_result = ltf_array.eval(inputs)
         mv_noisy_ltf_array_result = mv_noisy_ltf_array.eval(inputs)
@@ -832,7 +832,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         vote_count = 1
         weight_array = LTFArray.normal_weights(n, k, mu, sigma, weight_prng1)
 
-        inputs = array(list(tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))))
+        inputs = tools.random_inputs(n, crp_count, random_instance=RandomState(seed=0xDEADDA7A))
 
         combiners = get_functions_with_prefix('combiner_', SimulationMajorityLTFArray)
         transformations = get_functions_with_prefix('transform_', SimulationMajorityLTFArray)
@@ -858,7 +858,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         mu = 1
         sigma = 0.5
 
-        challenges = challenges = array(list(tools.all_inputs(n)))
+        challenges = challenges = tools.all_inputs(n)
 
         weight_array = SimulationMajorityLTFArray.normal_weights(n, k, mu=mu, sigma=sigma,
                                                                  random_instance=RandomState(0xBADA556))
@@ -905,7 +905,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         mu = 1
         sigma = 0.5
 
-        challenges = array(list(tools.all_inputs(n)))
+        challenges = tools.all_inputs(n)
 
         weight_array = SimulationMajorityLTFArray.normal_weights(n, k, mu=mu, sigma=sigma,
                                                                  random_instance=RandomState(0xBADA556))

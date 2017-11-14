@@ -391,8 +391,7 @@ class LTFArray(Simulation):
         ])
 
         # Transform challenges back to -1,1 notation.
-        vtransform_to_11 = vectorize(tools.transform_challenge_01_to_11)
-        result = array([vtransform_to_11(c) for c in challenges])
+        result = array([tools.transform_challenge_01_to_11(c) for c in challenges])
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
         return result
