@@ -10,24 +10,6 @@ class Learner(object, metaclass=abc.ABCMeta):
     """
     This class is the base class for all learning classes.
     """
-    @property
-    def training_set(self):
-        """
-        This function gets the trainigset of the learner class.
-        :return: pypuf.tool.TrainingSet
-                 The trainingset which is used to learn an instance of a PUF simulation.
-        """
-        raise NotImplementedError('users must define training_set to use this base class')
-
-    @training_set.setter
-    @abc.abstractmethod
-    def training_set(self, val):
-        """
-        This method sets the trainingset which is used to learn an instance of a PUF simulation.
-        :param val: pypuf.tool.TrainingSet
-                    The trainingset which is used to model a PUF instance.
-        """
-        raise NotImplementedError('users must define training_set to use this base class')
 
     @abc.abstractmethod
     def learn(self):
