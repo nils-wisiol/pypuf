@@ -25,12 +25,11 @@ class DFA(Simulation):
             :param on_true: The state we go to whenever -1 is input. Use None for a rejecting sink, use 'self' to stay.
             :param on_false: The state we go to whenever +1 is input. Use None for a rejecting sink, use 'self' to stay.
             """
-            assert accepting in [-1, +1]
             assert on_true is None or isinstance(on_true, DFA.State) or on_true == 'self'
             assert on_false is None or isinstance(on_false, DFA.State) or on_false == 'self'
             self.accepting = accepting
-            self.input_true = self if on_true == 'self' else on_true
-            self.input_false = self if on_false == 'self' else on_false
+            self.on_true = self if on_true == 'self' else on_true
+            self.on_false = self if on_false == 'self' else on_false
 
         def next(self, input_bit):
             """
@@ -38,9 +37,9 @@ class DFA(Simulation):
             :return: The new state of the DFA.
             """
             if input_bit == -1:
-                return self.input_true
+                return self.on_true
             elif input_bit == +1:
-                return self.input_false
+                return self.on_false
             else:
                 assert input_bit in [-1, +1], "input bits to the DFA must be represented as +-1 bits, -1 being true"
 
@@ -68,5 +67,5 @@ class DFA(Simulation):
         """
         current_state = self.start_state
         for bit in input_string:
-            current_state = current_state.next(bit) if current_state is not None else None
-        return current_state.accepting if current_state is not None else +1
+            current_state = current_state.next(bit)
+        return current_state.accepting

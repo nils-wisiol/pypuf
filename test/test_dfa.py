@@ -18,13 +18,13 @@ class TestState(unittest.TestCase):
         """
         state = dfa.DFA.State(accepting=+1, on_false=dfa.DFA.State(), on_true='self')
         self.assertEqual(state.accepting, +1)
-        self.assertEqual(type(state.input_false), dfa.DFA.State)
-        self.assertEqual(state.input_true, state)
+        self.assertEqual(type(state.on_false), dfa.DFA.State)
+        self.assertEqual(state.on_true, state)
 
         state = dfa.DFA.State()
         self.assertEqual(state.accepting, +1)
-        self.assertEqual(state.input_true, None)
-        self.assertEqual(state.input_false, None)
+        self.assertEqual(state.on_true, None)
+        self.assertEqual(state.on_false, None)
 
         state = dfa.DFA.State(accepting=-1)
         self.assertEqual(state.accepting, -1)
