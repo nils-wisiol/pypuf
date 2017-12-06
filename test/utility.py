@@ -9,7 +9,7 @@ from io import StringIO
 from functools import wraps
 from pypuf.experiments.experimenter import log_listener, setup_logger
 
-LOG_PATH = 'test/'
+LOG_PATH = 'test/logs/'
 LOG_NAME = 'test_log'
 
 
