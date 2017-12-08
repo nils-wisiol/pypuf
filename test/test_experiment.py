@@ -4,6 +4,8 @@ from test.utility import remove_test_logs, logging, get_functions_with_prefix, L
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
+from pypuf.property_test.base import PropertyTest
+from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 
 
 class TestBase(unittest.TestCase):
@@ -25,13 +27,14 @@ class TestExperimentLogisticRegression(TestBase):
     """
     This class tests the logistic regression experiment.
     """
+
     @logging
     def test_run_and_analyze(self, logger):
         """
         This method only runs the experiment.
         """
         lr16_4 = ExperimentLogisticRegression(
-            LOG_PATH+'exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
+            LOG_PATH + 'exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
             LTFArray.combiner_xor,
         )
         lr16_4.execute(logger.queue, logger.logger_name)
@@ -92,6 +95,7 @@ class TestExperimentLogisticRegression(TestBase):
                 seed_challenge=seed_challenge,
                 seed_chl_distance=seed_distance,
             )
+
         # Result check
         for transformation in transformations:
             for combiner in combiners:
@@ -146,6 +150,7 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
     This class is used to test the Experiment which searches for a number of votes which is needed to achieve an
     overall desired stability.
     """
+
     @logging
     def test_run_and_analyze(self, logger):
         """
@@ -240,3 +245,48 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
 
         self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
                                 'No vote_count was found.')
+
+
+class TestExperimentPropertyTest(TestBase):
+    """This class is used to test the property test experiment"""
+
+    @logging
+    def test_run_and_analyze_tests(self, logger):
+        """
+        This method runs the property testing experiment with different parameters.
+        """
+
+        def create_experiment(N, test_function, ins_gen_function, param_ins_gen):
+            """A shortcut function to create property experiments"""
+            measurements = 10
+            challenge_seed = 0xDE5
+            return ExperimentPropertyTest(
+                log_name=logger.logger_name,
+                test_function=test_function,
+                challenge_count=N,
+                measurements=measurements,
+                challenge_seed=challenge_seed,
+                ins_gen_function=ins_gen_function,
+                param_ins_gen=param_ins_gen,
+            )
+        tests = [PropertyTest.reliability_statistic, PropertyTest.uniqueness_statistic]
+        N = 255
+        array_parameter = {
+            'n': 16,
+            'k': 1,
+            'instance_count': 10,
+            'transformation': NoisyLTFArray.transform_id,
+            'combiner': NoisyLTFArray.combiner_xor,
+            'bias': None,
+            'mu': 0,
+            'sigma': 1,
+            'weight_random_seed': 0xF4EE,
+            'sigma_noise': 0.5,
+            'noise_random_seed': 0xEE4F,
+        }
+        for test_function in tests:
+            exp_rel = create_experiment(N, test_function,
+                                        ExperimentPropertyTest.create_noisy_ltf_arrays, array_parameter)
+            exp_rel.execute(logger.queue, logger.logger_name)
+            with open(exp_rel.log_name+'.log', 'r') as log_file:
+                self.assertNotEqual(log_file.read(), '')
