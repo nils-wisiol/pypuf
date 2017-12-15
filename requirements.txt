@@ -4,3 +4,4 @@ polymath==0.1.17
 pylint==1.7.*
 pypuf-helper==0.1.4
 scipy==0.19.*
+astroid==1.5.*
