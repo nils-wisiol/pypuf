@@ -698,6 +698,55 @@ class NoisyLTFArray(LTFArray):
         """
         return sqrt(n) * sigma_weight * noisiness
 
+    @staticmethod
+    def init_normal_empirical(n, k, transform, combiner, intra_dist, random_instance=RandomState(), bias=None,
+                              approx_threshold=.1):
+        """
+        Initializes a NoisyLTFArray with given parameters that can be expected to have the given intra_dist.
+        :param n: length of challenges
+        :param k: number of LTFs in the array
+        :param transform: input transformation for the LTF array
+        :param combiner: function mapping the individual output bits to one output bit
+        :param intra_dist: desired intra_dist, defined as the probability to see same output on two evaluations using
+                           the same challenge.
+        :param random_instance: pseudorandom generator to be used
+        :param bias: bias of the LTF array
+        :return: NoisyLTFArray
+        """
+        assert intra_dist > 0
+
+        instance = NoisyLTFArray(
+            weight_array=LTFArray.normal_weights(n, k, random_instance=random_instance),
+            transform=transform,
+            combiner=combiner,
+            sigma_noise=1,
+            random_instance=random_instance,
+            bias=bias,
+        )
+
+        # double max_sigma_noise until large enough
+        while tools.approx_dist(instance, instance, 1000) < intra_dist:
+            instance.sigma_noise *= 2
+        min_sigma_noise = 0
+        max_sigma_noise = 2*instance.sigma_noise
+
+        # binary search in [0, max_sigma_noise]
+        instance.sigma_noise = (max_sigma_noise + min_sigma_noise) / 2
+        estimation_distance = tools.approx_dist(instance, instance, 10000)
+        while abs(intra_dist - estimation_distance) > approx_threshold:
+
+            # update interval bounds
+            if estimation_distance > intra_dist:
+                max_sigma_noise = instance.sigma_noise
+            elif estimation_distance <= intra_dist:
+                min_sigma_noise = instance.sigma_noise
+
+            # update instance and estimated distance
+            instance.sigma_noise = (max_sigma_noise + min_sigma_noise) / 2
+            estimation_distance = tools.approx_dist(instance, instance, 10000)
+
+        return instance
+
     def __init__(self, weight_array, transform, combiner, sigma_noise,
                  random_instance=RandomState(), bias=None):
         """

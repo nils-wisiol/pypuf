@@ -745,6 +745,21 @@ class TestNoisyLTFArray(TestLTFArray):
         # The arithmetic mean of the res
         self.assertFalse(array_equal(biased_responses, responses))
 
+    def test_init_normal_empirical(self):
+        """
+        Test if initialization by intra distance yields the desired intra distance.
+        """
+        for intra_dist in [.1, .2, .3]:
+            nla = NoisyLTFArray.init_normal_empirical(32, 1, NoisyLTFArray.transform_id, NoisyLTFArray.combiner_xor,
+                                                      intra_dist, approx_threshold=.01,
+                                                      random_instance=RandomState(0xbeef))
+            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000) - intra_dist) < .02)
+        for intra_dist in [.1, .2, .3]:
+            nla = NoisyLTFArray.init_normal_empirical(64, 4, NoisyLTFArray.transform_id, NoisyLTFArray.combiner_xor,
+                                                      intra_dist, approx_threshold=.1,
+                                                      random_instance=RandomState(0xbeef))
+            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000) - intra_dist) < .15)
+
 
 class TestSimulationMajorityLTFArray(unittest.TestCase):
     """This class is used to test the SimulationMajorityLTFArray class."""
