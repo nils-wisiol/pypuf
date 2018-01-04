@@ -6,6 +6,7 @@ import abc
 import time
 import logging
 import logging.handlers
+from pypuf.experiments.experimenter import Experimenter
 
 
 class Experiment(object):
@@ -62,6 +63,7 @@ class Experiment(object):
         self.run()
         self.measured_time = time.time() - start_time
         self.analyze()
+        self.result_logger.info(Experimenter.PRINT_DELIMITER + '{}'.format(self.measured_time))
 
 
 def setup_result_logger(queue, logger_name):
