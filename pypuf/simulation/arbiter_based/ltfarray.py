@@ -732,7 +732,7 @@ class NoisyLTFArray(LTFArray):
 
         # binary search in [0, max_sigma_noise]
         instance.sigma_noise = (max_sigma_noise + min_sigma_noise) / 2
-        estimation_distance = tools.approx_dist(instance, instance, 10000)
+        estimation_distance = tools.approx_dist(instance, instance, 10000, random_instance)
         while abs(intra_dist - estimation_distance) > approx_threshold:
 
             # update interval bounds
@@ -743,7 +743,7 @@ class NoisyLTFArray(LTFArray):
 
             # update instance and estimated distance
             instance.sigma_noise = (max_sigma_noise + min_sigma_noise) / 2
-            estimation_distance = tools.approx_dist(instance, instance, 10000)
+            estimation_distance = tools.approx_dist(instance, instance, 10000, random_instance)
 
         return instance
 
