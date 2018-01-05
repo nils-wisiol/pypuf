@@ -54,7 +54,8 @@ def main(arguments):
             continue
 
         for filename in fn_filter(file_names, '*.py'):
-            files_to_check.append(path.join(root, filename))
+            if not reduce((lambda x, y: x or y), [pattern in filename for pattern in args.exclude_patterns]):
+                files_to_check.append(path.join(root, filename))
 
     # if the path is a single file
     if not files_to_check:
