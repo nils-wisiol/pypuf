@@ -102,7 +102,7 @@ from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 # create a simulation with random (Gaussian) weights
-# for 64-bit 4-XOR 
+# for 64-bit 2-XOR
 instance = LTFArray(
     weight_array=LTFArray.normal_weights(n=64, k=2),
     transform=LTFArray.transform_atf,
