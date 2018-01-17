@@ -753,12 +753,14 @@ class TestNoisyLTFArray(TestLTFArray):
             nla = NoisyLTFArray.init_normal_empirical(32, 1, NoisyLTFArray.transform_id, NoisyLTFArray.combiner_xor,
                                                       intra_dist, approx_threshold=.01,
                                                       random_instance=RandomState(0xbeef))
-            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000) - intra_dist) < .02)
+            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000, random_instance=RandomState(0xc0ffee))
+                                - intra_dist) < .02)
         for intra_dist in [.1, .2, .3]:
             nla = NoisyLTFArray.init_normal_empirical(64, 4, NoisyLTFArray.transform_id, NoisyLTFArray.combiner_xor,
                                                       intra_dist, approx_threshold=.1,
                                                       random_instance=RandomState(0xbeef))
-            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000) - intra_dist) < .15)
+            self.assertTrue(abs(tools.approx_dist(nla, nla, 10000, random_instance=RandomState(0xc0ffee))
+                                - intra_dist) < .15)
 
 
 class TestSimulationMajorityLTFArray(unittest.TestCase):

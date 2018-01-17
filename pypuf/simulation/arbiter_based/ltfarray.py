@@ -725,7 +725,7 @@ class NoisyLTFArray(LTFArray):
         )
 
         # double max_sigma_noise until large enough
-        while tools.approx_dist(instance, instance, 1000) < intra_dist:
+        while tools.approx_dist(instance, instance, 1000, random_instance) < intra_dist:
             instance.sigma_noise *= 2
         min_sigma_noise = 0
         max_sigma_noise = 2*instance.sigma_noise
