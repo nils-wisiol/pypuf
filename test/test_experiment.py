@@ -1,6 +1,8 @@
 """This module tests the different experiment classes."""
 import unittest
+from multiprocessing import Queue
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
+from numpy import array
 from numpy.testing import assert_array_equal
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -133,18 +135,45 @@ class TestExperimentLogisticRegression(TestBase):
         )
         experiment.execute(logger.queue, logger.logger_name)
 
-        legacy_result = ['0xbae55e', '0x5c6ae1e', '0', '8', '2', '255', 'transform_soelter_lightweight_secure',
+        legacy_result = ['0xbae55e', '0x5c6ae1e', '0', '8', '2', '255',
+                         'transform_soelter_lightweight_secure',
                          'combiner_xor', '363', '1.000000',
-                         '0.004434196697553547,-0.006165469115660552,0.01863460811941779,0.006161971947497141,'
-                         '0.007952844613342913,-0.00443539877582613,-0.003160478725989649,0.00993214368372716,'
-                         '0.050759572945916105,0.4152073731341133,-0.051717373783873026,0.28590058284200337,'
-                         '0.46751201637696743,0.5501022313657793,-0.0007397116100418063,-0.46775797717804346\n']
+                         '0.004434196698,-0.006165469116,0.018634608119,0.006161971947,0.007952844613,'
+                         '-0.004435398776,-0.003160478726,0.009932143684,0.050759572946,0.415207373134,'
+                         '-0.051717373784,0.285900582842,0.467512016377,0.550102231366,-0.000739711610,'
+                         '-0.467757977178\n']
         result_str = logger.read_result_log()
         self.assertFalse(result_str == '', 'The result log was empty.')
         experiment_result = result_str.split('\t')
         # remove execution time
         del experiment_result[9]
-        assert_array_equal(experiment_result, legacy_result, 'You changed the code significant.')
+        assert_array_equal(experiment_result, legacy_result, 'You changed the Logistic Regression Learner'
+                                                             'significantly.')
+
+    def test_mathematica_compatibility(self):
+        """
+        Tests if the result log of Logistic Regression learning is compatible with Mathematica input, i.e. it must not
+        contain numbers in scientific notation.
+        """
+        experiment = ExperimentLogisticRegression(
+            LOG_PATH + 'exp',
+            n=2,
+            k=1,
+            N=1,
+            seed_instance=1,
+            seed_model=2,
+            transformation=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+        )
+        experiment.execute(Queue(-1), 'testlog')
+        experiment.model = LTFArray(
+            weight_array=array([[1, 10E-13]]),
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+        )
+        with self.assertLogs('testlog', level='DEBUG') as mock_logger:
+            experiment.analyze()
+        self.assertEqual(mock_logger.output[0].split('\t')[11], '1.000000000000,0.000000000001')
 
 
 class TestExperimentMajorityVoteFindVotes(TestBase):
