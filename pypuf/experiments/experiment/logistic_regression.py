@@ -122,6 +122,7 @@ class ExperimentLogisticRegression(Experiment):
                 min(10000, 2 ** self.n),
                 random_instance=self.distance_prng,
             ),
-            ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
-
+            ','.join(
+                ['%.12f' % x for x in self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())]
+            ),
         )
