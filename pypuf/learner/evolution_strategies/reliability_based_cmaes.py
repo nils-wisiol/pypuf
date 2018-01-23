@@ -186,7 +186,7 @@ class ReliabilityBasedCMAES(Learner):
         """Return an abortion function on a fixed set of challenges and LTFs"""
         this = __class__
         weight_arrays = chains_learned[:num_learned, :]
-        learned_ltf_arrays = this.build_ltf_arrays(weight_arrays, transform, combiner)
+        learned_ltf_arrays = this.build_individual_ltf_arrays(weight_arrays, transform, combiner)
 
         def is_same_solution(solution):
             """Return True, if the current solution mean within CMAES is similar to a previously learned LTF array"""
@@ -214,7 +214,7 @@ class ReliabilityBasedCMAES(Learner):
         return polarized_chains
 
     @staticmethod
-    def build_ltf_arrays(weight_arrays, transform, combiner):
+    def build_individual_ltf_arrays(weight_arrays, transform, combiner):
         """Return iterator over LTF arrays created out of every individual"""
         pop_size, _ = np.shape(weight_arrays)
         for i in range(pop_size):

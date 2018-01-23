@@ -29,7 +29,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
     instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng_i)
     training_set = tools.TrainingSet(instance, num, prng_c, reps)
 
-    @unittest.skip
     def test_create_fitness_function(self):
         measured_rels = Learner.measure_rels(self.training_set.responses)
         epsilon = 4
@@ -55,7 +54,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         assert is_same_solution(self.instance.weight_array[0, :])
         assert not is_same_solution(weight_array[0, :])
 
-    @unittest.skip
     def test_learn(self):
         pop_size = 12
         limit_stag = 100
@@ -89,7 +87,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         assert corr_1_2 < corr_1_3 < corr_2_3
         self.assertEqual(corr_4_1, -1)
 
-    @unittest.skip
     def test_polarize_ltfs(self):
         learned_ltfs = np.array([
             [.5, -1, -.5, 1],
@@ -116,6 +113,23 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         for ltf_array in ltf_arrays:
             res = ltf_array.eval(challenges)
             np.testing.assert_array_equal(res, res_original)
+
+    def test_build_individual_ltf_arrays(self):
+        prng = np.random.RandomState(0x1)
+        challenges = np.array(list(tools.sample_inputs(self.n, self.num, prng)))
+        num_ltfs = 2
+        weight_arrays = LTFArray.normal_weights(
+            n=self.n,
+            k=num_ltfs,
+            mu=0,
+            sigma=0,
+            random_instance=prng
+        )
+        ltf_arrays = Learner.build_individual_ltf_arrays(weight_arrays, self.transform, self.combiner)
+        res = np.zeros((num_ltfs, self.num))
+        for i, ltf_array in enumerate(ltf_arrays):
+            res[i, :] = ltf_array.eval(challenges)
+        assert np.array_equal(res[0, :], res[1, :])
 
     responses = np.array([
         [1, 1, 1, 1],
