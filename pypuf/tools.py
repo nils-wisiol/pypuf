@@ -4,7 +4,7 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, squeeze, copy
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
@@ -260,16 +260,25 @@ class TrainingSet():
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState()):
+    def __init__(self, instance, N, random_instance=RandomState(), reps=1):
         """
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
-        :param N: int
-                  Number of desired challenges
+        :param instance:        pypuf.simulation.base.Simulation
+                                Instance which is used to generate responses for random challenges
+        :param N:               int
+                                Number of desired challenges
         :param random_instance: numpy.random.RandomState
-                                PRNG which is used to draft challenges.
+                                PRNG instance for pseudo random sampling challenges
+        :param reps:            int
+                                Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
-        self.challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        self.responses = instance.eval(self.challenges)
+        self.challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        self.responses = zeros((reps, N))
+        for i in range(reps):
+            self.challenges, cs = itertools.tee(self.challenges)
+            self.responses[i, :] = instance.eval(array(list(cs)))
+        self.challenges = array(list(self.challenges))
+        if reps == 1:
+            self.responses = squeeze(self.responses, axis=0)
         self.N = N
+        self.reps = reps

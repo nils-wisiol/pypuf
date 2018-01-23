@@ -1,14 +1,18 @@
 """This module tests the different experiment classes."""
 import unittest
-from multiprocessing import Queue
+from multiprocessing import Queue, Process
+from numpy import shape
+from numpy.random import RandomState
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
 from numpy import array
 from numpy.testing import assert_array_equal
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
+from pypuf.experiments.experimenter import log_listener, setup_logger
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
 from pypuf.property_test.base import PropertyTest
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
+from pypuf.experiments.experiment.reliability_based_cmaes import ExperimentReliabilityBasedCMAES
 
 
 class TestBase(unittest.TestCase):
@@ -321,3 +325,82 @@ class TestExperimentPropertyTest(TestBase):
             exp_rel.execute(logger.queue, logger.logger_name)
             with open(exp_rel.log_name+'.log', 'r') as log_file:
                 self.assertNotEqual(log_file.read(), '')
+
+
+class TestExperimentReliabilityBasedCMAES(TestBase):
+    """
+    This class tests the reliability based CMAES experiment.
+    """
+    def test_run_and_analyze(self):
+        """
+        This method only runs the experiment.
+        """
+        logger_name = 'log'
+
+        # Setup multiprocessing logging
+        queue = Queue(-1)
+        listener = Process(target=log_listener,
+                                           args=(queue, setup_logger, logger_name,))
+        listener.start()
+
+        experiment = ExperimentReliabilityBasedCMAES(
+            log_name=logger_name,
+            seed_instance=0xbee,
+            k=2,
+            n=16,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            noisiness=0.1,
+            seed_challenges=0xbee,
+            num=2**12,
+            reps=4,
+            seed_model=0xbee,
+            pop_size=16,
+            limit_stag=100,
+            limit_iter=1000,
+        )
+        experiment.execute(queue, logger_name)
+
+        queue.put_nowait(None)
+        listener.join()
+
+    def test_calc_individual_accs(self):
+        """This method tests the calculation of individual (non-polarized) accuracies of a learned model"""
+        exp = ExperimentReliabilityBasedCMAES(
+            log_name='exp_log',
+            seed_instance=0x123,
+            k=2,
+            n=16,
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor,
+            noisiness=.1,
+            seed_challenges=0x456,
+            num=40000,
+            reps=5,
+            seed_model=0x789,
+            pop_size=24,
+            limit_stag=40,
+            limit_iter=500
+        )
+        weight_array_model = LTFArray.normal_weights(
+            exp.n, exp.k, random_instance=RandomState(exp.seed_model)
+        )
+        exp.model = LTFArray(
+            combiner=exp.combiner,
+            transform=exp.transform,
+            weight_array=weight_array_model
+        )
+        weight_array_instance = LTFArray.normal_weights(
+            exp.n, exp.k, random_instance=RandomState(exp.seed_instance)
+        )
+        exp.instance = LTFArray(
+            combiner=exp.combiner,
+            transform=exp.transform,
+            weight_array=weight_array_instance
+        )
+        individual_accs = exp.calc_individual_accs()
+        self.assertIsNotNone(individual_accs)
+        assert shape(individual_accs) == (exp.k,)
+        for i in range(exp.k):
+            assert individual_accs[i] > 0.0
+            assert individual_accs[i] <= 1.0
