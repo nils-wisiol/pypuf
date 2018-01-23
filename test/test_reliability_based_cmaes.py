@@ -103,15 +103,22 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         )
         self.assertIsNotNone(polarized_ltf_array)
 
-    def test_build_ltf_arrays(self):
-        challenges = tools.sample_inputs(self.n, self.num)
-        ltf_array_original = LTFArray(self.weight_array, self.transform, self.combiner)
-        res_original = ltf_array_original.eval(challenges)
-        weight_arrays = self.weight_array[np.newaxis, :].repeat(2, axis=0)
-        ltf_arrays = Learner.build_ltf_arrays(weight_arrays, self.transform, self.combiner)
-        for ltf_array in ltf_arrays:
-            res = ltf_array.eval(challenges)
-            np.testing.assert_array_equal(res, res_original)
+    def test_build_individual_ltf_arrays(self):
+        prng = np.random.RandomState(0x1)
+        challenges = np.array(list(tools.sample_inputs(self.n, self.num, prng)))
+        num_ltfs = 2
+        weight_arrays = LTFArray.normal_weights(
+            n=self.n,
+            k=num_ltfs,
+            mu=0,
+            sigma=0,
+            random_instance=prng
+        )
+        ltf_arrays = Learner.build_individual_ltf_arrays(weight_arrays, self.transform, self.combiner)
+        res = np.zeros((num_ltfs, self.num))
+        for i, ltf_array in enumerate(ltf_arrays):
+            res[i, :] = ltf_array.eval(challenges)
+        assert np.array_equal(res[0, :], res[1, :])
 
     responses = np.array([
         [1, 1, 1, 1],
