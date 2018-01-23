@@ -4,6 +4,7 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, squeeze, copy
 from importlib import import_module
 from inspect import getmembers, isclass
 from math import ceil, log
@@ -416,20 +417,31 @@ class TrainingSet(ChallengeResponseSet):
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState()):
+    def __init__(self, instance, N, random_instance=RandomState(), reps=1):
         """
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
-        :param N: int
-                  Number of desired challenges
+        :param instance:        pypuf.simulation.base.Simulation
+                                Instance which is used to generate responses for random challenges
+        :param N:               int
+                                Number of desired challenges
         :param random_instance: numpy.random.RandomState
-                                PRNG which is used to draft challenges.
+                                PRNG instance for pseudo random sampling challenges
+        :param reps:            int
+                                Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
-        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
+        challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        responses = zeros((reps, N))
+        for i in range(reps):
+            challenges, cs = itertools.tee(self.challenges)
+            responses[i, :] = instance.eval(array(list(cs)))
+        challenges = array(list(challenges))
+        if reps == 1:
+            responses = squeeze(self.responses, axis=0)
+        self.N = N
+        self.reps = reps
         super().__init__(
             challenges=challenges,
-            responses=instance.eval(challenges)
+            responses=responses,
         )
 
 
