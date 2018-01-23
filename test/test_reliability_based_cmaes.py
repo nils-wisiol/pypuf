@@ -29,7 +29,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
     instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng_i)
     training_set = tools.TrainingSet(instance, num, prng_c, reps)
 
-    @unittest.skip
     def test_create_fitness_function(self):
         measured_rels = Learner.measure_rels(self.training_set.responses)
         epsilon = 4
@@ -55,7 +54,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         assert is_same_solution(self.instance.weight_array[0, :])
         assert not is_same_solution(weight_array[0, :])
 
-    @unittest.skip
     def test_learn(self):
         pop_size = 12
         limit_stag = 100
@@ -89,7 +87,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         assert corr_1_2 < corr_1_3 < corr_2_3
         self.assertEqual(corr_4_1, -1)
 
-    @unittest.skip
     def test_polarize_ltfs(self):
         learned_ltfs = np.array([
             [.5, -1, -.5, 1],
@@ -106,7 +103,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         )
         self.assertIsNotNone(polarized_ltf_array)
 
-    @unittest.skip
     def test_build_ltf_arrays(self):
         challenges = tools.sample_inputs(self.n, self.num)
         ltf_array_original = LTFArray(self.weight_array, self.transform, self.combiner)
