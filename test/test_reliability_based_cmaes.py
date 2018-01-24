@@ -15,8 +15,6 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
     reps = 5
     mu_weight = 0
     sigma_weight = 1
-    transform = LTFArray.transform_id
-    combiner = LTFArray.combiner_xor
     seed_instance = 0x1
     prng_i = np.random.RandomState(seed_instance)
     seed_model = 0x2
@@ -29,8 +27,12 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
             [.1, .2, .3, .4, -.5, -.6, -.7, -.8, -.1, -.2, -.3, -.4, .5, .6, .7, .81]
         ])
     sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness=0.05)
-    instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng_i)
-    training_set = tools.TrainingSet(instance, num, prng_c, reps)
+
+    def setUp(self):
+        self.transform = LTFArray.transform_id
+        self.combiner = LTFArray.combiner_xor
+        self.instance = NoisyLTFArray(self.weight_array, self.transform, self.combiner, self.sigma_noise, self.prng_i)
+        self.training_set = tools.TrainingSet(self.instance, self.num, self.prng_c, self.reps)
 
     def test_create_fitness_function(self):
         measured_rels = Learner.measure_rels(self.training_set.responses)
