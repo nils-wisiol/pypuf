@@ -308,13 +308,9 @@ class TestExperimentPropertyTest(TestBase):
 
 
 class TestExperimentReliabilityBasedCMAES(TestBase):
-    """
-    This class tests the reliability based CMAES experiment.
-    """
+    """This class tests the reliability based CMAES experiment."""
     def test_run_and_analyze(self):
-        """
-        This method only runs the experiment.
-        """
+        """This method only runs the experiment."""
         logger_name = 'log'
 
         # Setup multiprocessing logging
@@ -345,7 +341,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
         listener.join()
 
     def test_calc_individual_accs(self):
-        """This method tests the calculation of individual (non-polarized) accuracies of a learned model"""
+        """This method tests the calculation of individual (non-polarized) accuracies of a learned model."""
         exp = ExperimentReliabilityBasedCMAES(
             log_name='exp_log',
             seed_instance=0x123,

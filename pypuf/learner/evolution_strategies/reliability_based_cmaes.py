@@ -16,6 +16,10 @@ from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
 class ReliabilityBasedCMAES(Learner):
+    """This class implements a learner for XOR LTF arrays. Thus, by means of a CMAES algorithm a model
+    is created similar to the original LTF array. This process is based on the information of reliability
+    originating from multiple repeatedly evaluated challenges.
+    """
 
     # Constants
     CONST_EPSILON = 0.1
@@ -56,7 +60,7 @@ class ReliabilityBasedCMAES(Learner):
         self.logger = logger
 
         if 2**n < self.APPROX_CHALLENGE_NUM:
-            self.APPROX_CHALLENGE_NUM = 2**n
+            self.APPROX_CHALLENGE_NUM = 2 ** n
 
     def learn(self):
         """Compute a model according to the given LTF Array parameters and training set
@@ -110,22 +114,22 @@ class ReliabilityBasedCMAES(Learner):
                     combiner=self.combiner,
                     threshold=self.THRESHOLD_DIST,
                 )
-                es = cma.CMAEvolutionStrategy(x0=mean_start, sigma0=step_size_start, inopts=options)
+                search = cma.CMAEvolutionStrategy(x0=mean_start, sigma0=step_size_start, inopts=options)
                 counter = 1
                 # Learn individual LTF array using abortion if evolutionary search approximates previous a solution
-                while not es.stop():
-                    curr_points = es.ask()  # Sample new solution points
-                    es.tell(curr_points, [fitness(point) for point in curr_points])
+                while not search.stop():
+                    curr_points = search.ask()  # Sample new solution points
+                    search.tell(curr_points, [fitness(point) for point in curr_points])
                     self.num_iterations += 1
                     if counter % self.FREQ_LOGGING == 0:
-                        log_state(es)
+                        log_state(search)
                     counter += 1
                     if counter % self.FREQ_ABORTION_CHECK == 0:
-                        if is_same_solution(es.mean):
+                        if is_same_solution(search.mean):
                             self.num_abortions += 1
                             aborted = True
                             break
-                solution = es.result.xbest
+                solution = search.result.xbest
 
                 # Include normalized solution, if it is different from previous ones
                 if not aborted:
@@ -133,7 +137,7 @@ class ReliabilityBasedCMAES(Learner):
                     self.num_learned += 1
                     if self.stops != '':
                         self.stops += ','
-                    self.stops += '_'.join(list(es.stop()))
+                    self.stops += '_'.join(list(search.stop()))
 
         # Polarize the learned combined LTF array
         majority_responses = self.majority_responses(self.training_set.responses)
@@ -149,6 +153,7 @@ class ReliabilityBasedCMAES(Learner):
     @staticmethod
     @contextlib.contextmanager
     def avoid_printing():
+        """Avoid printing on sys.stdout while learning"""
         save_stdout = sys.stdout
         sys.stdout = open('/dev/null', 'w')
         yield

@@ -433,8 +433,8 @@ class TrainingSet(ChallengeResponseSet):
         challenges = sample_inputs(instance.n, self.N, random_instance=random_instance)
         responses = zeros((reps, self.N))
         for i in range(reps):
-            challenges, cs = itertools.tee(challenges)
-            responses[i, :] = instance.eval(array(list(cs)))
+            challenges, copy = itertools.tee(challenges)
+            responses[i, :] = instance.eval(array(list(copy)))
         challenges = array(list(challenges))
         if reps == 1:
             responses = squeeze(responses, axis=0)
