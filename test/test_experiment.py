@@ -344,6 +344,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
         queue.put_nowait(None)
         listener.join()
 
+    @unittest.skip
     def test_calc_individual_accs(self):
         """This method tests the calculation of individual (non-polarized) accuracies of a learned model"""
         exp = ExperimentReliabilityBasedCMAES(
