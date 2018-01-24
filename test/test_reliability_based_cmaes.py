@@ -36,7 +36,7 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
 
     def test_create_fitness_function(self):
         measured_rels = Learner.measure_rels(self.training_set.responses)
-        epsilon = 2
+        epsilon = .5
         fitness = Learner.create_fitness_function(
             challenges=self.training_set.challenges,
             measured_rels=measured_rels,
@@ -44,12 +44,12 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
             transform=self.transform,
             combiner=self.combiner,
         )
-        assert fitness(self.instance.weight_array[0, :]) < 0.2
+        self.assertLessEqual(fitness(self.instance.weight_array[0, :]), 0.3)
 
     def test_create_abortion_function(self):
         is_same_solution = Learner.create_abortion_function(
             chains_learned=self.instance.weight_array,
-            num_learned=1,
+            num_learned=2,
             transform=self.transform,
             combiner=self.combiner,
             threshold=0.25,
@@ -57,8 +57,8 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         weight_array = np.array(
             [.8, .8, .8, .8, .5, .5, .5, .5, 1.4, 1.4, 1.4, 1.4, -.7, -.7, -.7, -.33]
         )
-        assert not is_same_solution(weight_array)
-        assert is_same_solution(self.instance.weight_array[0, :])
+        self.assertFalse(is_same_solution(weight_array))
+        self.assertTrue(is_same_solution(self.instance.weight_array[0, :]))
 
     def test_learn(self):
         pop_size = 12
@@ -79,7 +79,7 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         )
         model = learner.learn()
         distance = tools.approx_dist(self.instance, model, 10000)
-        assert distance < 0.4
+        self.assertLessEqual(distance, 0.4)
 
     def test_calc_corr(self):
         rels_1 = np.array([0, 1, 2, 1])
@@ -90,7 +90,8 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         corr_1_3 = Learner.calc_corr(rels_1, rels_3)
         corr_2_3 = Learner.calc_corr(rels_2, rels_3)
         corr_4_1 = Learner.calc_corr(rels_4, rels_1)
-        assert corr_1_2 < corr_1_3 < corr_2_3
+        self.assertLess(corr_1_2, corr_1_3)
+        self.assertLess(corr_1_3, corr_2_3)
         self.assertEqual(corr_4_1, -1)
 
     def test_polarize_ltfs(self):
@@ -98,7 +99,7 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
             [.5, -1, -.5, 1],
             [-1, -1, 1, 1],
         ])
-        challenges = tools.sample_inputs(n=4, num=8, random_instance=self.prng_c)
+        challenges = np.array(list(tools.sample_inputs(n=4, num=8, random_instance=self.prng_c)))
         majority_responses = np.array([1, 1, 1, 1, -1, -1, -1, -1])
         polarized_ltf_array = Learner.polarize_chains(
             chains_learned=learned_ltfs,
@@ -123,7 +124,7 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         res = np.zeros((k, num))
         for i, ltf_array in enumerate(ltf_arrays):
             res[i, :] = ltf_array.eval(challenges)
-        assert np.array_equal(res[0, :], res[1, :])
+        np.testing.assert_array_equal(res[0, :], res[1, :])
 
     responses = np.array([
         [1, 1, 1, 1],
