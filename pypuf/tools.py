@@ -272,13 +272,14 @@ class TrainingSet():
                                 Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
-        self.challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
-        self.responses = zeros((reps, N))
+        self.N = min(N, 2**instance.n)
+        self.challenges = sample_inputs(instance.n, self.N, random_instance=random_instance)
+        responses = zeros((reps, self.N))
         for i in range(reps):
             self.challenges, cs = itertools.tee(self.challenges)
-            self.responses[i, :] = instance.eval(array(list(cs)))
+            responses[i, :] = instance.eval(array(list(cs)))
         self.challenges = array(list(self.challenges))
         if reps == 1:
-            self.responses = squeeze(self.responses, axis=0)
-        self.N = N
+            responses = squeeze(responses, axis=0)
+        self.responses = responses
         self.reps = reps
