@@ -15,23 +15,26 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
     reps = 5
     mu_weight = 0
     sigma_weight = 1
-    transform = LTFArray.transform_atf
+    transform = LTFArray.transform_id
     combiner = LTFArray.combiner_xor
-    seed_instance = 1234
+    seed_instance = 0x1
     prng_i = np.random.RandomState(seed_instance)
-    seed_model = 1234
+    seed_model = 0x2
     prng_m = np.random.RandomState(seed_model)
-    seed_challenges = 1234
+    seed_challenges = 0x3
     prng_c = np.random.RandomState(seed_challenges)
 
-    weight_array = LTFArray.normal_weights(n, k, mu_weight, sigma_weight, prng_i)
+    weight_array = np.array([
+            [.1, .2, .3, .4, .5, .6, .7, .8, -.1, -.2, -.3, -.4, -.5, -.6, -.7, -.83],
+            [.1, .2, .3, .4, -.5, -.6, -.7, -.8, -.1, -.2, -.3, -.4, .5, .6, .7, .81]
+        ])
     sigma_noise = NoisyLTFArray.sigma_noise_from_random_weights(n, sigma_weight, noisiness=0.05)
     instance = NoisyLTFArray(weight_array, transform, combiner, sigma_noise, prng_i)
     training_set = tools.TrainingSet(instance, num, prng_c, reps)
 
     def test_create_fitness_function(self):
         measured_rels = Learner.measure_rels(self.training_set.responses)
-        epsilon = 4
+        epsilon = 2
         fitness = Learner.create_fitness_function(
             challenges=self.training_set.challenges,
             measured_rels=measured_rels,
@@ -49,10 +52,11 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
             combiner=self.combiner,
             threshold=0.25,
         )
-        prng = np.random.RandomState(0xabc)
-        weight_array = LTFArray.normal_weights(self.n, 1, self.mu_weight, self.sigma_weight, prng)
+        weight_array = np.array(
+            [.8, .8, .8, .8, .5, .5, .5, .5, 1.4, 1.4, 1.4, 1.4, -.7, -.7, -.7, -.33]
+        )
+        assert not is_same_solution(weight_array)
         assert is_same_solution(self.instance.weight_array[0, :])
-        assert not is_same_solution(weight_array[0, :])
 
     def test_learn(self):
         pop_size = 12
@@ -104,18 +108,17 @@ class TestReliabilityBasedCMAES(unittest.TestCase):
         self.assertIsNotNone(polarized_ltf_array)
 
     def test_build_individual_ltf_arrays(self):
-        prng = np.random.RandomState(0x1)
-        challenges = np.array(list(tools.sample_inputs(self.n, self.num, prng)))
-        num_ltfs = 2
-        weight_arrays = LTFArray.normal_weights(
-            n=self.n,
-            k=num_ltfs,
-            mu=0,
-            sigma=0,
-            random_instance=prng
-        )
-        ltf_arrays = Learner.build_individual_ltf_arrays(weight_arrays, self.transform, self.combiner)
-        res = np.zeros((num_ltfs, self.num))
+        n = 16
+        k = 2
+        num = 2**10
+        prng = np.random.RandomState(0x4)
+        challenges = np.array(list(tools.sample_inputs(n, num, prng)))
+        duplicated_weights = np.array([
+            [.1, .2, .3, .4, .5, .6, .7, .8, -.1, -.2, -.3, -.4, -.5, -.6, -.7, -.8],
+            [.1, .2, .3, .4, .5, .6, .7, .8, -.1, -.2, -.3, -.4, -.5, -.6, -.7, -.8]
+        ])
+        ltf_arrays = Learner.build_individual_ltf_arrays(duplicated_weights, self.transform, self.combiner)
+        res = np.zeros((k, num))
         for i, ltf_array in enumerate(ltf_arrays):
             res[i, :] = ltf_array.eval(challenges)
         assert np.array_equal(res[0, :], res[1, :])
