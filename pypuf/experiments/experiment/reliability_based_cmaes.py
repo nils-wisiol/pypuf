@@ -12,12 +12,17 @@ from pypuf import tools
 
 
 class ExperimentReliabilityBasedCMAES(Experiment):
+    """This class implements an experiment for executing the reliability based CMAES learner for XOR LTF arrays.
+    It provides all relevant parameters as well as an instance of an LTF array to learn.
+    Furthermore, the learning results are being logged into csv files.
+    """
 
-    def __init__(self, log_name,
-                 seed_instance, k, n, transform, combiner, noisiness,
-                 seed_challenges, num, reps,
-                 seed_model, pop_size, limit_stag, limit_iter,
-                 ):
+    def __init__(
+            self, log_name,
+            seed_instance, k, n, transform, combiner, noisiness,
+            seed_challenges, num, reps,
+            seed_model, pop_size, limit_stag, limit_iter
+    ):
         """Initialize an Experiment using the Reliability based CMAES Learner for modeling LTF Arrays
         :param log_name:        Log name, Prefix of the name of the experiment log file
         :param seed_instance:   PRNG seed used to create an LTF array instance to learn

@@ -3,9 +3,9 @@ import unittest
 from multiprocessing import Queue, Process
 from numpy import shape
 from numpy.random import RandomState
-from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
 from numpy import array
 from numpy.testing import assert_array_equal
+from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experimenter import log_listener, setup_logger
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -328,13 +328,9 @@ class TestExperimentPropertyTest(TestBase):
 
 
 class TestExperimentReliabilityBasedCMAES(TestBase):
-    """
-    This class tests the reliability based CMAES experiment.
-    """
+    """This class tests the reliability based CMAES experiment."""
     def test_run_and_analyze(self):
-        """
-        This method only runs the experiment.
-        """
+        """This method only runs the experiment."""
         logger_name = 'log'
 
         # Setup multiprocessing logging
@@ -365,7 +361,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
         listener.join()
 
     def test_calc_individual_accs(self):
-        """This method tests the calculation of individual (non-polarized) accuracies of a learned model"""
+        """This method tests the calculation of individual (non-polarized) accuracies of a learned model."""
         exp = ExperimentReliabilityBasedCMAES(
             log_name='exp_log',
             seed_instance=0x123,

@@ -276,8 +276,8 @@ class TrainingSet():
         self.challenges = sample_inputs(instance.n, self.N, random_instance=random_instance)
         responses = zeros((reps, self.N))
         for i in range(reps):
-            self.challenges, cs = itertools.tee(self.challenges)
-            responses[i, :] = instance.eval(array(list(cs)))
+            self.challenges, copy = itertools.tee(self.challenges)
+            responses[i, :] = instance.eval(array(list(copy)))
         self.challenges = array(list(self.challenges))
         if reps == 1:
             responses = squeeze(responses, axis=0)
