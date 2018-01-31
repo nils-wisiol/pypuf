@@ -25,8 +25,10 @@ class ReliabilityBasedCMAES(Learner):
     CONST_EPSILON = 0.1
     FREQ_ABORTION_CHECK = 50
     FREQ_LOGGING = 1
-    APPROX_CHALLENGE_NUM = 10000
     THRESHOLD_DIST = 0.25
+
+    # Semi-constant :-)
+    approx_challenge_num = 10000
 
     def __init__(self, training_set, k, n, transform, combiner,
                  pop_size, limit_stag, limit_iter, random_seed, logger):
@@ -59,8 +61,8 @@ class ReliabilityBasedCMAES(Learner):
         self.num_learned = 0
         self.logger = logger
 
-        if 2**n < self.APPROX_CHALLENGE_NUM:
-            self.APPROX_CHALLENGE_NUM = 2 ** n
+        if 2**n < self.approx_challenge_num:
+            self.approx_challenge_num = 2 ** n
 
     def learn(self):
         """Compute a model according to the given LTF Array parameters and training set
@@ -163,7 +165,7 @@ class ReliabilityBasedCMAES(Learner):
     @staticmethod
     def create_fitness_function(challenges, measured_rels, epsilon, transform, combiner):
         """Return a fitness function on a fixed set of challenges and corresponding reliabilities"""
-        this = __class__
+        this = ReliabilityBasedCMAES
 
         def fitness(individual):
             """Return individuals sorted by their correlation coefficient as fitness"""
@@ -189,7 +191,7 @@ class ReliabilityBasedCMAES(Learner):
     @staticmethod
     def create_abortion_function(chains_learned, num_learned, transform, combiner, threshold):
         """Return an abortion function on a fixed set of challenges and LTFs"""
-        this = __class__
+        this = ReliabilityBasedCMAES
         weight_arrays = chains_learned[:num_learned, :]
         learned_ltf_arrays = list(this.build_individual_ltf_arrays(weight_arrays, transform, combiner))
 
@@ -199,7 +201,7 @@ class ReliabilityBasedCMAES(Learner):
                 return False
             new_ltf_array = LTFArray(solution[np.newaxis, :], transform, combiner)
             for current_ltf_array in learned_ltf_arrays:
-                dist = tools.approx_dist(current_ltf_array, new_ltf_array, this.APPROX_CHALLENGE_NUM)
+                dist = tools.approx_dist(current_ltf_array, new_ltf_array, this.approx_challenge_num)
                 if dist < threshold or dist > (1 - threshold):
                     return True
             return False
