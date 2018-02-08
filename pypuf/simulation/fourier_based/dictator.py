@@ -7,13 +7,16 @@ class Dictator(Simulation):
     """This class represents a dictator function which means that only one input bit affects the response.
     As an example the function f(x) = x[i] is an i-th bit dictator."""
 
-    def __init__(self, dictator):
+    def __init__(self, dictator, n):
         """
         :param dictator: int
                          Index of the dictator bit. Must be greater equal zero.
+        :param n: int
+                  Number of input bits.
         """
-        assert dictator >= 0, "The dictator index must be greater equal zero."
+        assert 0 <= dictator < n, "The dictator index must be between 0 and {}".format(n)
         self.dictator = dictator
+        self.n = n
 
     def eval(self, inputs):
         """
@@ -24,8 +27,6 @@ class Dictator(Simulation):
         :return: array of pypuf.tools.RESULT_TYPE shape(N)
                  Array of responses for the N different challenges.
         """
-        assert 0 <= self.dictator < shape(inputs)[
-            1], "Only challenges with number of bits greater {} are excepted".format(
-            self.dictator
-        )
+        n = shape(inputs)[1]
+        assert  n == self.n, "The number of input bits {} does not match {}".format(n, self.n)
         return inputs[:, self.dictator]

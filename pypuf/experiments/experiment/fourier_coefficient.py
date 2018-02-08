@@ -2,6 +2,7 @@
 from numpy.random import RandomState
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
+from pypuf.simulation.fourier_based.dictator import Dictator
 from pypuf.tools import TrainingSet
 
 
@@ -49,5 +50,29 @@ class ExperimentFCCRP(Experiment):
                 instance_param.append(str(value))
         instance_parameter_str = '\t'.join(instance_param)
         fourier_coefficient_str = ','.join(self.fourier_coefficients)
-        results = '{}\t{}\t{}'.format(instance_parameter_str, fourier_coefficient_str, self.measured_time)
+        unique_id = '{}{}{}'.format(
+            ''.join(instance_param), self.challenge_count, self.challenge_seed
+        )
+        results = '{}\t{}\t{}\t{}\t{}\t{}'.format(
+            instance_parameter_str,
+            self.challenge_seed,
+            self.challenge_count,
+            fourier_coefficient_str,
+            self.measured_time,
+            unique_id
+        )
         self.result_logger.info(results)
+
+    @classmethod
+    def create_dictator_instances(cls, instance_count=1, n=8, dictator=0):
+        """
+        This function can be used to create a list of dictator simulations.
+        :param instance_count: int
+                               Number of dictator simulations to create.
+        :param n: int
+                  Number of input bits
+        :param dictator: int
+                         Index for dictatorship
+        :return: list of pypuf.simulation.fourier_based.dictator.Dictator
+        """
+        return [Dictator(dictator, n) for _ in range(instance_count)]

@@ -977,19 +977,3 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             challenge_vector_test(challenge)
             challenge_vector_test(all_challenges)
             challenge_vector_test(random_challenges)
-
-        def test_wrong_index(self):
-            """This function tests for a wrong dictator index assertion."""
-            self.assertRaises(Dictator(-1), expected_exception="The dictator index must be greater equal zero.")
-
-            n = 8
-            challenge = tools.sample_inputs(n, 1)
-
-            dictator = Dictator(8)
-            self.assertRaises(
-                dictator.eval(challenge),
-                expected_exception="Only challenges with number of bits greater 8 are excepted"
-            )
-
-            challenge = tools.sample_inputs(n + 1, 1)
-            dictator.eval(challenge)
