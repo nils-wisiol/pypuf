@@ -1,9 +1,12 @@
 """This module tests the different experiment classes."""
 import unittest
+from collections import OrderedDict
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
+from numpy import pi
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
+from pypuf.experiments.experiment.fourier_coefficient import ExperimentFCCRP
 from pypuf.property_test.base import PropertyTest
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 
@@ -292,3 +295,24 @@ class TestExperimentPropertyTest(TestBase):
             exp_rel.execute(logger.queue, logger.logger_name)
             with open(exp_rel.log_name+'.log', 'r') as log_file:
                 self.assertNotEqual(log_file.read(), '')
+
+
+class TestExperimentFCCRP(TestBase):
+    """This class test the Fourier coefficient approximation experiment."""
+
+    @logging
+    def test_experiment_fccrp(self, logger):
+        """This function just executes the Fourier coefficient approximation experiment."""
+        challenge_count = 100000
+        instance_parameter = OrderedDict()
+        instance_parameter['n'] = 8
+        instance_parameter['k'] = 1
+        instance_parameter['weight_random_seed'] = int(pi*1000)+0xbeef
+        exp = ExperimentFCCRP(
+            log_name=logger.logger_name,
+            challenge_count=challenge_count,
+            challenge_seed=int(pi*100)+1234,
+            instance_gen=ExperimentPropertyTest.create_ltf_arrays,
+            instance_parameter=instance_parameter
+        )
+        exp.execute(logger.queue, logger_name=logger.logger_name)

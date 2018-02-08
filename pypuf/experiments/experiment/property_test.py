@@ -80,7 +80,7 @@ class ExperimentPropertyTest(Experiment):
         self.result_logger.info(msg)
 
     @classmethod
-    def create_ltf_arrays(cls, n=8, k=1, instance_count=10, transformation=LTFArray.transform_id,
+    def create_ltf_arrays(cls, n=8, k=1, instance_count=1, transformation=LTFArray.transform_id,
                           combiner=LTFArray.combiner_xor, bias=None, mu=0, sigma=1, weight_random_seed=0x123):
         """
         This function can be used to create a list of LTFArrays.
@@ -122,7 +122,7 @@ class ExperimentPropertyTest(Experiment):
         return instances
 
     @classmethod
-    def create_noisy_ltf_arrays(cls, n=8, k=1, instance_count=10, transformation=LTFArray.transform_id,
+    def create_noisy_ltf_arrays(cls, n=8, k=1, instance_count=1, transformation=LTFArray.transform_id,
                                 combiner=LTFArray.combiner_xor, bias=None, mu=0, sigma=1, weight_random_seed=0x123,
                                 sigma_noise=0.5, noise_random_seed=0x321):
         """
@@ -172,7 +172,7 @@ class ExperimentPropertyTest(Experiment):
         return instances
 
     @classmethod
-    def create_mv_ltf_arrays(cls, n=8, k=1, instance_count=10, transformation=LTFArray.transform_id,
+    def create_mv_ltf_arrays(cls, n=8, k=1, instance_count=1, transformation=LTFArray.transform_id,
                              combiner=LTFArray.combiner_xor, bias=None, mu=0, sigma=1, weight_random_seed=0x123,
                              sigma_noise=0.5, noise_random_seed=0x321, vote_count=3):
         """
