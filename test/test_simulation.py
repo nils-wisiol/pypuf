@@ -5,9 +5,10 @@ This module is used to test the different simulation models.
 import unittest
 from test.utility import get_functions_with_prefix
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from pypuf.simulation.fourier_based.dictator import Dictator
 from pypuf import tools
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, array, around, array_equal
+from numpy import shape, dot, array, around, array_equal, pi
 from numpy.random import RandomState
 
 
@@ -942,3 +943,53 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         print(biased_responses)
         print(responses)
         self.assertFalse(array_equal(biased_responses, responses))
+
+    class TestDictatorSimulation(unittest.TestCase):
+        """This module tests the dictator simulation class."""
+
+        def test_dictatorship(self):
+            """
+            This method checks the dictatorship of different dictator simulations.
+            """
+            n = 8
+            random_instance = RandomState(int(pi*1000))
+            challenge = tools.sample_inputs(n, 1, random_instance=random_instance)
+            all_challenges = tools.all_inputs(n)
+            random_challenges = tools.sample_inputs(n, 1000, random_instance=random_instance)
+
+            def challenge_vector_test(challenges):
+                """
+                Simple check that i-th bit is equal to the response.
+                :param challenges: array of pypuf.tools.RESULT_TYPE shape(N,n)
+                """
+                for i in range(n):
+                    simulation = Dictator(i)
+                    responses = simulation.eval(challenge)
+                    column_i = []
+                    for j in range(2**n):
+                        column_i.append(challenges[j, i])
+                    assert_array_equal(
+                        array(column_i),
+                        responses,
+                        err_msg='column {} and response column {} are unequal'.format(column_i, responses)
+                    )
+
+            challenge_vector_test(challenge)
+            challenge_vector_test(all_challenges)
+            challenge_vector_test(random_challenges)
+
+        def test_wrong_index(self):
+            """This function tests for a wrong dictator index assertion."""
+            self.assertRaises(Dictator(-1), expected_exception="The dictator index must be greater equal zero.")
+
+            n = 8
+            challenge = tools.sample_inputs(n, 1)
+
+            dictator = Dictator(8)
+            self.assertRaises(
+                dictator.eval(challenge),
+                expected_exception="Only challenges with number of bits greater 8 are excepted"
+            )
+
+            challenge = tools.sample_inputs(n + 1, 1)
+            dictator.eval(challenge)
