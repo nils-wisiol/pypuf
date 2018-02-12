@@ -3,6 +3,7 @@ from numpy.random import RandomState
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
 from pypuf.simulation.fourier_based.dictator import Dictator
+from pypuf.simulation.fourier_based.bent import BentFunction
 from pypuf.tools import TrainingSet
 
 
@@ -76,3 +77,7 @@ class ExperimentFCCRP(Experiment):
         :return: list of pypuf.simulation.fourier_based.dictator.Dictator
         """
         return [Dictator(dictator, n) for _ in range(instance_count)]
+
+    @classmethod
+    def create_bent_instances(cls, instance_count=1, n=8, name='ipmod_2'):
+        return  [BentFunction(n) for _ in range(instance_count)]
