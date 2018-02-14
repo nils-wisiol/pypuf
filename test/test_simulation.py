@@ -963,7 +963,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
                 :param challenges: array of pypuf.tools.RESULT_TYPE shape(N,n)
                 """
                 for i in range(n):
-                    simulation = Dictator(i)
+                    simulation = Dictator(i, n)
                     responses = simulation.eval(challenge)
                     column_i = []
                     for j in range(2**n):

@@ -1,11 +1,10 @@
 """This module provides experiments which can be used to estimate the Fourier coefficients of a pypuf.simulation."""
-import time
-from numpy.random import RandomState, shuffle
+from numpy.random import RandomState
 from numpy import matmul
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
 from pypuf.simulation.fourier_based.dictator import Dictator
-from pypuf.simulation.fourier_based.bent import BentFunction
+from pypuf.simulation.fourier_based.bent import BentFunctionIpMod2
 from pypuf.tools import TrainingSet, sample_inputs
 
 
@@ -81,8 +80,16 @@ class ExperimentFCCRP(Experiment):
         return [Dictator(dictator, n) for _ in range(instance_count)]
 
     @classmethod
-    def create_bent_instances(cls, instance_count=1, n=8, name='ipmod_2'):
-        return  [BentFunction(n) for _ in range(instance_count)]
+    def create_bent_instances(cls, instance_count=1, n=8):
+        """
+        This function creates a bent function simulation.
+        :param instance_count: int
+                               Number of instances.
+        :param n: int
+                  Number of input bits.
+        :return: list of BentFunctionIpMod2
+        """
+        return [BentFunctionIpMod2(n) for _ in range(instance_count)]
 
 
 class ExperimentCFCA(Experiment):
@@ -121,6 +128,17 @@ class ExperimentCFCA(Experiment):
 
     @classmethod
     def approx_degree_one_weight(cls, responses, challenges, challenge_count_min, challenge_count_max):
+        """
+        This function approximates a degree one weight based on the following parameters.
+        :param responses: array of float or pypuf.tools.RESULT_TYPE shape(N)
+                          Array of responses for the N different challenges.
+        :param challenges:  array of int8 shape(N,n)
+                            Array of challenges related the responses.
+        :param challenge_count_min: int
+        :param challenge_count_max: int
+        :return: list of float
+                 Degree one weights.
+        """
         results = []
         # Calculate the Fourier coefficients for self.challenge_count_min challenges
         coefficient_sums = matmul(responses[:challenge_count_min], challenges[:challenge_count_min])
@@ -151,8 +169,6 @@ class ExperimentCFCA(Experiment):
             responses, challenges, self.challenge_count_min, self.challenge_count_max
         )
 
-
-
     def analyze(self):
         """This method prints the results to the result logger"""
         instance_param = []
@@ -168,7 +184,7 @@ class ExperimentCFCA(Experiment):
         )
         degree_one_str = ','.join(list(map(str, self.results)))
         instance_parameter_str = '\t'.join(instance_param)
-        results = '{}\t{}\t{}\t{}\t{}\t{}'.format(
+        results = '{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(
             instance_parameter_str,
             self.challenge_seed,
             self.challenge_count_min,
