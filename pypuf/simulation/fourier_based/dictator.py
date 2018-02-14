@@ -28,5 +28,5 @@ class Dictator(Simulation):
                  Array of responses for the N different challenges.
         """
         n = shape(inputs)[1]
-        assert  n == self.n, "The number of input bits {} does not match {}".format(n, self.n)
+        assert n == self.n, "The number of input bits {} does not match {}".format(n, self.n)
         return inputs[:, self.dictator]
