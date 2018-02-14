@@ -2,13 +2,17 @@
 import unittest
 from collections import OrderedDict
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
-from numpy import pi
+from numpy import pi, sqrt
+from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
+from pypuf.simulation.fourier_based.bent import BentFunctionIpMod2
+from pypuf.simulation.fourier_based.dictator import Dictator
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
-from pypuf.experiments.experiment.fourier_coefficient import ExperimentFCCRP
+from pypuf.experiments.experiment.fourier_coefficient import ExperimentFCCRP, ExperimentCFCA
 from pypuf.property_test.base import PropertyTest
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
+from pypuf.tools import sample_inputs
 
 
 class TestBase(unittest.TestCase):
@@ -316,3 +320,35 @@ class TestExperimentFCCRP(TestBase):
             instance_parameter=instance_parameter
         )
         exp.execute(logger.queue, logger_name=logger.logger_name)
+
+
+class TestExperimentExperimentCFCA(TestBase):
+    """This class test the cumulative degree one weight approximation."""
+
+    def test_degree_one_approximation(self):
+        """This method tests the degree one weight approximation."""
+        n = 8
+        random_instance = RandomState(0x5123)
+
+        bent_instance = BentFunctionIpMod2(n)
+        dictator_instance = Dictator(4, n)
+        challenges = sample_inputs(n, 2**n, random_instance=random_instance)
+        responses = bent_instance.eval(challenges)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        # Check the bent function approximation
+        self.assertEqual(round(n*1/sqrt(2**n)**2, 2), round(degree_on_weights[-1], 2))
+
+        responses = dictator_instance.eval(challenges)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        # Check the dictator approximation
+        self.assertEqual(1.0, round(degree_on_weights[-1], 1))
+
+        ltfarray_instance = LTFArray(
+            weight_array=LTFArray.normal_weights(n, 1, random_instance=random_instance),
+            transform=LTFArray.transform_id,
+            combiner=LTFArray.combiner_xor
+        )
+        responses = ltfarray_instance.eval(challenges)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        # Check a fix result
+        self.assertEqual(0.66928, round(degree_on_weights[-1], 5))
