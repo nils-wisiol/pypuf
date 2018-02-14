@@ -117,17 +117,26 @@ class ExperimentCFCA(Experiment):
         self.challenge_seed = challenge_seed
         self.instance_gen = instance_gen
         self.instance_parameter = instance_parameter
-        self.fourier_coefficients = []
-        self.results = ''
+        self.results = []
 
-        instance_param = []
-        for value in self.instance_parameter.values():
-            if callable(value):
-                instance_param.append(value.__name__)
-            else:
-                instance_param.append(str(value))
-        self.instance_parameter_str = '\t'.join(instance_param)
-        self.clinched_instance_parameter_str = ''.join(instance_param)
+    @classmethod
+    def approx_degree_one_weight(cls, responses, challenges, challenge_count_min, challenge_count_max):
+        results = []
+        # Calculate the Fourier coefficients for self.challenge_count_min challenges
+        coefficient_sums = matmul(responses[:challenge_count_min], challenges[:challenge_count_min])
+        coefficient_sums = coefficient_sums.astype('int64')
+        fourier_coefficient = coefficient_sums / challenge_count_min
+        degree_one_weight = matmul(fourier_coefficient, fourier_coefficient)
+        results.append(degree_one_weight)
+
+        # Calculate Fourier coefficients based on the previous response sum
+        for i in range(challenge_count_min, challenge_count_max):
+            partial_sum = (responses[i] * challenges[i])
+            coefficient_sums = coefficient_sums + partial_sum
+            degree_one_weight = matmul(coefficient_sums / i, coefficient_sums / i)
+            results.append(degree_one_weight)
+
+        return results
 
     def run(self):
         """This method executes the Fourier coefficient approximation"""
@@ -137,41 +146,35 @@ class ExperimentCFCA(Experiment):
         challenges = sample_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng)
         challenge_prng.shuffle(challenges)
         responses = instance.eval(challenges)
-        start_time = time.time()
-        # Calculate the Fourier coefficients for self.challenge_count_min challenges
-        coefficient_sums = matmul(responses[:self.challenge_count_min], challenges[:self.challenge_count_min])
-        coefficient_sums = coefficient_sums.astype('int64')
-        self.fourier_coefficients = coefficient_sums / self.challenge_count_min
-        self.log_fourier_coefficient(self.challenge_count_min, time.time() - start_time)
 
-        # Calculate Fourier coefficients based on the previous response sum
-        for i in range(self.challenge_count_min + 1, self.challenge_count_max):
-            start_time = time.time()
-            part_sum = responses[i] * challenges[i]
-            coefficient_sums = coefficient_sums + part_sum
-            self.fourier_coefficients = coefficient_sums / i
-            measured_time = time.time() - start_time
-            self.log_fourier_coefficient(i, measured_time)
+        self.results = ExperimentCFCA.approx_degree_one_weight(
+            responses, challenges, self.challenge_count_min, self.challenge_count_max
+        )
+
+
 
     def analyze(self):
         """This method prints the results to the result logger"""
-        self.result_logger.info(self.results)
+        instance_param = []
+        for value in self.instance_parameter.values():
 
-    def log_fourier_coefficient(self, challenge_count, measured_time):
-        """
-        This method safes the experiment progress to the progress log and appends the partial result to self.result.
-        """
-        fourier_coefficient_str = ','.join(list(map(str, self.fourier_coefficients)))
-        unique_id = '{}{}{}'.format(
-            self.clinched_instance_parameter_str, challenge_count, self.challenge_seed
+            if callable(value):
+                instance_param.append(value.__name__)
+            else:
+                instance_param.append(str(value))
+
+        unique_id = '{}{}{}{}'.format(
+            ''.join(instance_param), self.challenge_count_min, self.challenge_count_max, self.challenge_seed
         )
+        degree_one_str = ','.join(list(map(str, self.results)))
+        instance_parameter_str = '\t'.join(instance_param)
         results = '{}\t{}\t{}\t{}\t{}\t{}'.format(
-            self.instance_parameter_str,
+            instance_parameter_str,
             self.challenge_seed,
-            challenge_count,
-            fourier_coefficient_str,
-            measured_time,
+            self.challenge_count_min,
+            self.challenge_count_max,
+            degree_one_str,
+            self.measured_time,
             unique_id
         )
-        self.results += results + '\n'
-        self.progress_logger.info(results)
+        self.result_logger.info(results)
