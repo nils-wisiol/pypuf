@@ -1,6 +1,7 @@
 """This module provides experiments which can be used to estimate the Fourier coefficients of a pypuf.simulation."""
 from numpy.random import RandomState
-from numpy import matmul
+from numpy import matmul, zeros
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
 from pypuf.simulation.fourier_based.dictator import Dictator
@@ -166,6 +167,132 @@ class ExperimentCFCA(Experiment):
         responses = instance.eval(challenges)
 
         self.results = ExperimentCFCA.approx_degree_one_weight(
+            responses, challenges, self.challenge_count_min, self.challenge_count_max
+        )
+
+    def analyze(self):
+        """This method prints the results to the result logger"""
+        instance_param = []
+        for value in self.instance_parameter.values():
+
+            if callable(value):
+                instance_param.append(value.__name__)
+            else:
+                instance_param.append(str(value))
+
+        unique_id = '{}{}{}{}'.format(
+            ''.join(instance_param), self.challenge_count_min, self.challenge_count_max, self.challenge_seed
+        )
+        degree_one_str = ','.join(list(map(str, self.results)))
+        instance_parameter_str = '\t'.join(instance_param)
+        results = '{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(
+            instance_parameter_str,
+            self.challenge_seed,
+            self.challenge_count_min,
+            self.challenge_count_max,
+            degree_one_str,
+            self.measured_time,
+            unique_id
+        )
+        self.result_logger.info(results)
+
+class ExperimentArbiterPUFCFCA(Experiment):
+    """
+    This class can be used to approximate Fourier coefficients through an cumulative sum, which is faster than multiple
+    ExperimentFCCRP experiments.
+    """
+
+    def __init__(
+            self, log_name, challenge_count_min, challenge_count_max, challenge_seed, instance_gen, instance_parameter
+    ):
+        """
+        :param log_name: string
+                         Name of the progress log.
+        :param challenge_count_min: int
+                                Minimum number of challenges which are used to approximate the Fourier coefficients.
+        :param challenge_count_max: int
+                                Maximum number of challenges which are used to approximate the Fourier coefficients.
+        :param challenge_seed: int
+                               Seed which is used to generate uniform at random distributed challenges.
+        :param instance_gen: function
+                             Function which is used to create an instance to approximate Fourier coefficients.
+        :param instance_parameter: A collections.OrderedDict with keyword arguments
+                                   This keyword arguments are passed to instance_gen to generate a
+                                   pypuf.simulation.base.Simulation instances.
+        """
+        assert challenge_count_min < challenge_count_max
+        self.log_name = log_name
+        super().__init__(self.log_name)
+        self.challenge_count_min = challenge_count_min
+        self.challenge_count_max = challenge_count_max
+        self.challenge_seed = challenge_seed
+        self.instance_gen = instance_gen
+        self.instance_parameter = instance_parameter
+        self.results = []
+
+    @classmethod
+    def approx_degree_one_weight(cls, responses, challenges, challenge_count_min, challenge_count_max):
+        """
+        This function approximates a degree one weight based on the following parameters.
+        :param responses: array of float or pypuf.tools.RESULT_TYPE shape(N)
+                          Array of responses for the N different challenges.
+        :param challenges:  array of int8 shape(N,n)
+                            Array of challenges related the responses.
+        :param challenge_count_min: int
+        :param challenge_count_max: int
+        :return: list of float
+                 Degree one weights.
+        """
+        results = []
+        # Calculate the Fourier coefficients for self.challenge_count_min challenges
+        coefficient_sums = matmul(responses[:challenge_count_min], challenges[:challenge_count_min])
+        coefficient_sums = coefficient_sums.astype('int64')
+        fourier_coefficient = coefficient_sums / challenge_count_min
+        degree_one_weight = matmul(fourier_coefficient, fourier_coefficient)
+        results.append(degree_one_weight)
+
+        # Calculate Fourier coefficients based on the previous response sum
+        for i in range(challenge_count_min, challenge_count_max):
+            partial_sum = (responses[i] * challenges[i])
+            coefficient_sums = coefficient_sums + partial_sum
+            degree_one_weight = matmul(coefficient_sums / i, coefficient_sums / i)
+            results.append(degree_one_weight)
+
+        return results
+
+    @classmethod
+    def inverse_atf(cls, challenges):
+        n = len(challenges)
+        result = zeros(n, dtype='int8')
+        count_minus_one = 0
+        for i in range(n - 1, -1, -1):
+            if challenges[i] == 1 and count_minus_one % 2 == 0:
+                result[i] = 1
+                continue
+            if challenges[i] == 1 and count_minus_one % 2 == 1:
+                result[i] = -1
+                count_minus_one += 1
+                continue
+            if challenges[i] == -1 and count_minus_one % 2 == 0:
+                result[i] = -1
+                count_minus_one += 1
+                continue
+            if challenges[i] == -1 and count_minus_one % 2 == 1:
+                result[i] = 1
+
+        return result
+
+    def run(self):
+        """This method executes the Fourier coefficient approximation"""
+        challenge_prng = RandomState(self.challenge_seed)
+        instance = self.instance_gen(**self.instance_parameter)[0]
+        # Calculate all challenge response pairs
+        challenges = sample_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng)
+        challenge_prng.shuffle(challenges)
+        for i in range(self.challenge_count_max):
+            challenges[i] = ExperimentArbiterPUFCFCA.inverse_atf(challenges[i])
+        responses = instance.eval(challenges)
+        self.results = ExperimentArbiterPUFCFCA.approx_degree_one_weight(
             responses, challenges, self.challenge_count_min, self.challenge_count_max
         )
 
