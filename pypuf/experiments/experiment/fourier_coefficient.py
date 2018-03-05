@@ -272,14 +272,16 @@ class ExperimentCFCAMatules(Experiment):
 
     def run(self):
         """This method executes the Fourier coefficient approximation"""
-        challenge_prng = RandomState(self.challenge_seed)
+        challenge_prng_x1 = RandomState(self.challenge_seed)
+        challenge_prng_x2 = RandomState(self.challenge_seed + 1000)
+        challenge_prng_y = RandomState(self.challenge_seed + 2000)
         instance = self.instance_gen(**self.instance_parameter)[0]
         # Calculate all challenge response pairs
-        challenges_x1 = random_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng)
-        challenges_x2 = random_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng)
+        challenges_x1 = random_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng_x1)
+        challenges_x2 = random_inputs(instance.n, self.challenge_count_max, random_instance=challenge_prng_x2)
         prob_plus_one = 1/2 + ((1/2) * self.mu)
         prob_minus_one = 1 - prob_plus_one
-        y = (challenge_prng.choice(
+        y = (challenge_prng_y.choice(
             [-1, +1],
             size=(self.challenge_count_max, instance.n),
             p=[prob_minus_one, prob_plus_one]
