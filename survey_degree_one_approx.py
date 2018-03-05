@@ -8,10 +8,8 @@ from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 PARAMETER = {
-    8: 2 ** 8,
-    16: 2 ** 16,
-    32: 10 ** 5,
-    64: 10 ** 5
+    # 64: 10 ** 5,
+    128: 33334
 }
 
 PATH = '/home/christoph/EXPERIMENTS/'
@@ -100,7 +98,7 @@ def ltf(exp_parameter, experiment_fkt):
     )
     experimenter.run()
 print('calculate dictator')
-dictator()
+dictator(PARAMETER, ExperimentCFCA)
 print('\ncalculate ip_mod2')
 ip_mod2(PARAMETER, ExperimentCFCA)
 print('\ncalculate ltf')
