@@ -204,16 +204,16 @@ class ExperimentCFCAMatules(Experiment):
     """
 
     def __init__(
-            self, log_name, challenge_base_count_min, challenge_base_count_max, challenge_seed, mu, instance_gen,
+            self, log_name, challenge_count_min, challenge_count_max, challenge_seed, mu, instance_gen,
             instance_parameter
     ):
         """
         :param log_name: string
                          Name of the progress log.
-        :param challenge_base_count_min: int
+        :param challenge_count_min: int
                                 Minimum number of challenges which are used to approximate the Fourier coefficients.
                                 The number will be multiplied with 3 regarding Matulef et al. approximation.
-        :param challenge_base_count_max: int
+        :param challenge_count_max: int
                                 Maximum number of challenges which are used to approximate the Fourier coefficients.
                                 The number will be multiplied with 3 regarding Matulef et al. approximation.
         :param challenge_seed: int
@@ -226,11 +226,11 @@ class ExperimentCFCAMatules(Experiment):
                                    This keyword arguments are passed to instance_gen to generate a
                                    pypuf.simulation.base.Simulation instances.
         """
-        assert challenge_base_count_min < challenge_base_count_max
+        assert challenge_count_min < challenge_count_max
         self.log_name = log_name
         super().__init__(self.log_name)
-        self.challenge_count_min = challenge_base_count_min
-        self.challenge_count_max = challenge_base_count_max
+        self.challenge_count_min = challenge_count_min
+        self.challenge_count_max = challenge_count_max
         self.challenge_seed = challenge_seed
         self.mu = float64(mu)
         self.instance_gen = instance_gen
