@@ -8,8 +8,8 @@ from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 PARAMETER = {
-    64: 33334,
-    128: 33334
+    64: 4 * 10 ** 5,
+    128: 4 * 10 ** 5
 }
 
 PATH = '/home/christoph/EXPERIMENTS/'
