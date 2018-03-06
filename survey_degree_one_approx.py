@@ -8,18 +8,18 @@ from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 PARAMETER = {
-    # 64: 10 ** 5,
-    128: 33334
+    64: 10 ** 5,
+    128: 10 ** 5
 }
 
 PATH = '/home/christoph/EXPERIMENTS/'
-SAMPLE_COUNT = 922
+SAMPLE_COUNT = 1116
 
 
 def dictator(exp_parameter, experiment_fkt):
     """This function defines the experiments for the dictator controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923,SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -35,7 +35,7 @@ def dictator(exp_parameter, experiment_fkt):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_dictator",
+        log_name=PATH + "controlled_experiment_dictator923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -45,7 +45,7 @@ def dictator(exp_parameter, experiment_fkt):
 def ip_mod2(exp_parameter, experiment_fkt):
     """This function defines the experiments for the ip_mod2 controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -60,7 +60,7 @@ def ip_mod2(exp_parameter, experiment_fkt):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_ip_mod2",
+        log_name=PATH + "controlled_experiment_ip_mod2923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -70,7 +70,7 @@ def ip_mod2(exp_parameter, experiment_fkt):
 def ltf(exp_parameter, experiment_fkt):
     """This function defines the experiments for the ltf controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -92,7 +92,7 @@ def ltf(exp_parameter, experiment_fkt):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_ltf",
+        log_name=PATH + "controlled_experiment_ltf923to1116",
         experiments=experiments,
         status_display=True,
     )

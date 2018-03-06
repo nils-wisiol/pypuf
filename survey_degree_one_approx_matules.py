@@ -13,14 +13,14 @@ PARAMETER = {
 }
 
 PATH = '/home/christoph/EXPERIMENTS/'
-SAMPLE_COUNT = 922
+SAMPLE_COUNT = 1116
 MU = 0.05
 
 
 def dictator(exp_parameter):
     """This function defines the experiments for the dictator matules controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -37,7 +37,7 @@ def dictator(exp_parameter):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_dictator_matules",
+        log_name=PATH + "controlled_experiment_dictator_matules923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -47,7 +47,7 @@ def dictator(exp_parameter):
 def ip_mod2(exp_parameter):
     """This function defines the experiments for the ip_mod2 matules controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -63,7 +63,7 @@ def ip_mod2(exp_parameter):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_ip_mod2_matules",
+        log_name=PATH + "controlled_experiment_ip_mod2_matules923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -73,7 +73,7 @@ def ip_mod2(exp_parameter):
 def ltf(exp_parameter):
     """This function defines the experiments for the ltf matules controlled experiments."""
     experiments = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
@@ -96,7 +96,7 @@ def ltf(exp_parameter):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_ltf_matules",
+        log_name=PATH + "controlled_experiment_ltf_matules923to1116",
         experiments=experiments,
         status_display=True,
     )
