@@ -1,6 +1,6 @@
 """This module provides experiments which can be used to estimate the Fourier coefficients of a pypuf.simulation."""
 from numpy.random import RandomState
-from numpy import matmul, zeros, cumsum, array, float64, tile
+from numpy import matmul, zeros, cumsum, array, float64, inner
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
 from pypuf.simulation.fourier_based.dictator import Dictator
@@ -119,6 +119,7 @@ class ExperimentCFCA(Experiment):
         assert challenge_count_min < challenge_count_max
         self.log_name = log_name
         super().__init__(self.log_name)
+        assert challenge_count_min == 1, 'Only challenge_count_min == 1 is supported.'
         self.challenge_count_min = challenge_count_min
         self.challenge_count_max = challenge_count_max
         self.challenge_seed = challenge_seed
@@ -141,17 +142,13 @@ class ExperimentCFCA(Experiment):
         """
         results = []
         # Calculate the Fourier coefficients for self.challenge_count_min challenges
-        coefficient_sums = matmul(responses[:challenge_count_min], challenges[:challenge_count_min])
-        coefficient_sums = coefficient_sums.astype('int64')
-        fourier_coefficient = coefficient_sums / challenge_count_min
-        degree_one_weight = matmul(fourier_coefficient, fourier_coefficient)
-        results.append(degree_one_weight)
+        coefficient_sums = zeros(len(challenges[0]), dtype='int64')
 
         # Calculate Fourier coefficients based on the previous response sum
-        for i in range(challenge_count_min, challenge_count_max):
+        for i in range(challenge_count_max):
             partial_sum = (responses[i] * challenges[i])
             coefficient_sums = coefficient_sums + partial_sum
-            degree_one_weight = matmul(coefficient_sums / i, coefficient_sums / i)
+            degree_one_weight = inner(coefficient_sums / float64(i + 1), coefficient_sums / float64(i + 1))
             results.append(degree_one_weight)
 
         return results
