@@ -3,7 +3,7 @@ import random
 from collections import OrderedDict
 from numpy import pi
 from pypuf.experiments.experimenter import Experimenter
-from pypuf.experiments.experiment.fourier_coefficient import ExperimentCFCAMatules, ExperimentFCCRP
+from pypuf.experiments.experiment.fourier_coefficient import ExperimentCFCAMatulef, ExperimentFCCRP
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
@@ -18,14 +18,14 @@ MU = 0.05
 
 
 def dictator(exp_parameter):
-    """This function defines the experiments for the dictator matules controlled experiments."""
+    """This function defines the experiments for the dictator matulef controlled experiments."""
     experiments = []
     for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
             instance_parameter['dictator'] = 1
-            experiment = ExperimentCFCAMatules(
+            experiment = ExperimentCFCAMatulef(
                 log_name=PATH + 'matules_dictator_' + str(n) + str(i),
                 challenge_count_min=1,
                 challenge_count_max=challenge_count,
@@ -37,7 +37,7 @@ def dictator(exp_parameter):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_dictator_matules923to1116",
+        log_name=PATH + "controlled_experiment_dictator_matulef923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -45,14 +45,14 @@ def dictator(exp_parameter):
 
 
 def ip_mod2(exp_parameter):
-    """This function defines the experiments for the ip_mod2 matules controlled experiments."""
+    """This function defines the experiments for the ip_mod2 matulef controlled experiments."""
     experiments = []
     for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
             instance_parameter = OrderedDict()
             instance_parameter['n'] = n
-            experiment = ExperimentCFCAMatules(
-                log_name=PATH + 'matules_ip_mod2_' + str(n) + str(i),
+            experiment = ExperimentCFCAMatulef(
+                log_name=PATH + 'matulef_ip_mod2_' + str(n) + str(i),
                 challenge_count_min=1,
                 challenge_count_max=challenge_count,
                 challenge_seed=int(pi * (10 ** 4)) + 0x1E92 + 1004 + n + i,
@@ -63,7 +63,7 @@ def ip_mod2(exp_parameter):
             experiments.append(experiment)
     random.shuffle(experiments)
     experimenter = Experimenter(
-        log_name=PATH + "controlled_experiment_ip_mod2_matules923to1116",
+        log_name=PATH + "controlled_experiment_ip_mod2_matulef923to1116",
         experiments=experiments,
         status_display=True,
     )
@@ -71,7 +71,7 @@ def ip_mod2(exp_parameter):
 
 
 def ltf(exp_parameter):
-    """This function defines the experiments for the ltf matules controlled experiments."""
+    """This function defines the experiments for the ltf matulef controlled experiments."""
     experiments = []
     for i in range(923, SAMPLE_COUNT):
         for n, challenge_count in exp_parameter.items():
@@ -84,7 +84,7 @@ def ltf(exp_parameter):
             instance_parameter['mu'] = 0
             instance_parameter['sigma'] = 1
             instance_parameter['weight_random_seed'] = int(pi * 10 ** 5) + 0x1EFA44A9
-            experiment = ExperimentCFCAMatules(
+            experiment = ExperimentCFCAMatulef(
                 log_name=PATH + 'matules_ltf_' + str(n) + str(i),
                 challenge_count_min=1,
                 challenge_count_max=challenge_count,
@@ -101,9 +101,9 @@ def ltf(exp_parameter):
         status_display=True,
     )
     experimenter.run()
-print('calculate dictator matules')
+print('calculate dictator matulef')
 dictator(PARAMETER)
-print('\ncalculate ip_mod2 matules')
+print('\ncalculate ip_mod2 matulef')
 ip_mod2(PARAMETER)
-print('\ncalculate ltf matules')
+print('\ncalculate ltf matulef')
 ltf(PARAMETER)

@@ -193,7 +193,7 @@ class ExperimentCFCA(Experiment):
         self.result_logger.info(results)
 
 
-class ExperimentCFCAMatules(Experiment):
+class ExperimentCFCAMatulef(Experiment):
     """
     This class can be used to approximate degree-one weights through an cumulative sum, using the method from
     K Matulef, R O’Donnell, R Rubinfeld, and R Servedio. Testing halfspaces.
@@ -289,7 +289,7 @@ class ExperimentCFCAMatules(Experiment):
         responses_x1_y = instance.eval(combined_challenges)
 
 
-        self.results = ExperimentCFCAMatules.approx_degree_one_weight(
+        self.results = ExperimentCFCAMatulef.approx_degree_one_weight(
             responses_x1, responses_x2, responses_x1_y, self.challenge_count_min, self.challenge_count_max, self.mu
         )
 
