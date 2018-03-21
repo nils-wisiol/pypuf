@@ -12,7 +12,7 @@ PARAMETER = {
     128: 10 ** 5
 }
 
-PATH = '/home/christoph/EXPERIMENTS/'
+PATH = '/media/chris/Expansion Drive/EXPERIMENTS/'
 SAMPLE_COUNT = 1000
 
 
