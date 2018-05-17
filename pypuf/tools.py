@@ -4,7 +4,7 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, fromstring
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
@@ -253,6 +253,47 @@ def assert_result_type(arr):
     """
     assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
 
+
+def crps_from_file(filename):
+    """
+    This function reads challenge response pairs from a file and stores them into a tuple. If a challenge occurs
+    multiple times majority vote determines the response. All challenges should have the same dimension n.
+    :param filename: string
+                     A path to a file with the format:
+                     challenge,response\n
+                     ...
+                     challenge,response\n
+                     The challenge is written in hex and the response is '0' or '1'.
+    :return: Tuple of challenge and responses. The shape of the arrays depends on the number of different challenges and
+             the challenge dimension.
+             (array(array of RESULT_TYPE), array of RESULT_TYPE)
+    """
+    crp_dict = dict()
+    challenges = []
+    responses = []
+    with open(filename, 'r') as file:
+        for line in file:
+            crp_list = line.strip().split(',')
+            crp_dict.setdefault(crp_list[0], [])
+            crp_dict[crp_list[0]].append(crp_list[1])
+
+    for key, value in crp_dict.items():
+        # converts the hex string into a whitespace seperated bit string
+        str_chl = ' '.join(bin(int(key, base=16)).lstrip('0b'))
+        # converts the string challenge into  a numpy array
+        chl_arry_01 = fromstring(str_chl, dtype=RESULT_TYPE, sep=' ')
+        # transform challenge into -1,1 notation and safe it
+        challenges.append(transform_challenge_01_to_11(chl_arry_01))
+        one_count = value.count('1')
+        zero_count = value.count('0')
+        assert one_count != zero_count, 'The number of 0 and 1 should not be equal. Use a odd number of responses.'
+        # majority vote responses
+        if one_count > zero_count:
+            responses.append(-1)
+        else:
+            responses.append(1)
+
+    return (array(challenges), array(responses, dtype=RESULT_TYPE))
 
 class TrainingSet():
     """
