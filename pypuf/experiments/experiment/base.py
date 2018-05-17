@@ -6,6 +6,7 @@ import abc
 import time
 import logging
 import logging.handlers
+from pypuf.experiments.experimenter import Experimenter
 
 
 class Experiment(object):
@@ -55,13 +56,14 @@ class Experiment(object):
                         Name of the experimenter result logger
         """
         self.result_logger = setup_result_logger(queue, logger_name)
-        file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
-        file_handler.setLevel(logging.DEBUG)
-        self.progress_logger.addHandler(file_handler)
+        # file_handler = logging.FileHandler('%s.log' % self.log_name, mode='w')
+        # file_handler.setLevel(logging.DEBUG)
+        # self.progress_logger.addHandler(file_handler)
         start_time = time.time()
         self.run()
         self.measured_time = time.time() - start_time
         self.analyze()
+        self.result_logger.info(Experimenter.PRINT_DELIMITER + '{}'.format(self.measured_time))
 
 
 def setup_result_logger(queue, logger_name):

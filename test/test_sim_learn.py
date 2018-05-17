@@ -58,7 +58,7 @@ class TestSimLearn(unittest.TestCase):
     @mute
     def test_ip_mod2_id(self):
         """This tests the identity transformation and inner product mod 2 combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "id", "ip_mod2", "20", "1", "2", "1234", "1234",
+        sim_learn.main(["sim_learn", "8", "3", "id", "ip_mod2", "20", "1", "2", "1234", "1234",
                         LOG_PATH + "test_ip_mod2_id"])
 
     @mute
