@@ -1,11 +1,14 @@
 """This module provides experiments which can be used to estimate the Fourier coefficients of a pypuf.simulation."""
 from numpy.random import RandomState
-from numpy import matmul, zeros, cumsum, array, float64, inner
+from numpy import matmul, zeros, cumsum, array, float64, inner, mean, median, percentile
+from numpy import min as np_min
+from numpy import max as np_max
+import matplotlib.pyplot as plt
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
 from pypuf.simulation.fourier_based.dictator import Dictator
 from pypuf.simulation.fourier_based.bent import BentFunctionIpMod2
-from pypuf.tools import TrainingSet, sample_inputs, random_inputs, RESULT_TYPE
+from pypuf.tools import TrainingSet, sample_inputs, random_inputs, crps_from_file, RESULT_TYPE
 
 
 class ExperimentFCCRP(Experiment):
@@ -192,6 +195,91 @@ class ExperimentCFCA(Experiment):
         )
         self.result_logger.info(results)
 
+
+class ExperimentCFCAFromFile(Experiment):
+    """
+    This class can be used to approximate Fourier coefficients through an cumulative sum, which is faster than multiple
+    ExperimentFCCRP experiments from a csv file.
+    """
+
+    def __init__(self, log_name, filename):
+        """
+        :param log_name: string
+                         Name of the progress log.
+        :param filename: string
+                     A path to a file with the format:
+                     challenge,response\n
+                     ...
+                     challenge,response\n
+                     The challenge is written in hex and the response is '0' or '1'
+        """
+        self.log_name = log_name
+        super().__init__(self.log_name)
+        self.filename = filename
+        self.results = []
+        self.challenge_count_max = 0
+
+    @classmethod
+    def approx_degree_one_weight(cls, responses, challenges, challenge_count_max):
+        """
+        This function approximates a degree one weight based on the following parameters.
+        :param responses: array of float or pypuf.tools.RESULT_TYPE shape(N)
+                          Array of responses for the N different challenges.
+        :param challenges:  array of int8 shape(N,n)
+                            Array of challenges related the responses.
+        :param challenge_count_max: int
+        :return: list of float
+                 Degree one weights.
+        """
+        results = []
+        # Calculate the Fourier coefficients for self.challenge_count_min challenges
+        coefficient_sums = zeros(len(challenges[0]), dtype='int64')
+
+        # Calculate Fourier coefficients based on the previous response sum
+        for i in range(challenge_count_max):
+            partial_sum = (responses[i] * challenges[i])
+            coefficient_sums = coefficient_sums + partial_sum
+            degree_one_weight = inner(coefficient_sums / float64(i + 1), coefficient_sums / float64(i + 1))
+            results.append(degree_one_weight)
+
+        return results
+
+    def run(self):
+        """This method executes the Fourier coefficient approximation"""
+        challenges, responses = crps_from_file(self.filename)
+        self.challenge_count_max = len(challenges)
+        self.results = ExperimentCFCAFromFile.approx_degree_one_weight(
+            responses, challenges, self.challenge_count_max
+        )
+
+    def analyze(self):
+        """This method prints the results to the result logger"""
+        degree_one_str = ','.join(list(map(str, self.results)))
+        results = '{}\t{}\t{}\t{}\t{}'.format(
+            self.filename,
+            0,
+            self.challenge_count_max,
+            degree_one_str,
+            self.measured_time,
+        )
+        self.plot_controlled_experiment_min_max()
+        self.result_logger.info(results)
+
+    def plot_controlled_experiment_min_max(self):
+        res = array(self.results)
+        challenge_count = len(res)
+        # prepare the correct values to plot
+        number_of_queries = array(range(1, challenge_count + 1))
+        # plot the degree one weights
+        fig, ax = plt.subplots()
+        ax.set_title('Degree-One Weight Statistic {}'.format(self.log_name))
+        ax.set_xlabel('Number of Querys N')
+        ax.set_ylabel('Degree-One Weights')
+        ax.set_ylim([-1.0, 1.0])
+        ax.set_xlim([1.0, challenge_count])
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        fig.savefig('{}_Degree_one_weight_statistic.svg'.format(self.log_name), format='svg', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
 
 class ExperimentCFCAMatulef(Experiment):
     """

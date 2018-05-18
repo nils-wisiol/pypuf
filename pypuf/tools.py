@@ -278,8 +278,10 @@ def crps_from_file(filename):
             crp_dict[crp_list[0]].append(crp_list[1])
 
     for key, value in crp_dict.items():
-        # converts the hex string into a whitespace seperated bit string
-        str_chl = ' '.join(bin(int(key, base=16)).lstrip('0b'))
+        # one hex digit results in 4 binary digits
+        digits = len(key) * 4
+        # converts the hex string into a whitespace separated bit string
+        str_chl = ' '.join(bin(int(key, base=16)).lstrip('0b').zfill(digits))
         # converts the string challenge into  a numpy array
         chl_arry_01 = fromstring(str_chl, dtype=RESULT_TYPE, sep=' ')
         # transform challenge into -1,1 notation and safe it
@@ -292,7 +294,6 @@ def crps_from_file(filename):
             responses.append(-1)
         else:
             responses.append(1)
-
     return (array(challenges), array(responses, dtype=RESULT_TYPE))
 
 class TrainingSet():
