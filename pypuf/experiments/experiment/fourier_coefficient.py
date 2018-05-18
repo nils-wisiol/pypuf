@@ -262,14 +262,16 @@ class ExperimentCFCAFromFile(Experiment):
             degree_one_str,
             self.measured_time,
         )
-        self.plot_controlled_experiment_min_max()
+        self.plot_experiment()
         self.result_logger.info(results)
 
-    def plot_controlled_experiment_min_max(self):
+    def plot_experiment(self):
+        """
+        This method creates a plot of the degree one weights saved in self.results.
+        The output is saved to self.logname_Degree_one_weight_statistic.svg.
+        """
         res = array(self.results)
         challenge_count = len(res)
-        # prepare the correct values to plot
-        number_of_queries = array(range(1, challenge_count + 1))
         # plot the degree one weights
         fig, ax = plt.subplots()
         ax.set_title('Degree-One Weight Statistic {}'.format(self.log_name))
