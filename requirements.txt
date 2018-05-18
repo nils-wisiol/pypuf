@@ -1,6 +1,7 @@
 numpy==1.13.*
 pep8==1.7.*
 polymath==0.1.18
+matplotlib==2.2.2
 pylint==1.7.*
 pypuf-helper==0.1.5
 scipy==0.19.*
