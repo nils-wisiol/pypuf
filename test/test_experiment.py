@@ -334,12 +334,12 @@ class TestExperimentExperimentCFCA(TestBase):
         dictator_instance = Dictator(4, n)
         challenges = sample_inputs(n, 2**n, random_instance=random_instance)
         responses = bent_instance.eval(challenges)
-        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 2**n)
         # Check the bent function approximation
         self.assertEqual(round(n*1/sqrt(2**n)**2, 2), round(degree_on_weights[-1], 2))
 
         responses = dictator_instance.eval(challenges)
-        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 2**n)
         # Check the dictator approximation
         self.assertEqual(1.0, round(degree_on_weights[-1], 1))
 
@@ -349,6 +349,6 @@ class TestExperimentExperimentCFCA(TestBase):
             combiner=LTFArray.combiner_xor
         )
         responses = ltfarray_instance.eval(challenges)
-        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 1, 2**n)
+        degree_on_weights = ExperimentCFCA.approx_degree_one_weight(responses, challenges, 2**n)
         # Check a fix result
         self.assertEqual(0.66928, round(degree_on_weights[-1], 5))

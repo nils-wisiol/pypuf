@@ -3,7 +3,7 @@ import random
 from collections import OrderedDict
 from numpy import pi
 from pypuf.experiments.experimenter import Experimenter
-from pypuf.experiments.experiment.fourier_coefficient import ExperimentCFCAMatules, ExperimentFCCRP
+from pypuf.experiments.experiment.fourier_coefficient import ExperimentCFCAMatulef, ExperimentFCCRP
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 

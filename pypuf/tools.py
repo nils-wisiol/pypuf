@@ -296,6 +296,7 @@ def crps_from_file(filename):
             responses.append(1)
     return (array(challenges), array(responses, dtype=RESULT_TYPE))
 
+
 class TrainingSet():
     """
     Basic data structure to hold a collection of challenge response pairs.

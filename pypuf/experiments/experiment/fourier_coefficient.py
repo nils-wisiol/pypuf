@@ -1,8 +1,6 @@
 """This module provides experiments which can be used to estimate the Fourier coefficients of a pypuf.simulation."""
 from numpy.random import RandomState
-from numpy import matmul, zeros, cumsum, array, float64, inner, mean, median, percentile
-from numpy import min as np_min
-from numpy import max as np_max
+from numpy import zeros, cumsum, array, float64, inner
 import matplotlib.pyplot as plt
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
@@ -131,14 +129,13 @@ class ExperimentCFCA(Experiment):
         self.results = []
 
     @classmethod
-    def approx_degree_one_weight(cls, responses, challenges, challenge_count_min, challenge_count_max):
+    def approx_degree_one_weight(cls, responses, challenges, challenge_count_max):
         """
         This function approximates a degree one weight based on the following parameters.
         :param responses: array of float or pypuf.tools.RESULT_TYPE shape(N)
                           Array of responses for the N different challenges.
         :param challenges:  array of int8 shape(N,n)
                             Array of challenges related the responses.
-        :param challenge_count_min: int
         :param challenge_count_max: int
         :return: list of float
                  Degree one weights.
@@ -166,7 +163,7 @@ class ExperimentCFCA(Experiment):
         responses = instance.eval(challenges)
 
         self.results = ExperimentCFCA.approx_degree_one_weight(
-            responses, challenges, self.challenge_count_min, self.challenge_count_max
+            responses, challenges, self.challenge_count_max
         )
 
     def analyze(self):
@@ -273,15 +270,18 @@ class ExperimentCFCAFromFile(Experiment):
         res = array(self.results)
         challenge_count = len(res)
         # plot the degree one weights
-        fig, ax = plt.subplots()
-        ax.set_title('Degree-One Weight Statistic {}'.format(self.log_name))
-        ax.set_xlabel('Number of Querys N')
-        ax.set_ylabel('Degree-One Weights')
-        ax.set_ylim([-1.0, 1.0])
-        ax.set_xlim([1.0, challenge_count])
+        fig, ax_plt = plt.subplots()
+        ax_plt.set_title('Degree-One Weight Statistic {}'.format(self.log_name))
+        ax_plt.set_xlabel('Number of Querys N')
+        ax_plt.set_ylabel('Degree-One Weights')
+        ax_plt.set_ylim([-1.0, 1.0])
+        ax_plt.set_xlim([1.0, challenge_count])
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-        fig.savefig('{}_Degree_one_weight_statistic.svg'.format(self.log_name), format='svg', bbox_inches='tight', pad_inches=0)
+        fig.savefig(
+            '{}_Degree_one_weight_statistic.svg'.format(self.log_name), format='svg', bbox_inches='tight', pad_inches=0
+        )
         plt.close(fig)
+
 
 class ExperimentCFCAMatulef(Experiment):
     """
@@ -377,7 +377,6 @@ class ExperimentCFCAMatulef(Experiment):
         responses_x1 = instance.eval(challenges_x1)
         responses_x2 = instance.eval(challenges_x2)
         responses_x1_y = instance.eval(combined_challenges)
-
 
         self.results = ExperimentCFCAMatulef.approx_degree_one_weight(
             responses_x1, responses_x2, responses_x1_y, self.challenge_count_min, self.challenge_count_max, self.mu

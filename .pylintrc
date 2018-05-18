@@ -7,11 +7,18 @@ extension-pkg-whitelist=numpy,polymath,pypuf_helper
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,XXX
 
+[TYPECHECK]
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E1101 when accessed. Python regular
+# expressions are accepted.
+ignored-modules=numpy
+ignored-classes=numpy
 
 [BASIC]
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,ex,Run,_,n,N,mu,s,l,m,u,v
+good-names=i,j,k,ex,Run,_,n,N,mu,s,l,m,u,v,y
 
 # Naming hint for function names
 function-name-hint=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
