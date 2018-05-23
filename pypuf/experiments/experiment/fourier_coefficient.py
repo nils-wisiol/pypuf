@@ -271,12 +271,13 @@ class ExperimentCFCAFromFile(Experiment):
         challenge_count = len(res)
         # plot the degree one weights
         fig, ax_plt = plt.subplots()
-        ax_plt.set_title('Degree-One Weight Statistic {}'.format(self.log_name))
+        ax_plt.set_title('Degree-One Weight Statistic\n{}'.format(self.log_name.split('/')[-1]))
         ax_plt.set_xlabel('Number of Querys N')
         ax_plt.set_ylabel('Degree-One Weights')
         ax_plt.set_ylim([-1.0, 1.0])
         ax_plt.set_xlim([1.0, challenge_count])
-        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        ax_plt.plot(range(challenge_count), res)
+        #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         fig.savefig(
             '{}_Degree_one_weight_statistic.svg'.format(self.log_name), format='svg', bbox_inches='tight', pad_inches=0
         )
