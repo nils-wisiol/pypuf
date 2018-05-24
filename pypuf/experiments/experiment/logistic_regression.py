@@ -2,6 +2,7 @@
 This module provides an experiment class which learns an instance of LTFArray simulation PUF with the logistic
 regression learner.
 """
+from numpy import count_nonzero
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
@@ -125,3 +126,125 @@ class ExperimentLogisticRegression(Experiment):
             ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
 
         )
+
+class ExperimentLogisticRegressionFromFile(Experiment):
+    """This class runs the logistic regression algorithm on a set of challenge-response pairs given by a CSV file."""
+    def __init__(self, log_name, n, N, filename, seed_model, transformation, combiner, seed_challenge=0x5A551):
+        """
+        :param log_name: string
+                         Prefix of the path or name of the experiment log file.
+        :param n: int
+                  Number of input bits of the PUF
+        :param N: int
+                  Number of challenges which are used to learn the PUF simulation.
+        :param filename: string
+                         Path to the CSV file with the challenge-responses.
+        :param seed_model: int
+                           The seed which is used to initialize the pseudo-random number generator
+                           which is used to generate the stage weights for the learner arbiter PUF simulation.
+        :param transformation: A function: array of int with shape(N,k,n), int number of PUFs k -> shape(N,k,n)
+                               The function transforms input challenges in order to increase resistance against attacks.
+        :param combiner: A function: array of int with shape(N,k,n) -> array of in with shape(N)
+                         The functions combines the outputs of k PUFs to one bit results,
+                         in oder to increase resistance against attacks.
+        :param seed_challenge: int default is 0x5A551
+                               The seed which is used to initialize the pseudo-random number generator
+                               which is used to draft challenges for the TrainingSet.
+        """
+        super().__init__(
+            log_name='%s.0x%x_0x_%i_%i_%s_%s' % (
+                log_name,
+                seed_model,
+                n,
+                N,
+                transformation.__name__,
+                combiner.__name__,
+            ),
+        )
+        self.n = n
+        self.N = N
+        self.filename = filename
+        self.seed_model = seed_model
+        self.model_prng = RandomState(seed=self.seed_model)
+        self.combiner = combiner
+        self.transformation = transformation
+        self.seed_challenge = seed_challenge
+        self.instance = None
+        self.learner = None
+        self.model = None
+        self.challenges = None
+        self.responses = None
+
+    def run(self):
+        """
+        Initializes the instance, the training set and the learner to then run the logistic regression
+        with the given parameters.
+        """
+        # TODO input transformation is computed twice. Add a shortcut to recycle results from the first computation
+        self.challenges, self.responses = tools.crps_from_file(self.filename)
+        self.learner = LogisticRegression(
+            self.TrainingSet(self.challenges, self.responses, self.N, self.seed_challenge),
+            self.n,
+            1,# k=1
+            transformation=self.transformation,
+            combiner=self.combiner,
+            weights_prng=self.model_prng,
+            logger=self.progress_logger,
+        )
+        self.model = self.learner.learn()
+
+    def analyze(self):
+        """
+        Analyzes the learned result.
+        """
+        assert self.model is not None
+
+        def approx_distance(model, challenges, responses):
+            """
+            This function calculates the approximated distance.
+            :param model: pypuf.simulation.base
+            :param challenges: two dimensional array of pypuf.tools.RESULT_TYPE
+            :param responses: array of float
+            """
+            model_responses = model.eval(challenges)
+            num = len(model_responses)
+            return 1.0 - (num - count_nonzero(model_responses == responses)) / num
+
+        self.result_logger.info(
+            # filename     seed_model  i      n      N      trans  comb   iter   time   accuracy  model values
+            '%s\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t'  '%s\t' '%s\t' '%i\t' '%f\t' '%f\t'    '%s',
+            self.filename,
+            self.seed_model,
+            0,  # restart count, kept for compatibility to old log files
+            self.n,
+            self.N,
+            self.transformation.__name__,
+            self.combiner.__name__,
+            self.learner.iteration_count,
+            self.measured_time,
+            approx_distance(self.model, self.challenges, self.responses),
+            ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
+
+        )
+
+    class TrainingSet(object):
+        """This class generates a training set with N challenges and responses."""
+        def __init__(self, challenges, responses, N, random_seed):
+            """
+            :param challenges: two dimensional array of pypuf.tools.RESULT_TYPE
+            :param responses: array of float
+            :param N: int
+                      Number of challenges
+            :param random_seed: int
+                                Seed to determine the challenge-response subset.
+            """
+            challenge_count = len(challenges)
+            response_count = len(responses)
+            assert challenge_count == len(responses),\
+                'The number of challenges and responses must be equal'.format(challenge_count, response_count)
+            prng = RandomState(random_seed)
+            # draw a list of random indices with N elements
+            indices = prng.choice(challenge_count, N, replace=False)
+            self.challenges = challenges[indices]
+            self.responses = responses[indices]
+            self.N = N
