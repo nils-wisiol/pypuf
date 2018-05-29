@@ -129,7 +129,10 @@ class ExperimentLogisticRegression(Experiment):
 
 class ExperimentLogisticRegressionFromFile(Experiment):
     """This class runs the logistic regression algorithm on a set of challenge-response pairs given by a CSV file."""
-    def __init__(self, log_name, n, N, filename, seed_model, transformation, combiner, seed_challenge=0x5A551):
+    def __init__(
+            self, log_name, n, N, filename, seed_model, transformation, combiner, seed_challenge=0x5A551,
+            seed_chl_distance=0xB055
+    ):
         """
         :param log_name: string
                          Prefix of the path or name of the experiment log file.
@@ -150,6 +153,9 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         :param seed_challenge: int default is 0x5A551
                                The seed which is used to initialize the pseudo-random number generator
                                which is used to draft challenges for the TrainingSet.
+        :param seed_chl_distance: int default is 0xB055
+                                  The seed which is used to initialize the pseudo-random number generator
+                                  which is used to draft challenges for the accuracy calculation.
         """
         super().__init__(
             log_name='%s.0x%x_0x_%i_%i_%s_%s' % (
@@ -169,6 +175,7 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         self.combiner = combiner
         self.transformation = transformation
         self.seed_challenge = seed_challenge
+        self.seed_chl_distance = seed_chl_distance
         self.instance = None
         self.learner = None
         self.model = None
@@ -199,17 +206,6 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         """
         assert self.model is not None
 
-        def approx_distance(model, challenges, responses):
-            """
-            This function calculates the approximated distance.
-            :param model: pypuf.simulation.base
-            :param challenges: two dimensional array of pypuf.tools.RESULT_TYPE
-            :param responses: array of float
-            """
-            model_responses = model.eval(challenges)
-            num = len(model_responses)
-            return 1.0 - (num - count_nonzero(model_responses == responses)) / num
-
         self.result_logger.info(
             # filename     seed_model  i      n      N      trans  comb   iter   time   accuracy  model values
             '%s\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t'  '%s\t' '%s\t' '%i\t' '%f\t' '%f\t'    '%s',
@@ -222,10 +218,25 @@ class ExperimentLogisticRegressionFromFile(Experiment):
             self.combiner.__name__,
             self.learner.iteration_count,
             self.measured_time,
-            approx_distance(self.model, self.challenges, self.responses),
+            self.approx_distance(),
             ','.join(map(str, self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())))
-
         )
+
+    def approx_distance(self):
+        """
+        This function calculates the approximated distance.
+        :param model: pypuf.simulation.base
+        :param challenges: two dimensional array of pypuf.tools.RESULT_TYPE
+        :param responses: array of float
+        """
+        challenge_count = len(self.challenges)
+        prng = RandomState(self.seed_chl_distance)
+        # draw a list of random indices with N elements
+        indices = prng.choice(challenge_count, challenge_count, replace=True)
+        model_responses = self.model.eval(self.challenges[indices])
+        num = len(model_responses)
+        return 1.0 - (num - count_nonzero(model_responses == self.responses[indices])) / num
+
 
     class TrainingSet(object):
         """This class generates a training set with N challenges and responses."""
