@@ -2,7 +2,7 @@
 This module provides an experiment class which learns an instance of LTFArray simulation PUF with the logistic
 regression learner.
 """
-from numpy import count_nonzero
+from numpy import count_nonzero, delete
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
@@ -181,6 +181,7 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         self.model = None
         self.challenges = None
         self.responses = None
+        self.traning_set = None
 
     def run(self):
         """
@@ -189,8 +190,9 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         """
         # TODO input transformation is computed twice. Add a shortcut to recycle results from the first computation
         self.challenges, self.responses = tools.crps_from_file(self.filename)
+        self.traning_set = self.TrainingSet(self.challenges, self.responses, self.N, self.seed_challenge)
         self.learner = LogisticRegression(
-            self.TrainingSet(self.challenges, self.responses, self.N, self.seed_challenge),
+            self.traning_set,
             self.n,
             1,# k=1
             transformation=self.transformation,
@@ -229,13 +231,13 @@ class ExperimentLogisticRegressionFromFile(Experiment):
         :param challenges: two dimensional array of pypuf.tools.RESULT_TYPE
         :param responses: array of float
         """
-        challenge_count = len(self.challenges)
+        challenge_count = len(self.traning_set.test_challenges)
         prng = RandomState(self.seed_chl_distance)
         # draw a list of random indices with N elements
         indices = prng.choice(challenge_count, challenge_count, replace=True)
-        model_responses = self.model.eval(self.challenges[indices])
+        model_responses = self.model.eval(self.traning_set.test_challenges[indices])
         num = len(model_responses)
-        return 1.0 - (num - count_nonzero(model_responses == self.responses[indices])) / num
+        return 1.0 - (num - count_nonzero(model_responses == self.traning_set.test_responses[indices])) / num
 
 
     class TrainingSet(object):
@@ -256,6 +258,9 @@ class ExperimentLogisticRegressionFromFile(Experiment):
             prng = RandomState(random_seed)
             # draw a list of random indices with N elements
             indices = prng.choice(challenge_count, N, replace=False)
+            not_indices = delete(range(challenge_count), indices)
             self.challenges = challenges[indices]
+            self.test_challenges = challenges[not_indices]
             self.responses = responses[indices]
+            self.test_responses = responses[not_indices]
             self.N = N
