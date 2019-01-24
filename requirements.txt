@@ -1,7 +1,7 @@
-numpy==1.13.*
-pep8==1.7.*
+numpy~=1.16
+pep8~=1.7
 polymath==0.1.18
-pylint==1.7.*
+pylint~=2.2
 pypuf-helper==0.1.5
-scipy==0.19.*
-astroid==1.5.*
+scipy~=1.2
+astroid~=2.1
