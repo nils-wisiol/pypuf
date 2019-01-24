@@ -1,7 +1,7 @@
 """This module tests the different experiment classes."""
 import unittest
-from numpy.testing import assert_array_equal
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
+from numpy.testing import assert_array_equal
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes

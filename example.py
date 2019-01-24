@@ -36,5 +36,6 @@ def main():
     # output the result
     print('Learned a 64bit 2-xor XOR Arbiter PUF from 12000 CRPs with accuracy %f' % accuracy)
 
+
 if __name__ == '__main__':
     main()
