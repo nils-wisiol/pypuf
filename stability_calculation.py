@@ -3,9 +3,9 @@ This module provides the ability to calculate a list of stabilities for randomly
 MV XOR Arbiter PUF.
 """
 from sys import argv, stderr
+from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, SimulationMajorityLTFArray, NoisyLTFArray
 from pypuf import tools
-from numpy.random import RandomState
 
 
 def stability_figure_data(n, k, vote_count, sigma_noise_ratio, num, reps, random):

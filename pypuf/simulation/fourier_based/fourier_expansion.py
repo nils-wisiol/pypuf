@@ -2,9 +2,9 @@
 This module provides a model for the Fourier expansion of Boolean functions.
 (http://www.contrib.andrew.cmu.edu/~ryanod/?p=207)
 """
+import numpy as np
 from pypuf.simulation.base import Simulation
 from pypuf import tools
-import numpy as np
 
 
 class FourierCoefficient:
