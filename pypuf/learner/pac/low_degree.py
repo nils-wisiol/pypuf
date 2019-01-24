@@ -4,7 +4,7 @@ This module contains the Low Degree Algorithm.
 from itertools import combinations
 import time
 import numpy as np
-from scipy.misc import comb as ncr
+from scipy.special import comb as ncr
 from pypuf.simulation.fourier_based.fourier_expansion import FourierExpansionSign, FourierCoefficient
 from pypuf import tools
 
