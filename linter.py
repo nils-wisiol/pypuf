@@ -33,7 +33,7 @@ def main(arguments):
     parser.add_argument(
         '-e', '--exclude_patterns', help='patterns to identify directories or files which should not be checked '
                                          '(default are env .env)',
-        default=['.env', 'env'], type=str, dest='exclude_patterns', nargs='+',
+        default=['.env', 'env', 'venv', '.venv'], type=str, dest='exclude_patterns', nargs='+',
     )
     args = parser.parse_args(arguments)
 
@@ -43,8 +43,8 @@ def main(arguments):
     # set paths which should not be checked
     excludes = '--exclude={0}'.format(','.join(args.exclude_patterns))
 
-    # run pep8 check
-    pep8_returncode = call([executable, '-m', 'pep8', max_line_length, excludes, args.path])
+    # run pycodestyle check
+    pycodestyle_returncode = call([executable, '-m', 'pycodestyle', max_line_length, excludes, args.path])
 
     # exclude specific directories support to check subdirectories by default
     files_to_check = []
@@ -67,7 +67,7 @@ def main(arguments):
     pylint_returncode = call(pylint_cmd)
 
     returncode = 0
-    if pep8_returncode != 0 or pylint_returncode != 0:
+    if pycodestyle_returncode != 0 or pylint_returncode != 0:
         returncode = 1
 
     exit(returncode)

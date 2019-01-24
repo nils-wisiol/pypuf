@@ -31,6 +31,7 @@ def stability_figure_data(n, k, vote_count, sigma_noise_ratio, num, reps, random
     stabilities = tools.approx_stabilities(instance_mv, num, reps, random)
     print('{' + ','.join(map(str, stabilities)) + '}')
 
+
 if __name__ == "__main__":
     if len(argv) != 8:
         stderr.write('Stability Calculation for MV XOR Arbiter PUF\n')

@@ -100,5 +100,6 @@ def example_uniqueness_statistic():
     uniqueness_statistic = property_test.uniqueness_statistic(challenges, measurements=measurements)
     print('The uniqueness statistic is {}.'.format(uniqueness_statistic))
 
+
 if __name__ == '__main__':
     main()
