@@ -4,11 +4,11 @@ This module is used to test the different simulation models.
 
 import unittest
 from test.utility import get_functions_with_prefix
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
-from pypuf import tools
 from numpy.testing import assert_array_equal
 from numpy import shape, dot, array, around, array_equal
 from numpy.random import RandomState
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from pypuf import tools
 
 
 class TestCombiner(unittest.TestCase):
