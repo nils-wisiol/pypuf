@@ -124,15 +124,15 @@ class TestExperimenter(unittest.TestCase):
                 count = count + 1
             return count
 
-        paths = list(glob.glob(LOG_PATH+'*.log'))
+        paths = list(glob.glob('logs/' + LOG_PATH + '*.log'))
         # Check if the number of lines is greater than zero
         for log_path in paths:
             exp_log_file = open(log_path, 'r')
-            self.assertGreater(line_count(exp_log_file), 0, 'The experiment log is empty.')
+            self.assertGreater(line_count(exp_log_file), 0, 'The experiment log {} is empty.'.format(log_path))
             exp_log_file.close()
 
         # Check if the number of results is correct
-        log_file = open(experimenter_log_name+'.log', 'r')
+        log_file = open('logs/' + experimenter_log_name + '.log', 'r')
         self.assertEqual(line_count(log_file), n*2, 'Unexpected number of results')
         log_file.close()
 
