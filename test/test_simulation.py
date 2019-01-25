@@ -207,67 +207,14 @@ class TestInputTransformation(unittest.TestCase):
             LTFArray.transform_lightweight_secure(test_array, k=3),
             [
                 [
-                    [-1, -1, -1, 1, 1, -1],
-                    [-1, -1, 1, 1, -1, -1],
-                    [-1, 1, 1, -1, -1, -1],
+                    [1, -1, 1, -1, -1, -1],
+                    [1, 1, -1, -1, 1, -1],
+                    [-1, 1, -1, 1, -1, 1],
                 ],
                 [
-                    [-1, -1, -1, -1, 1, 1],
-                    [-1, -1, -1, 1, 1, -1],
-                    [-1, -1, 1, 1, -1, -1],
-                ],
-            ]
-        )
-
-    def test_shift_secure_lightweight(self):
-        """This method tests the shift secure lightweight transformation with predefined input and output."""
-        test_array = array([
-            [1, -1, -1, 1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
-        assert_array_equal(
-            LTFArray.transform_shift_lightweight_secure(test_array, k=3),
-            [
-                [
+                    [1, -1, 1, -1, 1, 1],
                     [-1, -1, -1, 1, 1, -1],
                     [1, -1, 1, -1, -1, -1],
-                    [-1, -1, -1, -1, -1, 1],
-                ],
-            ]
-        )
-
-    def test_1_n_bent(self):
-        """This method tests the one to n bent transformation with predefined inputs and outputs."""
-        test_array = array([
-            [1, -1, -1, 1, -1, 1],
-            [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
-        assert_array_equal(
-            LTFArray.transform_1_n_bent(test_array, k=3),
-            [
-                [
-                    [1, -1, 1, -1, 1, -1],
-                    [1, -1, -1, 1, -1, 1],
-                    [1, -1, -1, 1, -1, 1],
-                ],
-                [
-                    [1, -1, 1, -1, 1, -1],
-                    [-1, 1, 1, -1, -1, 1],
-                    [-1, 1, 1, -1, -1, 1],
-                ],
-            ]
-        )
-        test_array = array([
-            [1, -1, -1, 1, -1, 1],
-            [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
-        assert_array_equal(
-            LTFArray.transform_1_n_bent(test_array, k=1),
-            [
-                [
-                    [1, -1, 1, -1, 1, -1],
-                ],
-                [
-                    [1, -1, 1, -1, 1, -1],
                 ],
             ]
         )
@@ -357,37 +304,15 @@ class TestInputTransformation(unittest.TestCase):
         ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
-                transform_1=LTFArray.transform_1_n_bent,
+                transform_1=LTFArray.transform_id,
                 bit_number_transform_1=6,
-                transform_2=LTFArray.transform_id,
+                transform_2=LTFArray.transform_atf,
             )(test_array, k=3),
             [
                 [
-                    [1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1],
-                    [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
-                    [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
-                ],
-            ]
-        )
-
-    def test_1_1_bent(self):
-        """This method test the one to one bent transformation with predefined input and output."""
-        test_array = array([
-            [1, -1, -1, 1, -1, 1],
-            [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
-        assert_array_equal(
-            LTFArray.transform_1_1_bent(test_array, k=3),
-            [
-                [
-                    [1, -1, -1, 1, -1, 1],
-                    [1, -1, -1, 1, -1, 1],
-                    [1, -1, -1, 1, -1, 1],
-                ],
-                [
-                    [1, 1, 1, -1, -1, 1],
-                    [-1, 1, 1, -1, -1, 1],
-                    [-1, 1, 1, -1, -1, 1],
+                    [1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1],
+                    [1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1],
+                    [1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1],
                 ],
             ]
         )
@@ -799,8 +724,6 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         ltf_array_result = ltf_array.eval(inputs)
         mv_noisy_ltf_array_result = mv_noisy_ltf_array.eval(inputs)
-        print(ltf_array_result)
-        print(mv_noisy_ltf_array_result)
         # These test checks if the output is different because of noise
         self.assertFalse(array_equal(ltf_array_result, mv_noisy_ltf_array_result), 'These arrays must be different')
 
@@ -939,6 +862,4 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
 
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
-        print(biased_responses)
-        print(responses)
         self.assertFalse(array_equal(biased_responses, responses))

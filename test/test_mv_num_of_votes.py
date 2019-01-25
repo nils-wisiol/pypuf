@@ -37,3 +37,4 @@ class TestMvNumOfVotes(unittest.TestCase):
         stability = float(line.split('\t')[6])
         # Check the stability
         self.assertGreaterEqual(stability, overall_desired_stability)
+        log_file.close()
