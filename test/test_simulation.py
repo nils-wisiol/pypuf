@@ -281,13 +281,13 @@ class TestInputTransformation(unittest.TestCase):
         """This method tests the random permutation transformation generation ith predefined inputs and outputs."""
         test_array = array([
             [1, 2, 3, 4],
-            [10, 20, 30, 40],
+            [5, 6, 2, 1],
         ], dtype=tools.RESULT_TYPE)
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
-                challenge_length=4,
-                puf_count=3,
+                nn=4,
+                kk=3,
             )(test_array, k=3),
             [
                 [
@@ -296,17 +296,17 @@ class TestInputTransformation(unittest.TestCase):
                     [3, 1, 4, 2],
                 ],
                 [
-                    [40, 10, 20, 30],
-                    [10, 40, 30, 20],
-                    [30, 10, 40, 20],
+                    [1, 5, 6, 2],
+                    [5, 1, 2, 6],
+                    [2, 5, 1, 6],
                 ],
             ],
         )
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
-                challenge_length=4,
-                puf_count=3,
+                nn=4,
+                kk=3,
                 atf=True,
             )(test_array, k=3),
             [
@@ -316,9 +316,9 @@ class TestInputTransformation(unittest.TestCase):
                     [3 * 1 * 4 * 2, 1 * 4 * 2, 4 * 2, 2],
                 ],
                 [
-                    [40 * 10 * 20 * 30, 10 * 20 * 30, 20 * 30, 30],
-                    [10 * 40 * 30 * 20, 40 * 30 * 20, 30 * 20, 20],
-                    [30 * 10 * 40 * 20, 10 * 40 * 20, 40 * 20, 20],
+                    [1 * 5 * 6 * 2, 5 * 6 * 2, 6 * 2, 2],
+                    [5 * 1 * 2 * 6, 1 * 2 * 6, 2 * 6, 6],
+                    [2 * 5 * 1 * 6, 5 * 1 * 6, 1 * 6, 6],
                 ],
             ],
         )

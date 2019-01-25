@@ -16,8 +16,8 @@ class LTFArray(Simulation):
     and constant bias added.
     """
 
-    @staticmethod
-    def combiner_xor(responses):
+    @classmethod
+    def combiner_xor(cls, responses):
         """
         combines output responses with the XOR operation
         :param responses: Array of int of float with shape(N,k,n)
@@ -27,8 +27,8 @@ class LTFArray(Simulation):
         """
         return ph.combiner_xor(responses)
 
-    @staticmethod
-    def combiner_ip_mod2(responses):
+    @classmethod
+    def combiner_ip_mod2(cls, responses):
         """
         combines output responses with the inner product mod 2 operation
         :param responses: a array with a number of vectors of single LTF results
@@ -46,8 +46,8 @@ class LTFArray(Simulation):
             1
         )
 
-    @staticmethod
-    def transform_id(challenges, k):
+    @classmethod
+    def transform_id(cls, challenges, k):
         """
         Input transformation that does nothing.
         :param challenges: array of int8 shape(N,n)
@@ -99,31 +99,23 @@ class LTFArray(Simulation):
                   Array of transformed challenges.
         """
         tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
+        (N, n) = challenges.shape
         assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
 
-        shifted = cls.transform_shift(challenges, k)
+        sub_challenges = cls.transform_shift(challenges, k)
 
-        challenges = transpose(
+        sub_challenges = transpose(
             concatenate(
                 (
-                    [shifted[:, :, i] * shifted[:, :, i + 1] for i in range(0, n, 2)],
-                    [shifted[:, :, 0]],
-                    [shifted[:, :, i] * shifted[:, :, i + 1] for i in range(1, n - 2, 2)],
+                    [sub_challenges[:, :, i] * sub_challenges[:, :, i + 1] for i in range(0, n, 2)],
+                    [sub_challenges[:, :, 0]],
+                    [sub_challenges[:, :, i] * sub_challenges[:, :, i + 1] for i in range(1, n - 2, 2)],
                 )
             ),
             (1, 2, 0)
         )
 
-        # Perform atf transform
-        result = transpose(
-            array([
-                prod(challenges[:, :, i:], 2)
-                for i in range(n)
-            ], dtype=tools.RESULT_TYPE),
-            (1, 2, 0)
-        )
+        result = cls.att(sub_challenges)
 
         assert result.shape == (N, k, n), 'The resulting challenges do not have the desired shape.'
         tools.assert_result_type(result)
@@ -142,8 +134,7 @@ class LTFArray(Simulation):
                   Array of transformed challenges.
         """
         tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
+        (N, n) = challenges.shape
         assert n % 2 == 0, 'Sölter\'s Secure Lightweight Input Transformation only defined for even n.'
         n_half = int(n / 2)
 
@@ -162,8 +153,8 @@ class LTFArray(Simulation):
         tools.assert_result_type(res)
         return res
 
-    @staticmethod
-    def transform_shift(challenges, k):
+    @classmethod
+    def transform_shift(cls, challenges, k):
         """
         Input transformation that shifts the input bits for each of the k PUFs.
         :param challenges: array of int8 shape(N,n)
@@ -186,8 +177,8 @@ class LTFArray(Simulation):
         tools.assert_result_type(result)
         return result
 
-    @staticmethod
-    def transform_polynomial(challenges, k):
+    @classmethod
+    def transform_polynomial(cls, challenges, k):
         """
         This input transformation interprets a challenge c as a
         polynomial over the finite field GF(2^n)=F2/f*F2, where f is a
@@ -249,8 +240,8 @@ class LTFArray(Simulation):
         tools.assert_result_type(result)
         return result
 
-    @staticmethod
-    def transform_permutation_atf(challenges, k):
+    @classmethod
+    def transform_permutation_atf(cls, challenges, k):
         """
         This transformation performs first a pseudorandom permutation of the challenge k times before applying the
         ATF transformation to each challenge.
@@ -267,28 +258,21 @@ class LTFArray(Simulation):
         seed = 0x1234
 
         # Perform random permutations
-        cs_permuted = array(
+        sub_challenges = array(
             [
                 [RandomState(seed + i).permutation(c)
                  for i in range(k)]
                 for c in challenges
             ]
         )
-        # Perform atf transform
-        result = transpose(
-            array([
-                prod(cs_permuted[:, :, i:], 2)
-                for i in range(n)
-            ], dtype=tools.RESULT_TYPE),
-            (1, 2, 0)
-        )
+        result = cls.att(sub_challenges)
 
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
         tools.assert_result_type(result)
         return result
 
-    @staticmethod
-    def transform_random(challenges, k):
+    @classmethod
+    def transform_random(cls, challenges, k):
         """
         This input transformation chooses for each Arbiter Chain an random challenge based on the initial challenge.
         :param challenges: array of int8 shape(N,n)
@@ -310,8 +294,8 @@ class LTFArray(Simulation):
         tools.assert_result_type(result)
         return result
 
-    @staticmethod
-    def generate_stacked_transform(transform_1, puf_count, transform_2):
+    @classmethod
+    def generate_stacked_transform(cls, transform_1, puf_count, transform_2):
         """
         Returns an input transformation that will transform the first puf_count challenges using transform_1,
         the remaining k - puf_count challenges using transform_2.
@@ -358,23 +342,21 @@ class LTFArray(Simulation):
 
         return transform
 
-    @staticmethod
-    def generate_random_permutation_transform(seed, challenge_length, puf_count, atf=False):
+    @classmethod
+    def generate_random_permutation_transform(cls, seed, nn, kk, atf=False):
         """
         Returns an input transformation that uses k pseudorandomly generated permutations
         :param seed: int
                      Seed for the pseudorandom generation
-        :param challenge_length: int
-                   Challenge length (must equal LTFArray.n)
-        :param puf_count: int
-                          Number of permutations to be used (must equal LTFArray.k)
+        :param nn: int Challenge length (must equal LTFArray.n)
+        :param kk: int Number of permutations to be used (must equal LTFArray.k)
         :param atf: boolean
                     Perform ATF transform after permuting
         :return:  A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                   A function that can perform the desired transformation.
         """
         prng = RandomState(seed)
-        permutations = [prng.permutation(challenge_length) for _ in range(puf_count)]
+        permutations = [prng.permutation(nn) for _ in range(kk)]
 
         def transform(challenges, k):
             """
@@ -388,13 +370,13 @@ class LTFArray(Simulation):
             """
             tools.assert_result_type(challenges)
             (_, n) = challenges.shape
-            assert k == puf_count and n == challenge_length, \
+            assert k == kk and n == nn, \
                 'Permutations Input Transform cannot be used for LTFArrays with size other than defined'
 
-            result = swapaxes(
+            sub_challenges = swapaxes(
                 array([
                     challenges[:, permutations[i]]
-                    for i in range(puf_count)
+                    for i in range(kk)
                 ]),
                 0,
                 1
@@ -402,21 +384,15 @@ class LTFArray(Simulation):
 
             if atf:
                 # Perform atf transform
-                result = transpose(
-                    array([
-                        prod(result[:, :, i:], 2)
-                        for i in range(n)
-                    ]),
-                    (1, 2, 0)
-                )
+                sub_challenges = cls.att(sub_challenges)
 
-            return result
+            return sub_challenges
 
         transform.__name__ = 'transform_permutations' + ('_plus_atf_' if atf else '') + '_%x' % seed
         return transform
 
-    @staticmethod
-    def generate_concatenated_transform(transform_1, bit_number_transform_1, transform_2):
+    @classmethod
+    def generate_concatenated_transform(cls, transform_1, bit_number_transform_1, transform_2):
         """
         Returns an input transformation that will transform the first bit_number_transform_1 bit of each challenge using
         transform_1, the remaining bits using transform_2.
@@ -465,8 +441,8 @@ class LTFArray(Simulation):
 
         return transform
 
-    @staticmethod
-    def att(sub_challenges):
+    @classmethod
+    def att(cls, sub_challenges):
         """
         Performs the "Arbiter Threshold Transform" (ATT) on an array of sub-challenges.
         ATT is defined to modify any given sub-challenge c as follows:
@@ -486,8 +462,8 @@ class LTFArray(Simulation):
             sub_challenges[:, :, i] *= sub_challenges[:, :, i + 1]
         return sub_challenges
 
-    @staticmethod
-    def att_inverse(sub_challenges):
+    @classmethod
+    def att_inverse(cls, sub_challenges):
         """
         Performs the inverse "Arbiter Threshold Transform" (ATT) on an array of sub-challenges.
         The inverse ATT is defined to modify any given sub-challenge x as follows:
@@ -511,8 +487,8 @@ class LTFArray(Simulation):
             sub_challenges[:, :, i] *= sub_challenges[:, :, i + 1]
         return sub_challenges
 
-    @staticmethod
-    def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
+    @classmethod
+    def normal_weights(cls, n, k, mu=0, sigma=1, random_instance=RandomState()):
         """
         Returns weights for an array of k LTFs of size n each.
         The weights are drawn from a normal distribution with given
