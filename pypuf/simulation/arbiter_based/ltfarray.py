@@ -3,7 +3,7 @@ This module provides several different implementations of arbiter PUF simulation
 model is the core of each simulation class.
 """
 from numpy import sum as np_sum
-from numpy import prod, shape, sign, array, transpose, concatenate, dstack, swapaxes, sqrt, amax, tile, append
+from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, tile, append
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -87,107 +87,10 @@ class LTFArray(Simulation):
         tools.assert_result_type(res)
         return res
 
-    @staticmethod
-    def transform_mm(challenges, k):
-        """
-        Input transformation that transforms nice.
-        :param challenges: array of int8 shape(N,n)
-                           Array of challenges which should be evaluated by the simulation.
-        :param k: int
-                  Number of LTFArray PUFs
-        :return:  array of int8 shape(N,k,n)
-                  Array of transformed challenges.
-        """
-        tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
-        assert k == 2, 'MM transform currently only implemented for k=2.'
-        assert n % 2 == 0, 'MM transform only defined for even n.'
-
-        cs_1 = challenges
-        cs_2 = transpose(
-            concatenate(
-                (
-                    [challenges[:, 0]],
-                    [challenges[:, i] * challenges[:, i + 1] for i in range(0, n, 2)],
-                    [challenges[:, i] * challenges[:, i + 1] * challenges[:, i + 2] for i in range(0, n - 2, 2)]
-                )
-            )
-        )
-
-        result = swapaxes(dstack((cs_1, cs_2)), 1, 2)
-        assert result.shape == (N, 2, n)
-        tools.assert_result_type(result)
-        return result
-
-    @classmethod
-    def transform_lightweight_secure_original(cls, challenges, k):
-        """
-        Input transform as defined by Majzoobi et al. 2008.
-        :param challenges: array of int8 shape(N,n)
-                           Array of challenges which should be evaluated by the simulation.
-        :param k: int
-                  Number of LTFArray PUFs
-        :return:  array of int8 shape(N,k,n)
-                  Array of transformed challenges.
-        """
-        tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
-        assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
-
-        cs_shift_trans = cls.transform_shift_lightweight_secure(challenges, k)
-
-        # Perform atf transform
-        result = transpose(
-            array([
-                prod(cs_shift_trans[:, :, i:], 2)
-                for i in range(n)
-            ], dtype=tools.RESULT_TYPE),
-            (1, 2, 0)
-        )
-
-        assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
-        tools.assert_result_type(result)
-        return result
-
     @classmethod
     def transform_lightweight_secure(cls, challenges, k):
         """
-        Input transform as defined by Majzoobi et al. 2008, but with the shift
-        operation executed after and without ATF transform.
-        :param challenges: array of int8 shape(N,n)
-                           Array of challenges which should be evaluated by the simulation.
-        :param k: int
-                  Number of LTFArray PUFs
-        :return:  array of int8 shape(N,k,n)
-                  Array of transformed challenges.
-        """
-        tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
-        assert n % 2 == 0, 'Secure Lightweight Input Transformation only defined for even n.'
-
-        challenges = transpose(
-            concatenate(
-                (
-                    [challenges[:, i] * challenges[:, i + 1] for i in range(0, n, 2)],  # (x1x2, x3x4, ... xn-1xn)
-                    [challenges[:, 0]],  # (x1)
-                    [challenges[:, i] * challenges[:, i + 1] for i in range(1, n - 2, 2)],  # (x2x3, x4x5, ... xn-2xn-1)
-                )
-            )
-        )
-
-        assert challenges.shape == (N, n)
-        res = cls.transform_shift(challenges, k)
-        tools.assert_result_type(res)
-        return res
-
-    @classmethod
-    def transform_shift_lightweight_secure(cls, challenges, k):
-        """
-        Input transform as defined by Majzoobi et al. 2008, with the shift
-        operation executed first and without ATF transform.
+        Input transform as defined by Majzoobi et al. 2008.
         :param challenges: array of int8 shape(N,n)
                            Array of challenges which should be evaluated by the simulation.
         :param k: int
@@ -213,9 +116,18 @@ class LTFArray(Simulation):
             (1, 2, 0)
         )
 
-        assert challenges.shape == (N, k, n)
-        tools.assert_result_type(challenges)
-        return challenges
+        # Perform atf transform
+        result = transpose(
+            array([
+                prod(challenges[:, :, i:], 2)
+                for i in range(n)
+            ], dtype=tools.RESULT_TYPE),
+            (1, 2, 0)
+        )
+
+        assert result.shape == (N, k, n), 'The resulting challenges do not have the desired shape.'
+        tools.assert_result_type(result)
+        return result
 
     @classmethod
     def transform_soelter_lightweight_secure(cls, challenges, k):
@@ -273,86 +185,6 @@ class LTFArray(Simulation):
         assert result.shape == (N, k, n)
         tools.assert_result_type(result)
         return result
-
-    @classmethod
-    def transform_1_n_bent(cls, challenges, k):
-        """
-        For one LTF, we compute the input as follows: the i-th input bit will be the result
-        of the challenge shifted by i bits to the left, then input into inner product mod 2
-        function.
-        The other LTF get the original input.
-        :param challenges: array of int8 shape(N,n)
-                           Array of challenges which should be evaluated by the simulation.
-        :param k: int
-                  Number of LTFArray PUFs
-        :return:  array of int8 shape(N,k,n)
-                  Array of transformed challenges.
-        """
-        tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
-        assert n % 2 == 0, '1-n bent transform only defined for even n.'
-
-        shift_challenges = cls.transform_shift(challenges, n)
-        assert shift_challenges.shape == (N, n, n)
-
-        bent_challenges = transpose(
-            array(
-                [
-                    cls.combiner_ip_mod2(shift_challenges[:, i, :])
-                    for i in range(n)
-                ]
-            )
-        )
-        assert bent_challenges.shape == (N, n)
-        res = array([
-            concatenate(
-                (
-                    [bent_challenges[j]],  # 'bent' challenge as generated above
-                    tile(challenges[j], (k - 1, 1))  # unmodified challenge for k-1 LTFs
-                ),
-                axis=0
-            )
-            for j in range(N)
-        ], dtype=tools.RESULT_TYPE)
-        tools.assert_result_type(res)
-        return res
-
-    @classmethod
-    def transform_1_1_bent(cls, challenges, k):
-        """
-        For one LTF, we compute the input as follows: the first input bit will be
-        the result of IPmod2 of the original challenge, all other input bits will
-        remain the same.
-        The other LTF get the original input.
-        :param challenges: array of int8 shape(N,n)
-                           Array of challenges which should be evaluated by the simulation.
-        :param k: int
-                  Number of LTFArray PUFs
-        :return:  array of int8 shape(N,k,n)
-                  Array of transformed challenges.
-        """
-        tools.assert_result_type(challenges)
-        N = len(challenges)
-        n = len(challenges[0])
-        assert k >= 2, '1-n bent transform currently only implemented for k>=2.'
-        assert n % 2 == 0, '1-n bent transform only defined for even n.'
-
-        bent_challenge_bits = cls.combiner_ip_mod2(challenges)
-        assert bent_challenge_bits.shape == (N,)
-        res = array([
-            concatenate(
-                (
-                    [concatenate(([[bent_challenge_bits[j]], challenges[j][1:]]))],
-                    # 'bent' challenge bit plus remainder unchanged
-                    tile(challenges[j], (k - 1, 1))  # unmodified challenge for k-1 LTFs
-                ),
-                axis=0
-            )
-            for j in range(N)
-        ], dtype=tools.RESULT_TYPE)
-        tools.assert_result_type(res)
-        return res
 
     @staticmethod
     def transform_polynomial(challenges, k):

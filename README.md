@@ -97,7 +97,8 @@ More input transformations can be added by implementing a function and provide t
 
 #### Combiner Function
 
-`LTFArray` currently only provides the traditional XOR (that is, parity) as a combiner function.
+`LTFArray` currently provides the traditional XOR (that is, parity) as a combiner function,
+as well as the Inner Product Mod 2 function.
 Further combiner functions can be implemented as static functions in `LTFArray`,
 or anywhere else and given to the `LTFArray` constructor.
 

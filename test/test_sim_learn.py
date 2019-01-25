@@ -27,33 +27,10 @@ class TestSimLearn(unittest.TestCase):
         sim_learn.main(["sim_learn", "8", "2", "atf", "xor", "20", "1", "2", "1234", "1234", LOG_PATH + "test_atf"])
 
     @mute
-    def test_mm(self):
-        """This tests the mm transformation and xor combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "mm", "xor", "20", "1", "2", "1234", "1234", LOG_PATH + "test_mm"])
-
-    @mute
     def test_lightweight_secure(self):
-        """This tests the lightweight secure transformation and xor combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "lightweight_secure", "xor", "20", "1", "2", "1234", "1234",
-                        LOG_PATH + "test_lightweight_secure"])
-
-    @mute
-    def test_lightweight_secure_original(self):
         """This tests the lightweight secure original transformation and xor combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "lightweight_secure_original", "xor", "20", "1", "2", "1234", "1234",
+        sim_learn.main(["sim_learn", "8", "2", "lightweight_secure", "xor", "20", "1", "2", "1234", "1234",
                         LOG_PATH+"test_lightweight_secure_original"])
-
-    @mute
-    def test_1_n_bent(self):
-        """This tests the one to n bent transformation and xor combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "1_n_bent", "xor", "20", "1", "2", "1234", "1234",
-                        LOG_PATH + "test_1_n_bent"])
-
-    @mute
-    def test_1_1_bent(self):
-        """This tests the one to one bent transformation and xor combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "1_1_bent", "xor", "20", "1", "2", "1234", "1234",
-                        LOG_PATH + "test_1_1_bent"])
 
     @mute
     def test_ip_mod2_id(self):
@@ -68,28 +45,10 @@ class TestSimLearn(unittest.TestCase):
                         LOG_PATH + "test_ip_mod2_atf"])
 
     @mute
-    def test_ip_mod2_mm(self):
-        """This tests the mm transformation and inner product mod 2 combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "mm", "ip_mod2", "20", "1", "2", "1234", "1234",
-                        LOG_PATH + "test_ip_mod2_mm"])
-
-    @mute
     def test_ip_mod2_lightweight_secure(self):
         """This tests the lightweight secure transformation and inner product mod 2 combiner."""
         sim_learn.main(["sim_learn", "8", "2", "lightweight_secure", "ip_mod2", "20", "1", "2", "1234", "1234",
                         LOG_PATH + "test_ip_mod2_lightweight_secure"])
-
-    @mute
-    def test_ip_mod2_1_n_bent(self):
-        """This tests the one to n bent transformation and inner product mod 2 combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "1_n_bent", "ip_mod2", "20", "1", "2", "1234", "1234",
-                        LOG_PATH + "test_ip_mod2_1_n_bent"])
-
-    @mute
-    def test_ip_mod2_1_1_bent(self):
-        """This tests the one to one bent transformation and inner product mod 2 combiner."""
-        sim_learn.main(["sim_learn", "8", "2", "1_1_bent", "ip_mod2", "20", "1", "2", "1234", "1234",
-                        LOG_PATH+"test_ip_mod2_1_1_bent"])
 
     @mute
     def test_permutation_atf(self):
