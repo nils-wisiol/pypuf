@@ -67,8 +67,8 @@ class TestExperimentLogisticRegression(TestBase):
             experiment_1.execute(logger.queue, logger.logger_name)
             experiment_2.execute(logger.queue, logger.logger_name)
             # Open logs
-            exp_1_result_log = open(experiment_1.log_name + '.log', 'r')
-            exp_2_result_log = open(experiment_2.log_name + '.log', 'r')
+            exp_1_result_log = open('logs/' + experiment_1.log_name + '.log', 'r')
+            exp_2_result_log = open('logs/' + experiment_2.log_name + '.log', 'r')
             # Save the results
             result_1 = exp_1_result_log.read()
             result_2 = exp_2_result_log.read()
@@ -319,5 +319,5 @@ class TestExperimentPropertyTest(TestBase):
             exp_rel = create_experiment(N, test_function,
                                         ExperimentPropertyTest.create_noisy_ltf_arrays, array_parameter)
             exp_rel.execute(logger.queue, logger.logger_name)
-            with open(exp_rel.log_name+'.log', 'r') as log_file:
+            with open('logs/' + exp_rel.log_name+'.log', 'r') as log_file:
                 self.assertNotEqual(log_file.read(), '')

@@ -174,7 +174,7 @@ def setup_logger(logger_name):
     root = logging.getLogger(logger_name)
 
     # Setup logging to both file and console
-    file_handler = logging.FileHandler(filename='%s.log' % logger_name, mode='w')
+    file_handler = logging.FileHandler(filename='logs/%s.log' % logger_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
     root.addHandler(file_handler)

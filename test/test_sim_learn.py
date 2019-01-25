@@ -85,7 +85,7 @@ class TestSimLearn(unittest.TestCase):
             return count
 
         # Check if the number of results is correct
-        log_file = open(LOG_PATH + log_name + '.log', 'r')
+        log_file = open('logs/' + LOG_PATH + log_name + '.log', 'r')
         self.assertEqual(line_count(log_file), instance_count, 'Unexpected number of results')
         log_file.close()
 
@@ -114,7 +114,7 @@ class TestSimLearn(unittest.TestCase):
             return count
 
         # Check if the number of results is correct
-        log_file = open(LOG_PATH + log_name + '.log', 'r')
+        log_file = open('logs/' + LOG_PATH + log_name + '.log', 'r')
         self.assertEqual(line_count(log_file), expected_number_of_result, 'Unexpected number of results')
         log_file.close()
 
@@ -144,33 +144,39 @@ class TestSimLearn(unittest.TestCase):
         :param log_path: string
         """
         sim_learn.main(parameter_set1)
-        res_param_set1 = self.read_log(log_path)
+        res_param_set1 = self.read_log('logs/' + log_path)
 
         sim_learn.main(parameter_set2)
-        res_param_set2 = self.read_log(log_path)
+        res_param_set2 = self.read_log('logs/' + log_path)
 
         # Test challenge seed impact
+        # remove timing info
+        del res_param_set1[0][10]
+        del res_param_set2[0][10]
         self.assertNotEqual(res_param_set1, res_param_set2)
 
         sim_learn.main(parameter_set1)
-        res_param_set1_2 = self.read_log(log_path)
+        res_param_set1_2 = self.read_log('logs/' + log_path)
 
         sim_learn.main(parameter_set2)
-        res_param_set2_2 = self.read_log(log_path)
+        res_param_set2_2 = self.read_log('logs/' + log_path)
 
         # Test challenge to be deterministic
+        # remove timing info
+        del res_param_set1_2[0][10]
+        del res_param_set2_2[0][10]
         self.assertEqual(res_param_set2, res_param_set2_2)
         self.assertEqual(res_param_set1, res_param_set1_2)
 
     @mute
     def test_seeds(self):
         """
-        This test the trainingset challenge generation and accuracy seeds.
-        Whit this seeds sim_learn should be deterministic.
+        This tests the training set challenge generation and accuracy seeds.
+        sim_learn must behave deterministically to pass this test.
         """
         log_name = 'test_seed_challenges'
         log_path = LOG_PATH + log_name + '.log'
-        parameter = ["8", "2", "id", "xor", "20", "1", "2", "1234", "1234", self.log_parameter(log_name)]
+        parameter = ["8", "2", "id", "xor", "20", "1", "1", "1234", "1234", self.log_parameter(log_name)]
         seed_parameter_chl = '--seed_challenges=0xBA11'
         seed_parameter_dist = '--seed_distance=5ACE'
         parameter_with_seed_chl = parameter + [seed_parameter_chl]
