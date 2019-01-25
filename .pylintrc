@@ -30,3 +30,17 @@ method-rgx=(([a-z][a-z0-9_]{2,37})|(_[a-z0-9_]*))$
 
 # Maximum number of characters on a single line.
 max-line-length=120
+
+[MESSAGES CONTROL]
+
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time.
+#enable=
+
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifier separated by comma (,) or put this option
+# multiple time (only on the command line, not in the configuration file where
+# it should appear only once).
+# E1111 is buggy for certain numpy functions, see github.com/PyCQA/pylint/issues/2435
+disable=E1111
