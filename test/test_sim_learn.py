@@ -36,11 +36,6 @@ class TestSimLearn(unittest.TestCase):
         sim_learn.main(["8", "2", "atf", "xor", "20", "1", "2", "1234", "1234", self.log_parameter("test_atf")])
 
     @mute
-    def test_mm(self):
-        """This tests the mm transformation and xor combiner."""
-        sim_learn.main(["8", "2", "mm", "xor", "20", "1", "2", "1234", "1234", self.log_parameter("test_mm")])
-
-    @mute
     def test_lightweight_secure(self):
         """This tests the lightweight secure transformation and xor combiner."""
         sim_learn.main(["8", "2", "lightweight_secure", "xor", "20", "1", "2", "1234", "1234",
