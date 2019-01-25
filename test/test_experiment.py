@@ -315,8 +315,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
 
         # Setup multiprocessing logging
         queue = Queue(-1)
-        listener = Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
+        listener = Process(target=log_listener, args=(queue, setup_logger, logger_name,))
         listener.start()
 
         experiment = ExperimentReliabilityBasedCMAES(

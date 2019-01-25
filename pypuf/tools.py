@@ -4,15 +4,16 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, squeeze, copy
 from importlib import import_module
 from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
 
 from numpy import abs as np_abs, absolute
+from numpy import copy as np_copy
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
+from numpy import squeeze
 from numpy import sum as np_sum
 from numpy.random import RandomState
 
@@ -213,7 +214,7 @@ def transform_challenge_01_to_11(challenge):
              Same vector in -1,1 notation
     """
     assert_result_type(challenge)
-    res = copy(challenge)
+    res = np_copy(challenge)
     res[res == 1] = -1
     res[res == 0] = 1
     return res
@@ -228,7 +229,7 @@ def transform_challenge_11_to_01(challenge):
              Same vector in 0,1 notation
     """
     assert_result_type(challenge)
-    res = copy(challenge)
+    res = np_copy(challenge)
     res[res == 1] = 0
     res[res == -1] = 1
     return res

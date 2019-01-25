@@ -45,7 +45,7 @@ def main(args):
     num = int(args[4])
     reps = int(args[5])
     pop_size = int(args[6])
-    limit_s = float(args[7])
+    limit_s = int(args[7])
     limit_i = int(args[8])
 
     # Initialize or use optional parameters
@@ -71,7 +71,7 @@ def main(args):
     stderr.write('Learning %i time(s) each %i (%i,%i)-XOR Arbiter PUF(s) with %f noisiness, '
                  'using %i different %i times repeated CRPs.\n'
                  'There, %i solution points are sampled each iteration of the CMAES algorithm. '
-                 'Among other termination criteria, it stops if the fitness stagnates since %i iterations '
+                 'Among other termination criteria, it stops if the fitness stagnates for %i iterations '
                  'or the total number of iterations equals %i.\n'
                  % (attempts, instances, n, k, noisiness, num, reps, pop_size, limit_s, limit_i))
     stderr.write('The following seeds are used for generating pseudo random numbers.\n')
