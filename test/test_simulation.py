@@ -219,6 +219,34 @@ class TestInputTransformation(unittest.TestCase):
             ]
         )
 
+    def test_att(self):
+        """Test the ATT by providing a simple input-output sample."""
+        test_array = array([[
+            [1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, -1, 1],
+        ]], dtype=tools.RESULT_TYPE)
+        assert_array_equal(
+            LTFArray.att(test_array),
+            [[
+                [-1, -1, 1, -1, -1, 1],
+                [-1, 1, 1, 1, -1, 1],
+            ]]
+        )
+
+    def test_att_inverse(self):
+        """Test the inverse ATT by providing a simple input-output sample."""
+        test_array = array([[
+            [-1, -1, 1, -1, -1, 1],
+            [-1, 1, 1, 1, -1, 1],
+        ]], dtype=tools.RESULT_TYPE)
+        assert_array_equal(
+            LTFArray.att_inverse(test_array),
+            [[
+                [1, -1, -1, 1, -1, 1],
+                [-1, 1, 1, -1, -1, 1],
+            ]]
+        )
+
     def test_generate_stacked_transform(self):
         """
         This method tests the stacked transformation generation of identity and shift with predefined input and output.
