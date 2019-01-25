@@ -5,9 +5,9 @@ define nine parameters which define the experiment.
 """
 import sys
 import argparse
+from pypuf.experiments.experimenter import Experimenter
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
-from pypuf.experiments.experimenter import Experimenter
 
 
 def main(args):
