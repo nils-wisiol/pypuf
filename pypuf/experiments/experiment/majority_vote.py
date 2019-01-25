@@ -186,8 +186,8 @@ class ExperimentMajorityVoteFindVotes(Experiment):
         :param challenge_prng: RandomState
                                Pseudo-random number generator which is used to generate challenges.
         """
-        challenges = np.array(list(tools.random_inputs(self.n, self.N, random_instance=challenge_prng)))
-        eval_array = np.zeros(len(challenges))
+        challenges = tools.random_inputs(self.n, self.N, random_instance=challenge_prng)
+        eval_array = np.zeros(len(challenges), dtype=tools.RESULT_TYPE)
 
         # Evaluation of the PUF in order to measure the stability
         for i in range(self.iterations):

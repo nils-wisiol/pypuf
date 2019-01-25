@@ -1,7 +1,7 @@
 numpy==1.13.*
 pep8==1.7.*
-polymath==0.1.17
+polymath==0.1.18
 pylint==1.7.*
-pypuf-helper==0.1.4
+pypuf-helper==0.1.5
 scipy==0.19.*
 astroid==1.5.*

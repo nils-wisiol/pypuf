@@ -102,4 +102,4 @@ class LowDegreeAlgorithm:
         :return iterator of arrays of length n
         """
         for indices in combinations(range(self.n), degree):
-            yield np.array([1 if i in indices else 0 for i in range(self.n)])
+            yield np.array([1 if i in indices else 0 for i in range(self.n)], dtype=tools.RESULT_TYPE)

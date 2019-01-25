@@ -1,6 +1,6 @@
 """This module tests the different functions which can be used to determine simulation properties."""
 import unittest
-from numpy import array, mean, reshape, repeat
+from numpy import mean, reshape, repeat
 from numpy.testing import assert_array_equal
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
@@ -23,7 +23,7 @@ class TestPropertyTest(unittest.TestCase):
             transform=transformation,
             combiner=combiner,
         )
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB1A))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB1A))
         reliabilities = []
         for challenge in challenges:
             reliabilities.append(PropertyTest.reliability(instance, reshape(challenge, (1, n))))
@@ -35,11 +35,11 @@ class TestPropertyTest(unittest.TestCase):
             weight_array=NoisyLTFArray.normal_weights(n=n, k=k, random_instance=RandomState(0xA1A1)),
             transform=transformation,
             combiner=combiner,
-            sigma_noise=0.5,
+            sigma_noise=15.0,
             random_instance=RandomState(0x5015E),
         )
         for challenge in challenges:
-            reliability = PropertyTest.reliability(noisy_instance, challenge)
+            reliability = PropertyTest.reliability(noisy_instance, reshape(challenge, (1, n)))
             # For noisy simulations the responses should vary
             self.assertNotEqual(reliability, 0.0)
 
@@ -61,7 +61,7 @@ class TestPropertyTest(unittest.TestCase):
             )
             instances.append(instance)
 
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB0))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB0))
 
         reliability_set = PropertyTest.reliability_set(instances, challenges, measurements=measurements)
         # The result is an array like with N * k entries.
@@ -99,7 +99,7 @@ class TestPropertyTest(unittest.TestCase):
                      transform=transformation, combiner=combiner) for i in range(instance_count)
         ]
 
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB10))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB10))
 
         property_test = PropertyTest(instances)
         reliability_statistic = property_test.reliability_statistic(challenges, measurements=measurements)
@@ -140,7 +140,7 @@ class TestPropertyTest(unittest.TestCase):
             LTFArray(weight_array=LTFArray.normal_weights(n=n, k=k, random_instance=RandomState(0xA1A1 + i)),
                      transform=transformation, combiner=combiner) for i in range(instance_count)
         ]
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB10))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB10))
         uniqueness = []
         for challenge in challenges:
             uniqueness.append(PropertyTest.uniqueness(instances, reshape(challenge, (1, n))))
@@ -160,7 +160,7 @@ class TestPropertyTest(unittest.TestCase):
             LTFArray(weight_array=LTFArray.normal_weights(n=n, k=k, random_instance=RandomState(0xA1A1 + i)),
                      transform=transformation, combiner=combiner) for i in range(instance_count)
         ]
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB10))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB10))
 
         uniqueness_set = PropertyTest.uniqueness_set(instances, challenges, measurements=measurements)
 
@@ -184,7 +184,7 @@ class TestPropertyTest(unittest.TestCase):
                      transform=transformation, combiner=combiner) for i in range(instance_count)
         ]
 
-        challenges = array(list(sample_inputs(n, N, random_instance=RandomState(0xFAB10))))
+        challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB10))
 
         property_test = PropertyTest(instances)
         uniqueness_statistic = property_test.uniqueness_statistic(challenges, measurements=measurements)
