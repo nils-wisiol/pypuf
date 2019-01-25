@@ -466,6 +466,52 @@ class LTFArray(Simulation):
         return transform
 
     @staticmethod
+    def att(sub_challenges):
+        """
+        Performs the "Arbiter Threshold Transform" (ATT) on an array of sub-challenges.
+        ATT is defined to modify any given sub-challenge c as follows:
+        Let c be a vector of n bits, then the i-th output bit of ATT(c) equals
+        prod_(j=i)^n c_j, i.e. the i-th output bit is the product of the i-th input bit
+        and all following input bits.
+
+        This method performs ATT in situ, i.e. without (much) additional memory.
+        The input array will be overwritten.
+        :param sub_challenges: array of shape (N, k, n), where N is the total number of
+        sub-challenge tuples, k is the number of sub-challenges per master-challenge, and
+        n is the number of bits per sub-challenge.
+        :return: transformed array of sub-challenges, shape (N, k, n)
+        """
+        (_, _, n) = sub_challenges.shape
+        for i in range(n - 2, -1, -1):
+            sub_challenges[:, :, i] *= sub_challenges[:, :, i + 1]
+        return sub_challenges
+
+    @staticmethod
+    def att_inverse(sub_challenges):
+        """
+        Performs the inverse "Arbiter Threshold Transform" (ATT) on an array of sub-challenges.
+        The inverse ATT is defined to modify any given sub-challenge x as follows:
+        Let x be a vector of n bits, then the i-th output bit of ATT_inverse(x) equals
+        x_i / x_(i+1), where x_(n+1) is treated as 1. I.e. the i-th output bit is the division
+        of the i-th input bit and the following input bit.
+
+        This method performs ATT in situ, i.e. without (much) additional memory.
+        The input array will be overwritten.
+
+        This method is defined for input bits in {-1,1} only, using other bits has undefined
+        behavior.
+
+        :param sub_challenges: array of shape (N, k, n), where N is the total number of
+        sub-challenge tuples, k is the number of sub-challenges per master-challenge, and
+        n is the number of bits per sub-challenge.
+        :return: transformed array of sub-challenges, shape (N, k, n)
+        """
+        (_, _, n) = sub_challenges.shape
+        for i in range(n - 1):
+            sub_challenges[:, :, i] *= sub_challenges[:, :, i + 1]
+        return sub_challenges
+
+    @staticmethod
     def normal_weights(n, k, mu=0, sigma=1, random_instance=RandomState()):
         """
         Returns weights for an array of k LTFs of size n each.
