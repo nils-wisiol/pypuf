@@ -89,7 +89,6 @@ class TestInputFunctions(unittest.TestCase):
         # Checks for different values
         self.assertNotEqual(array_sum, n, 'All values are 1.')
         self.assertNotEqual(array_sum, 0, 'All values are 0.')
-        self.assertGreater(array_sum, 0, 'The array should contain positive values only.')
 
     def test_all_inputs(self):
         """This checks the shape and type of the returned multidimensional array."""

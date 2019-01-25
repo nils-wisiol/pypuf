@@ -23,7 +23,7 @@ def random_input(n, random_instance=RandomState()):
     :returns: array of int8
               A pseudo random array of -1 and 1
     """
-    return (random_instance.choice((-1, +1), n)).astype(RESULT_TYPE)
+    return random_inputs(n, 1, random_instance)[0]
 
 
 def all_inputs(n):
@@ -50,10 +50,7 @@ def random_inputs(n, num, random_instance=RandomState()):
     :return: array of num {-1,1} int8 arrays
              An array with num random {-1,1} int arrays.
     """
-    res = zeros((num, n), dtype=RESULT_TYPE)
-    for i in range(num):
-        res[i] = random_input(n, random_instance=random_instance)
-    return res
+    return 2 * random_instance.randint(0, 2, (num, n), dtype=RESULT_TYPE) - 1
 
 
 def sample_inputs(n, num, random_instance=RandomState()):

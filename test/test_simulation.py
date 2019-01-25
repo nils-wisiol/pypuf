@@ -758,7 +758,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         # reset pseudo random number generator
         noise_prng = RandomState(seed=0xC0FFEE)
         # increase the vote_count in order to get equality
-        vote_count = 277
+        vote_count = 2845
         mv_noisy_ltf_array = SimulationMajorityLTFArray(
             weight_array=weight_array,
             transform=LTFArray.transform_id,
