@@ -8,3 +8,4 @@ matplotlib~=3.0.0
 pandas~=0.24.1
 tensorflow==1.5.0  # newest version that does not require AVX
 seaborn~=0.9.0
+scikit-learn~=0.20
