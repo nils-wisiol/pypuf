@@ -20,6 +20,7 @@ import multiprocessing
 import logging
 import sys
 import traceback
+import os
 
 
 class Experimenter(object):
@@ -27,7 +28,7 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, log_name, experiments, cpu_limit=2**16):
+    def __init__(self, log_name, experiments, cpu_limit=2**16, auto_multiprocessing=False):
         """
         :param experiments: A list of pypuf.experiments.experiment.base.Experiment
         :param log_name: A unique file path where to output should be logged.
@@ -43,6 +44,10 @@ class Experimenter(object):
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
         self.semaphore = multiprocessing.BoundedSemaphore(self.cpu_limit)
+
+        # Disable automatic multiprocessing
+        if not auto_multiprocessing:
+            self.disable_auto_multiprocessing()
 
     def run(self):
         """
@@ -113,6 +118,30 @@ class Experimenter(object):
         # Quit logging process
         queue.put_nowait(None)
         listener.join()
+
+    @staticmethod
+    def disable_auto_multiprocessing():
+        """
+        Disables numpy's automatic multiprocessing/multithreading for the current
+        python instance by setting environment variables.
+        This method must be called before numpy is first imported. If numpy was
+        already imported and the environment was not yet set accordingly, an
+        Exception will be raised.
+        """
+        desired_environment = {
+            'OMP_NUM_THREADS': '1',
+            'NUMEXPR_NUM_THREADS': '1',
+            'MKL_NUM_THREADS': '1',
+        }
+        if 'numpy' in sys.modules:
+            for key, val in desired_environment.items():
+                if key not in os.environ or os.environ[key] != val:
+                    raise Exception('Cannot disable numpy\'s automatic parallel computing, '
+                                    'because it was already imported. To fix this issue, '
+                                    'import Experimenter before numpy or run python in the '
+                                    'following environment: ' + str(desired_environment))
+        for key, val in desired_environment.items():
+            os.environ[key] = val
 
 
 def setup_logger(logger_name):
