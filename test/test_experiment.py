@@ -1,11 +1,10 @@
 """This module tests the different experiment classes."""
 import unittest
 from multiprocessing import Queue, Process
-from numpy import shape
-from numpy.random import RandomState
-from numpy import array
-from numpy.testing import assert_array_equal
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
+from numpy import shape, array
+from numpy.random import RandomState
+from numpy.testing import assert_array_equal
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.experiments.experimenter import log_listener, setup_logger
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -335,8 +334,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
 
         # Setup multiprocessing logging
         queue = Queue(-1)
-        listener = Process(target=log_listener,
-                                           args=(queue, setup_logger, logger_name,))
+        listener = Process(target=log_listener, args=(queue, setup_logger, logger_name,))
         listener.start()
 
         experiment = ExperimentReliabilityBasedCMAES(
