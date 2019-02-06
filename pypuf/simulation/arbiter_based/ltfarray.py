@@ -3,7 +3,7 @@ This module provides several different implementations of arbiter PUF simulation
 model is the core of each simulation class.
 """
 from numpy import sum as np_sum
-from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, tile, append
+from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, tile, append, int8
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -61,6 +61,14 @@ class LTFArray(Simulation):
         res = ph.transform_id(challenges, k)
         tools.assert_result_type(res)
         return res
+
+    @staticmethod
+    def transform_none(challenges, k):
+        """
+        Use this "transform" for pre-transformed challenges. It does nothing.
+        :return: exactly the input challenges object
+        """
+        return challenges
 
     @classmethod
     def transform_atf(cls, challenges, k):
@@ -560,9 +568,23 @@ class LTFArray(Simulation):
                  Array of responses for the N different challenges.
         """
         tools.assert_result_type(inputs)
+        assert self.n == inputs.shape[2], 'challenges should be length %i, but were %i' % (
+            self.n,
+            inputs.shape[2],
+        )
         if self.bias is not None:
-            responses = ph.eval(tools.append_last(inputs, 1), self.weight_array)
+            assert self.weight_array.shape == (self.k, self.n + 1), 'weight array should have shape %s, but had %s' % (
+                (self.k, self.n + 1),
+                self.weight_array.shape,
+            )
+            responses = ph.eval(tools.append_last(inputs, int8(1)), self.weight_array)
+            #inputs_and_bias = tools.append_last(inputs, 1)
+            #responses = transpose(array([dot(inputs_and_bias[:,l], self.weight_array[l]) for l in range(self.k)]))
         else:
+            assert self.weight_array.shape == (self.k, self.n), 'weight array should have shape %s, but had %s' % (
+                (self.k, self.n),
+                self.weight_array.shape,
+            )
             responses = ph.eval(inputs, self.weight_array)
         return responses
 

@@ -8,6 +8,7 @@ from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones,
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
+from random import sample
 
 RESULT_TYPE = 'int8'
 
@@ -81,12 +82,14 @@ def append_last(arr, item):
     :return: n dimensional array of type
              initial arr with appended element item
     """
+    assert arr.dtype == dtype(type(item)), 'The elements of arr and item must be of the same type, but the array has ' \
+                                           'type %s and the item has type %s.' % (arr.dtype, dtype(type(item)))
     dimension = list(shape(arr))
     assert len(dimension) >= 1, 'arr must have at least one dimension.'
     # the lowest level should contain one item
     dimension[-1] = 1
     # create an array white shape(array) where the lowest level contains only one item
-    item_arr = full(dimension, item)
+    item_arr = full(dimension, item, dtype=RESULT_TYPE)
     # the item should be appended at the lowest level
     axis = len(dimension) - 1
     return append(arr, item_arr, axis=axis)
@@ -206,13 +209,19 @@ def poly_mult_div(challenge, irreducible_polynomial, k):
     import polymath as pm
     assert_result_type(challenge)
     assert_result_type(irreducible_polynomial)
+    # TODO Change the type to int8 or uint8
+    challenge = challenge.astype('uint8')
+    irreducible_polynomial = irreducible_polynomial.astype('uint8')
+    # TODO Change the type to int8 or uint8
+    # challenge = challenge.astype('int64')
+    # irreducible_polynomial = irreducible_polynomial.astype('int64')
     c_original = challenge
     res = None
     for i in range(k):
         challenge = pm.polymul(challenge, c_original)
         challenge = pm.polymodpad(challenge, irreducible_polynomial)
         if i == 0:
-            res = array([challenge], dtype=RESULT_TYPE)
+            res = array([challenge], dtype='int8')
         else:
             res = vstack((res, challenge))
     res = res.astype(RESULT_TYPE)
