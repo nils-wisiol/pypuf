@@ -3,13 +3,14 @@ Module for Learning Arbiter PUFs with Logistic Regression.
 Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
 of the 17th ACM conference on Computer and communications security. ACM, 2010.
 """
-from numpy import sign, dot, exp, array, seterr, minimum, full, amin, amax, dtype
+from numpy import sign, dot, exp, minimum, dtype, sign, dot, exp, array, seterr, minimum, abs, full, amin, amax, ones, \
+    int8
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import compare_functions
+from pypuf.tools import compare_functions, append_last
 
 
 class LogisticRegression(Learner):
@@ -51,7 +52,7 @@ class LogisticRegression(Learner):
             :param eta_minus: float
             :param eta_plus: float
             """
-            self.n = n = model.n
+            self.n = n = model.n if model.bias is None else model.n + 1
             self.k = k = model.k
 
             self.eta_minus = eta_minus
@@ -107,7 +108,7 @@ class LogisticRegression(Learner):
             return self.step
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
-                 weights_sigma=1, weights_prng=RandomState(), logger=None):
+                 weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, bias=False):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -130,7 +131,7 @@ class LogisticRegression(Learner):
         self.weights_mu = weights_mu
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
-        self.iteration_limit = 10000
+        self.iteration_limit = iteration_limit
         self.convergence_decimals = 2
         self.sign_combined_model_responses = None
         self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
@@ -139,8 +140,15 @@ class LogisticRegression(Learner):
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
         self.converged = False
         self.logger = logger
+        self.bias = True
+        self.logger_callback = None
+        self.updater = None
 
-        assert self.n == len(self.training_set.challenges[0])
+
+        if self.bias:
+            s = self.transformed_challenges = append_last(self.transformed_challenges, int8(1))
+
+        #assert self.n == len(self.training_set.challenges[0]) why do we need this? It does not work with bias=True
 
     @property
     def training_set(self):
@@ -167,7 +175,7 @@ class LogisticRegression(Learner):
         """
 
         # compute model responses
-        model_responses = model.ltf_eval(self.transformed_challenges)
+        model_responses = model.ltf_eval(self.transformed_challenges[:,:,:-1])  # cut off that bias 1
         combined_model_responses = self.combiner(model_responses)
         self.sign_combined_model_responses = sign(combined_model_responses)
 
@@ -233,7 +241,7 @@ class LogisticRegression(Learner):
         ])
         return ret
 
-    def learn(self):
+    def learn(self, init_weight_array=None, eta_minus=0.5, eta_plus=1.2, refresh_updater=True):
         """
         Compute a model according to the given LTF Array parameters and training set.
         Note that this function can take long to return.
@@ -249,11 +257,12 @@ class LogisticRegression(Learner):
             if self.logger is None:
                 return
             self.logger.debug(
-                '%i\t%f\t%f\t%s' % (
+                '%i\t%f\t%f\t%s\t%s' % (
                     self.iteration_count,
                     distance,
-                    norm(updater.step),
-                    ','.join(map(str, model.weight_array.flatten()))
+                    norm(self.updater.step),
+                    0,#','.join(map(str, model.weight_array.flatten()))
+                    self.logger_callback(model) if self.logger_callback else '-'
                 )
             )
 
@@ -266,9 +275,14 @@ class LogisticRegression(Learner):
                                                  self.weights_prng),
             transform=self.transformation,
             combiner=self.combiner,
+            bias=0.0,
         )
 
-        updater = self.RPropModelUpdate(model)
+        if init_weight_array is not None:
+            model.weight_array = init_weight_array
+
+        if refresh_updater:
+            self.updater = self.RPropModelUpdate(model, eta_minus=eta_minus, eta_plus=eta_plus)
         converged = False
         distance = 1
         self.iteration_count = 0
@@ -278,10 +292,10 @@ class LogisticRegression(Learner):
 
             # compute gradient & update model
             gradient = self.gradient(model)
-            model.weight_array += updater.update(gradient)
+            model.weight_array += self.updater.update(gradient)
 
             # check convergence
-            converged = norm(updater.step) < 10**-self.convergence_decimals
+            converged = norm(self.updater.step) < 10**-self.convergence_decimals
 
             # log
             log_state()
