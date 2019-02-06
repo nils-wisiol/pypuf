@@ -355,7 +355,7 @@ class LTFArray(Simulation):
         :param transform_1: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                             The function transforms input challenges in order to increase resistance against attacks.
         :param puf_count: int
-                          Number of permutations to be used (must equal LTFArray.k)
+                          Number of LTFs that receive challenges transformed with transform_1.
         :param transform_2: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                             The function transforms input challenges in order to increase resistance against attacks.
         :return: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
