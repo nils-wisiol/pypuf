@@ -303,6 +303,51 @@ class LTFArray(Simulation):
         return result
 
     @classmethod
+    def transform_fixed_permutation(cls, challenges, k):
+        """
+        Permutes the challenge bits using hardcoded, fix point free permutations designed such that no
+        sub-challenge bit gets permuted equally for all other generated sub-challenges. Such permutations
+        are not easy to find, hence this function only supports a limited number of n and k.
+        After permutation, we apply the ATF transform to the sub-challenges (hence generating what in the
+        linear Arbiter PUF model is called feature vectors).
+        :param challenges: array of int8 shape(N,n)
+                           Array of challenges which should be evaluated by the simulation.
+        :param k: int
+                  Number of LTFArray PUFs
+        :return:  array of int8 shape(N,k,n)
+                  Array of transformed challenges.
+        """
+        FIXED_PERMUTATION_SEEDS = {
+            64: [2989, 2992, 3038, 3084, 3457, 6200, 7089, 18369, 21540, 44106],
+        }
+
+        # check parameter n
+        n = len(challenges[0])
+        assert n in FIXED_PERMUTATION_SEEDS.keys(), 'Fixed permutation currently not supported for n=%i, but only ' \
+                                                    'for n in %s' % (n, FIXED_PERMUTATION_SEEDS.keys())
+
+        # check parameter k
+        seeds = FIXED_PERMUTATION_SEEDS[n]
+        assert k <= len(seeds), 'Fixed permutation for n=%i currently only supports k<=%i.' % (n, len(seeds))
+
+        # generate permutations
+        permutations = [RandomState(seed).permutation(n) for seed in seeds]
+
+        # perform permutations
+        result = swapaxes(
+            array([
+                challenges[:, permutations[i]]
+                for i in range(k)
+            ], dtype=int8),
+            0,
+            1
+        )
+
+        result = cls.att(result)
+
+        return result
+
+    @classmethod
     def generate_stacked_transform(cls, transform_1, puf_count, transform_2):
         """
         Returns an input transformation that will transform the first puf_count challenges using transform_1,
