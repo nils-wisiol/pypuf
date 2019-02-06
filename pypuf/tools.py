@@ -113,6 +113,18 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
 
 
+def set_dist(instance, challenge_response_set):
+    """
+    Evaluates all challenges given in `challenge_response_set` and compares the responses given by `instance`
+    to the responses found in `challenge_response_set`.
+    :param instance: any simulation
+    :param challenge_response_set: a challenge response set
+    :return: Distance of the instance to the set, a relative value [0,1].
+    """
+    return (challenge_response_set.N - count_nonzero(instance.eval(challenge_response_set.challenges) ==
+                                                     challenge_response_set.responses)) / challenge_response_set.N
+
+
 def approx_fourier_coefficient(s, training_set):
     """
     Approximate the Fourier coefficient of a function on the subset `s`
