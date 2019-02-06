@@ -127,7 +127,7 @@ class Experimenter(object):
                     len(active_jobs),
                     len(self.experiments) - number_of_started_jobs,
                     progress,
-                    timedelta(seconds=(elapsed_time / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                    timedelta(seconds=(elapsed_time * (1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
                 )
             )
 
