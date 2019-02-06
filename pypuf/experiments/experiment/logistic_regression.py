@@ -3,14 +3,14 @@ This module provides an experiment class which learns an instance of LTFArray si
 regression learner.
 """
 from os import getpid
-from typing import NamedTuple
+from typing import NamedTuple, Union
 from uuid import UUID
 
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
 from pypuf import tools
 
 
@@ -27,7 +27,7 @@ class Parameters(NamedTuple):
     # LTF array definition
     n: int
     k: int
-    transformation: str
+    transformation: Union[str, CompoundTransformation]
     combiner: str
 
     # Learning setup
@@ -49,6 +49,7 @@ class Result(NamedTuple):
     measured_time: float
     accuracy: float
     model: list
+    transformation_name: str
 
 
 class ExperimentLogisticRegression(Experiment):
@@ -130,4 +131,5 @@ class ExperimentLogisticRegression(Experiment):
             measured_time=self.measured_time,
             accuracy=accuracy,
             model=self.model.weight_array.flatten() / norm(self.model.weight_array.flatten()),
+            transformation_name=self.instance.transform.__name__
         )

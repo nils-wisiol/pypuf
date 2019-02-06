@@ -344,13 +344,17 @@ class LTFArray(Simulation):
                   Array of transformed challenges.
         """
         FIXED_PERMUTATION_SEEDS = {
+            # For performance reasons, we do not call self._find_fixed_permutations here.
             64: [2989, 2992, 3038, 3084, 3457, 6200, 7089, 18369, 21540, 44106],
+            128: [2989, 3006, 3009, 3031, 3437, 4174, 6045, 7906, 11554, 29544],
         }
 
         # check parameter n
         n = len(challenges[0])
         assert n in FIXED_PERMUTATION_SEEDS.keys(), 'Fixed permutation currently not supported for n=%i, but only ' \
-                                                    'for n in %s' % (n, FIXED_PERMUTATION_SEEDS.keys())
+                                                    'for n in %s. To add support, please use ' \
+                                                    'LTFArray._find_fixed_permutations(n, k).' % \
+                                                    (n, FIXED_PERMUTATION_SEEDS.keys())
 
         # check parameter k
         seeds = FIXED_PERMUTATION_SEEDS[n]
@@ -372,6 +376,48 @@ class LTFArray(Simulation):
         result = cls.att(result)
 
         return result
+
+    @classmethod
+    def _find_fixed_permutations(cls, n, k):
+        """
+        Finds permutations suitable to use in LTFArray.transform_fixed_permutation.
+
+        Permutations are chosen such that no permutation has a fix point and no
+        two permutations share at least one point. (See `permutation_okay` below.)
+
+        Note that the run time of this method increases drastically with k. On an
+        Intel i7, n=64, k=10 takes a couple of seconds.
+
+        :return: list of seeds for `RandomState`. Obtain the permutation with
+          `RandomState(seed).permutation(n)`.
+        """
+        def permutation_okay(new_p, ps):
+            # 1. check that p has no fix point
+            if any([i == new_p[i] for i in range(len(new_p))]):
+                return False
+
+            # 2. check that it does not share a point if any old_p in ps:
+            if any([
+                    any([old_p[i] == new_p[i] for i in range(len(new_p))])
+                    for old_p in ps
+            ]):
+                return False
+
+            return True
+
+        seed = 0xbad
+        permutation_seeds = []
+        permutations = []
+
+        while len(permutations) < k:
+            prng = RandomState(seed)
+            p = prng.permutation(n)
+            if permutation_okay(p, permutations):
+                permutation_seeds.append(seed)
+                permutations.append(p)
+            seed += 1
+
+        return permutation_seeds
 
     @classmethod
     def generate_stacked_transform(cls, transform_1, puf_count, transform_2):
@@ -842,7 +888,7 @@ class SimulationMajorityLTFArray(LTFArray):
         :return: array of int with shape(N,k,n)
                  Majority voted responses for each of the k PUFs.
         """
-        # Evaluate the sub challeneges individually
+        # Evaluate the sub challenges individually
         (N, k, _) = sub_challenges.shape
         evaluated_sub_challenges = super().ltf_eval(sub_challenges)
 

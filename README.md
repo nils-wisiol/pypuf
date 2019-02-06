@@ -14,8 +14,10 @@ Some operations base on an additional module that has been written in C (see ins
 
 ## Studies and Results
 
-pypuf has been used in the following projects:
+pypuf is used in the following projects:
 
+- 2019, Wisiol et al.: [Breaking the Lightweight Secure PUF: Understanding the Relation of Input Transformations and Machine Learning Resistance](https://eprint.iacr.org/2019/799):
+  An advanced machine learning attack on the Lightweight Secure PUF. [Details](pypuf/studies/breaking_lightweight_secure/README.md)
 - 2019, Wisiol et al.: [Why Attackers Lose: Design and Security Analysis of Arbitrarily Large XOR Arbiter PUFs](https://doi.org/10.1007/s13389-019-00204-8):
   Simulation of the stabiltiy of Majority Vote XOR Arbiter PUFs. [Details](pypuf/studies/why_attackers_lose/README.md)
 
