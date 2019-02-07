@@ -5,7 +5,8 @@ order to be executed.
 import abc
 import logging
 import logging.handlers
-from datetime import datetime
+import sys
+from time import time, clock
 
 
 class Experiment(object):
@@ -66,9 +67,15 @@ class Experiment(object):
         file_handler.setLevel(logging.DEBUG)
         self.progress_logger.addHandler(file_handler)
         self.prepare()
-        start_time = datetime.now()
+
+        if sys.platform == 'win32':
+            timer = clock
+        else:
+            timer = time
+
+        start_time = timer()
         self.run()
-        self.measured_time = (datetime.now() - start_time).total_seconds()
+        self.measured_time = timer() - start_time
         self.analyze()
 
 
