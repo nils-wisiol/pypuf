@@ -44,7 +44,7 @@ class Experimenter(object):
 
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
-        self.semaphore = multiprocessing.BoundedSemaphore(self.cpu_limit)
+        self.semaphore = None
 
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
@@ -54,6 +54,7 @@ class Experimenter(object):
         """
         Runs all experiments.
         """
+        self.semaphore = multiprocessing.BoundedSemaphore(min(self.cpu_limit, len(self.experiments)))
 
         # Setup multiprocessing logging
         queue = multiprocessing.Queue(-1)
@@ -65,6 +66,36 @@ class Experimenter(object):
         active_jobs = []
 
         start_time = datetime.now()
+
+        def output_status(number_of_started_jobs):
+            progress = (number_of_started_jobs - len(active_jobs)) / len(self.experiments)
+            elapsed_time = datetime.now() - start_time
+            sys.stdout.write(
+                "%s %i jobs total, %i finished, %i running, %i queued, progress %.2f, remaining time: %s\n" %
+                (
+                    datetime.now().strftime('%c'),
+                    len(self.experiments),
+                    number_of_started_jobs - len(active_jobs),
+                    len(active_jobs),
+                    len(self.experiments) - number_of_started_jobs,
+                    progress,
+                    timedelta(seconds=(elapsed_time * (1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                )
+            )
+
+        def list_active_jobs():
+            """
+            update list of active jobs
+            return: [multiprocessing.Process] list of active jobs
+            """
+            still_active_jobs = []
+            from time import sleep
+            sleep(.1)  # Wait for jobs to exit after they release. Ugly but good enough for the status output. 🙈
+            for j in active_jobs:
+                j.join(0)
+                if j.exitcode is None:
+                    still_active_jobs.append(j)
+            return still_active_jobs
 
         for (i, exp) in enumerate(self.experiments):
 
@@ -97,41 +128,23 @@ class Experimenter(object):
             # wait for a free CPU
             self.semaphore.acquire()
 
-            def list_active_jobs():
-                """
-                update list of active jobs
-                return: [multiprocessing.Process] list of active jobs
-                """
-                still_active_jobs = []
-                for j in active_jobs:
-                    j.join(0)
-                    if j.exitcode is None:
-                        still_active_jobs.append(j)
-                return still_active_jobs
-
             # start experiment
             job.start()
             active_jobs = list_active_jobs()
             active_jobs.append(job)
 
             # output status
-            number_of_started_jobs = i + 1  # including finished ones!
-            progress = (number_of_started_jobs - len(active_jobs)) / len(self.experiments)
-            elapsed_time = datetime.now() - start_time
-            sys.stdout.write(
-                "%s %i jobs total, %i finished, %i running, %i queued, progress %.2f, remaining time: %s\n" %
-                (
-                    datetime.now().strftime('%c'),
-                    len(self.experiments),
-                    number_of_started_jobs - len(active_jobs),
-                    len(active_jobs),
-                    len(self.experiments) - number_of_started_jobs,
-                    progress,
-                    timedelta(seconds=(elapsed_time * (1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
-                )
-            )
+            output_status(i + 1)
 
         # wait for all processes to be finished
+        still_running = min(len(active_jobs), self.cpu_limit, len(self.experiments))
+        while still_running > 0:
+            self.semaphore.acquire()
+            still_running -= 1
+            active_jobs = list_active_jobs()
+            output_status(len(self.experiments))
+
+        # join remaining processes, at this point this will be without wait
         for job in active_jobs:
             job.join()
 
