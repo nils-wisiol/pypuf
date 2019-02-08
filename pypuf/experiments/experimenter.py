@@ -102,6 +102,8 @@ class Experimenter(object):
                 output_status()
 
             def update_status_error(exception):
+                print('Experiment exception: ', exception, file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
                 raise exception
 
             # experiment execution
