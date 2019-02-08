@@ -18,6 +18,8 @@ experimenter.run()
 """
 import multiprocessing
 import logging
+import pickle
+import queue
 import sys
 import traceback
 import os
@@ -29,7 +31,7 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, log_name, experiments, cpu_limit=2**16, auto_multiprocessing=False):
+    def __init__(self, log_name, experiments, cpu_limit=2**16, auto_multiprocessing=False, update_callback=None):
         """
         :param experiments: A list of pypuf.experiments.experiment.base.Experiment
         :param log_name: A unique file path where to output should be logged.
@@ -46,9 +48,15 @@ class Experimenter(object):
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
         self.semaphore = None
 
+        # experimental results
+        self.results = []
+
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
             self.disable_auto_multiprocessing()
+
+        # Callback for new results
+        self.update_callback = update_callback
 
     def run(self):
         """
@@ -57,13 +65,17 @@ class Experimenter(object):
         self.semaphore = multiprocessing.BoundedSemaphore(min(self.cpu_limit, len(self.experiments)))
 
         # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
+        logging_queue = multiprocessing.Queue(-1)
         listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, self.logger_name,))
+                                           args=(logging_queue, setup_logger, self.logger_name,))
         listener.start()
 
         # list of active jobs
         active_jobs = []
+
+        # list of queues
+        result_queues = [None] * len(self.experiments)
+        self.results = [None] * len(self.experiments)
 
         start_time = datetime.now()
 
@@ -97,32 +109,54 @@ class Experimenter(object):
                     still_active_jobs.append(j)
             return still_active_jobs
 
+        def update_results():
+            updated = False
+            for (i, result_queue) in enumerate(result_queues):
+                if result_queue and not self.results[i]:
+                    try:
+                        self.results[i] = pickle.loads(result_queue.get_nowait())
+                        updated = True
+                        result_queue.close()
+
+                    except queue.Empty:
+                        pass
+            if updated and self.update_callback:
+                self.update_callback()
+            return updated
+
         for (i, exp) in enumerate(self.experiments):
 
             # define experiment process
-            def run_experiment(experiment, queue, semaphore, logger_name):
+            def run_experiment(experiment, logging_queue, semaphore, logger_name, result_queue):
                 """
                 This method is responsible to start the experiment and release the semaphore which coordinates the
                 number of parallel running processes.
                 :param experiment: pypuf.experiments.experiment.base.Experiment
                                    A implementation of the base experiment class which should be executed
-                :param queue: multiprocessing.queue
-                              This is used to coordinate the processes in order to obtain results.
+                :param logging_queue: multiprocessing.queue
+                              This is used to coordinate the processes in order to obtain logs.
                 :param semaphore: multiprocessing.BoundedSemaphore(self.cpu_limit)
                                   A semaphore to limit the number of concurrent running experiments
                 :param logger_name: String
                                     Path to or name to the log file of the experiment
+                :param result_queue: multiprocessing.queue
+                                Used to obtain the result object.
                 """
+                ex = None
                 try:
-                    experiment.execute(queue, logger_name)  # run the actual experiment
-                    semaphore.release()  # release CPU
-                except Exception as experiment:  # pylint: disable=W
-                    semaphore.release()  # release CPU
-                    raise experiment
+                    experiment.execute(logging_queue, logger_name, result_queue)  # run the actual experiment
+                except Exception as ex_raised:  # pylint: disable=W
+                    ex = ex_raised
+                semaphore.release()  # release CPU
+                result_queue.close()
+                if ex:
+                    raise ex
+
+            result_queues[i] = multiprocessing.Queue()
 
             job = multiprocessing.Process(
                 target=run_experiment,
-                args=(exp, queue, self.semaphore, self.logger_name)
+                args=(exp, logging_queue, self.semaphore, self.logger_name, result_queues[i])
             )
 
             # wait for a free CPU
@@ -133,8 +167,9 @@ class Experimenter(object):
             active_jobs = list_active_jobs()
             active_jobs.append(job)
 
-            # output status
+            # output status and update results
             output_status(i + 1)
+            update_results()
 
         # wait for all processes to be finished
         still_running = min(len(active_jobs), self.cpu_limit, len(self.experiments))
@@ -143,13 +178,14 @@ class Experimenter(object):
             still_running -= 1
             active_jobs = list_active_jobs()
             output_status(len(self.experiments))
+            update_results()
 
         # join remaining processes, at this point this will be without wait
         for job in active_jobs:
             job.join()
 
         # Quit logging process
-        queue.put_nowait(None)
+        logging_queue.put_nowait(None)
         listener.join()
 
     @staticmethod
