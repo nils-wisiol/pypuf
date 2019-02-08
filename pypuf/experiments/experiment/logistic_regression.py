@@ -5,6 +5,7 @@ regression learner.
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
+from pypuf.experiments.result import ExperimentResult
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
@@ -74,6 +75,7 @@ class ExperimentLogisticRegression(Experiment):
         self.instance = None
         self.learner = None
         self.model = None
+        self.accuracy = None
 
     def run(self):
         """
@@ -102,6 +104,27 @@ class ExperimentLogisticRegression(Experiment):
         Analyzes the learned result.
         """
         assert self.model is not None
+        self.accuracy = 1.0 - tools.approx_dist(
+                self.instance,
+                self.model,
+                min(10000, 2 ** self.n),
+                random_instance=self.distance_prng,
+            )
+
+        result = ExperimentResult()
+        result.experiment = self.__class__.__name__
+        result.seed_instance = self.seed_instance
+        result.seed_model = self.seed_model
+        result.restart_count = 0
+        result.n = self.n
+        result.k = self.k
+        result.N = self.N
+        result.transformation = self.transformation.__name__
+        result.combiner = self.combiner.__name__
+        result.iteration_count = self.learner.iteration_count
+        result.measured_time = self.measured_time
+        result.accuracy = self.accuracy
+        result.model = self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())
 
         self.result_logger.info(
             # seed_instance  seed_model i      n      k      N      trans  comb   iter   time   accuracy  model values
@@ -116,13 +139,10 @@ class ExperimentLogisticRegression(Experiment):
             self.combiner.__name__,
             self.learner.iteration_count,
             self.measured_time,
-            1.0 - tools.approx_dist(
-                self.instance,
-                self.model,
-                min(10000, 2 ** self.n),
-                random_instance=self.distance_prng,
-            ),
+            self.accuracy,
             ','.join(
                 ['%.12f' % x for x in self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())]
             ),
         )
+
+        return result

@@ -5,6 +5,7 @@ order to be executed.
 import abc
 import logging
 import logging.handlers
+import pickle
 import sys
 from time import time, clock
 
@@ -52,17 +53,17 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-    def execute(self, queue, logger_name):
+    def execute(self, logging_queue, logger_name, result_queue):
         """
         Executes the experiment at hand by
         (1) calling run() and measuring the run time of run() and
         (2) calling analyze().
-        :param queue: multiprocessing.queue
+        :param logging_queue: multiprocessing.queue
                       Multiprocessing safe queue which is used to serialize the logging
         :param logger_name: string
                         Name of the experimenter result logger
         """
-        self.result_logger = setup_result_logger(queue, logger_name)
+        self.result_logger = setup_result_logger(logging_queue, logger_name)
         file_handler = logging.FileHandler('logs/%s.log' % self.log_name, mode='w')
         file_handler.setLevel(logging.DEBUG)
         self.progress_logger.addHandler(file_handler)
@@ -76,7 +77,8 @@ class Experiment(object):
         start_time = timer()
         self.run()
         self.measured_time = timer() - start_time
-        self.analyze()
+        result = self.analyze()
+        result_queue.put(pickle.dumps(result))
 
 
 def setup_result_logger(queue, logger_name):
