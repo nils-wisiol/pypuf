@@ -5,7 +5,6 @@ order to be executed.
 import abc
 import logging
 import logging.handlers
-import pickle
 import sys
 from time import time, clock
 
@@ -53,7 +52,7 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-    def execute(self, logging_queue, logger_name, result_queue):
+    def execute(self, logging_queue, logger_name):
         """
         Executes the experiment at hand by
         (1) calling run() and measuring the run time of run() and
@@ -77,8 +76,7 @@ class Experiment(object):
         start_time = timer()
         self.run()
         self.measured_time = timer() - start_time
-        result = self.analyze()
-        result_queue.put(pickle.dumps(result))
+        return self.analyze()
 
 
 def setup_result_logger(queue, logger_name):

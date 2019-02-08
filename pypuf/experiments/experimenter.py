@@ -18,8 +18,6 @@ experimenter.run()
 """
 import multiprocessing
 import logging
-import pickle
-import queue
 import sys
 import traceback
 import os
@@ -56,137 +54,71 @@ class Experimenter(object):
             self.disable_auto_multiprocessing()
 
         # Callback for new results
-        self.update_callback = update_callback
+        self.update_callback = update_callback if update_callback else lambda *args: None
+
+        # Counters
+        self.jobs_finished = 0
+        self.jobs_total = len(self.experiments)
 
     def run(self):
         """
-        Runs all experiments.
+        Runs all experiments. Blocks until all experiment are finished.
         """
-        self.semaphore = multiprocessing.BoundedSemaphore(min(self.cpu_limit, len(self.experiments)))
 
         # Setup multiprocessing logging
-        logging_queue = multiprocessing.Queue(-1)
+        logging_queue = multiprocessing.Manager().Queue(-1)
         listener = multiprocessing.Process(target=log_listener,
                                            args=(logging_queue, setup_logger, self.logger_name,))
         listener.start()
 
-        # list of active jobs
-        active_jobs = []
-
-        # list of queues
-        result_queues = [None] * len(self.experiments)
-        self.results = [None] * len(self.experiments)
-
+        # setup process pool
+        self.jobs_total = len(self.experiments)
         start_time = datetime.now()
+        print("Using up to %i CPUs with numpy multi-threading disabled" % self.cpu_limit)
+        with multiprocessing.Pool(self.cpu_limit, maxtasksperchild=1) as pool:
 
-        def output_status(number_of_started_jobs):
-            progress = (number_of_started_jobs - len(active_jobs)) / len(self.experiments)
-            elapsed_time = datetime.now() - start_time
-            sys.stdout.write(
-                "%s %i jobs total, %i finished, %i running, %i queued, progress %.2f, remaining time: %s\n" %
-                (
-                    datetime.now().strftime('%c'),
-                    len(self.experiments),
-                    number_of_started_jobs - len(active_jobs),
-                    len(active_jobs),
-                    len(self.experiments) - number_of_started_jobs,
-                    progress,
-                    timedelta(seconds=(elapsed_time * (1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+            # print status function
+            def output_status():
+                progress = self.jobs_finished / self.jobs_total
+                elapsed_time = datetime.now() - start_time
+                sys.stdout.write(
+                    "%s: %i jobs total, %i finished, %i queued, %.2f, ~remaining: %s\n" %
+                    (
+                        datetime.now().strftime('%c'),
+                        self.jobs_total,
+                        self.jobs_finished,
+                        self.jobs_total - self.jobs_finished,
+                        progress,
+                        timedelta(seconds=(elapsed_time * (
+                                    1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                    )
                 )
-            )
-
-        def list_active_jobs():
-            """
-            update list of active jobs
-            return: [multiprocessing.Process] list of active jobs
-            """
-            still_active_jobs = []
-            from time import sleep
-            sleep(.1)  # Wait for jobs to exit after they release. Ugly but good enough for the status output. 🙈
-            for j in active_jobs:
-                j.join(0)
-                if j.exitcode is None:
-                    still_active_jobs.append(j)
-            return still_active_jobs
-
-        def update_results():
-            updated = False
-            for (i, result_queue) in enumerate(result_queues):
-                if result_queue and not self.results[i]:
-                    try:
-                        self.results[i] = pickle.loads(result_queue.get_nowait())
-                        updated = True
-                        result_queue.close()
-
-                    except queue.Empty:
-                        pass
-            if updated and self.update_callback:
                 self.update_callback()
-            return updated
 
-        for (i, exp) in enumerate(self.experiments):
+            # define callbacks, they are run within the main process, but in separate threads
+            def update_status(result):
+                self.jobs_finished += 1
+                self.results.append(result)
+                output_status()
 
-            # define experiment process
-            def run_experiment(experiment, logging_queue, semaphore, logger_name, result_queue):
-                """
-                This method is responsible to start the experiment and release the semaphore which coordinates the
-                number of parallel running processes.
-                :param experiment: pypuf.experiments.experiment.base.Experiment
-                                   A implementation of the base experiment class which should be executed
-                :param logging_queue: multiprocessing.queue
-                              This is used to coordinate the processes in order to obtain logs.
-                :param semaphore: multiprocessing.BoundedSemaphore(self.cpu_limit)
-                                  A semaphore to limit the number of concurrent running experiments
-                :param logger_name: String
-                                    Path to or name to the log file of the experiment
-                :param result_queue: multiprocessing.queue
-                                Used to obtain the result object.
-                """
-                ex = None
-                try:
-                    experiment.execute(logging_queue, logger_name, result_queue)  # run the actual experiment
-                except Exception as ex_raised:  # pylint: disable=W
-                    ex = ex_raised
-                semaphore.release()  # release CPU
-                result_queue.close()
-                if ex:
-                    raise ex
+            def update_status_error(exception):
+                raise exception
 
-            result_queues[i] = multiprocessing.Queue()
+            # experiment execution
+            for i, experiment in enumerate(self.experiments):
+                pool.apply_async(
+                    experiment.execute,
+                    (logging_queue, self.logger_name),
+                    callback=update_status,
+                    error_callback=update_status_error,
+                )
 
-            job = multiprocessing.Process(
-                target=run_experiment,
-                args=(exp, logging_queue, self.semaphore, self.logger_name, result_queues[i])
-            )
+            # block until we're ready
+            pool.close()
+            pool.join()
 
-            # wait for a free CPU
-            self.semaphore.acquire()
-
-            # start experiment
-            job.start()
-            active_jobs = list_active_jobs()
-            active_jobs.append(job)
-
-            # output status and update results
-            output_status(i + 1)
-            update_results()
-
-        # wait for all processes to be finished
-        still_running = min(len(active_jobs), self.cpu_limit, len(self.experiments))
-        while still_running > 0:
-            self.semaphore.acquire()
-            still_running -= 1
-            active_jobs = list_active_jobs()
-            output_status(len(self.experiments))
-            update_results()
-
-        # join remaining processes, at this point this will be without wait
-        for job in active_jobs:
-            job.join()
-
-        # Quit logging process
-        logging_queue.put_nowait(None)
-        listener.join()
+            # quit logger
+            logging_queue.put_nowait(None)
 
     @staticmethod
     def disable_auto_multiprocessing():
