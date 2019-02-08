@@ -10,6 +10,22 @@ from pypuf.simulation.base import Simulation
 import pypuf_helper as ph
 
 
+class CompoundTransformation():
+    def __init__(self, generator, args):
+        self.generator = generator
+        self.args = args
+        self.__name__ = generator(*args).__name__
+        self._transform = None
+
+    def build(self):
+        return self.generator(*self.args)
+
+    def __call__(self, *args, **kwargs):
+        if not self._transform:
+            self._transform = self.build()
+        return self._transform(*args, **kwargs)
+
+
 class LTFArray(Simulation):
     """
     Class that simulates k LTFs with n bits and a constant term each
@@ -566,7 +582,7 @@ class LTFArray(Simulation):
         """
         (self.k, self.n) = shape(weight_array)
         self.weight_array = weight_array
-        self.transform = transform
+        self.transform = transform if type(transform) != CompoundTransformation else transform.build()
         self.combiner = combiner
         self.bias = bias
         # If it is a float append the same value to all PUFs
