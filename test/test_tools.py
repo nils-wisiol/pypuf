@@ -66,8 +66,8 @@ class TestAppendLast(unittest.TestCase):
 
         challenge_seed = 0xAB17D
 
-        training_set_1 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
-        training_set_2 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+        training_set_1 = TrainingSet.random_set(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+        training_set_2 = TrainingSet.random_set(instance=instance, N=N, random_instance=RandomState(challenge_seed))
 
         self.assertTrue(
             array_equal(training_set_1.challenges, training_set_2.challenges),

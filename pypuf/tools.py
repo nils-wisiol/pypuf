@@ -257,8 +257,28 @@ class TrainingSet():
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState()):
+    def __init__(self, instance, challenges, responses, N):
         """
+        :param instance: pypuf.simulation.base.Simulation
+                         Instance which is used to generate responses for random challenges.
+        :param challenge: array of int8
+                          Challenge vector in -1,1 notation
+        :param responses: array of int8
+                          Response vector in -1,1 notation
+        :param N: int
+                  Number of challenges
+        """
+        self.instance = instance
+        self.challenges = challenges
+        self.responses = responses
+        self.N = N
+
+    @classmethod
+    def random_set(obj, instance, N, random_instance=RandomState()):
+        """
+        This method constructs a TrainingSet from random challenge-response pairs.
+        :param obj: TrainingSet
+                    Object to construct
         :param instance: pypuf.simulation.base.Simulation
                          Instance which is used to generate responses for random challenges.
         :param N: int
@@ -266,7 +286,42 @@ class TrainingSet():
         :param random_instance: numpy.random.RandomState
                                 PRNG which is used to draft challenges.
         """
-        self.instance = instance
-        self.challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        self.responses = instance.eval(self.challenges)
-        self.N = N
+        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
+        responses = instance.eval(challenges)
+        return obj(instance, challenges, responses, N)
+
+    @classmethod
+    def from_file(obj, instance, N, filename):
+        """
+        This method constructs a TrainingSet from challenge-response pairs in a file.
+        The format is one pair per line, first all inputs separated by spaces
+        followed by the output value.
+        :param obj: TrainingSet
+                    Object to construct
+        :param instance: pypuf.simulation.base.Simulation
+                         Instance which is used to generate responses for random challenges.
+        :param N: int
+                  Number of desired challenges
+        :param filename: string
+                  Path of the file to read the challenge-response pairs from
+        """
+        with open(filename) as f:
+            lines = f.readlines()
+
+        assert len(lines) >= N, 'File contains too few challenges ({} instead of {})'.format(len(lines), N)
+
+        challenges, responses = [], []
+        for ln, line in enumerate(lines, 1):
+            vals = line.split()
+
+            assert len(vals) == instance.n + 1, 'Lines must contain {} values (line {} has {} values)'.format(instance.n + 1, ln, len(vals))
+
+            challenges.append(vals[:instance.n])
+            responses.append(vals[instance.n])
+
+        return obj(
+            instance,
+            array(challenges).astype(RESULT_TYPE),
+            array(responses).astype(RESULT_TYPE),
+            N
+        )

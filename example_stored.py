@@ -11,30 +11,31 @@ def main():
     Run an example how to use pypuf.
     Developers Notice: Changes here need to be mirrored to README!
     """
+    n, k, N, filename = 128, 1, 4, 'test/data/stub-crps.txt'
 
     # create a simulation with random (Gaussian) weights
     # for 64-bit 2-XOR
     instance = LTFArray(
-        weight_array=LTFArray.normal_weights(n=64, k=2),
+        weight_array=LTFArray.normal_weights(n=n, k=k),
         transform=LTFArray.transform_atf,
         combiner=LTFArray.combiner_xor,
     )
 
     # create the learner
     lr_learner = LogisticRegression(
-        t_set=tools.TrainingSet.random_set(instance=instance, N=12000),
-        n=64,
-        k=2,
+        t_set=tools.TrainingSet.from_file(instance, N, filename),
+        n=n,
+        k=k,
         transformation=LTFArray.transform_atf,
         combiner=LTFArray.combiner_xor,
     )
 
     # learn and test the model
     model = lr_learner.learn()
-    accuracy = 1 - tools.approx_dist(instance, model, 10000)
+    accuracy = 1 - tools.approx_dist(instance, model, 2000)
 
     # output the result
-    print('Learned a 64bit 2-xor XOR Arbiter PUF from 12000 CRPs with accuracy %f' % accuracy)
+    print('Learned a {}-bit {}-xor XOR Arbiter PUF from {} CRPs with accuracy {}'.format(n, k, N, accuracy))
 
 
 if __name__ == '__main__':

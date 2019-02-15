@@ -87,7 +87,7 @@ class ExperimentLogisticRegression(Experiment):
             combiner=self.combiner,
         )
         self.learner = LogisticRegression(
-            tools.TrainingSet(instance=self.instance, N=self.N, random_instance=self.challenge_prng),
+            tools.TrainingSet.random_set(instance=self.instance, N=self.N, random_instance=self.challenge_prng),
             self.n,
             self.k,
             transformation=self.transformation,
