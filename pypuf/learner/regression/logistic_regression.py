@@ -109,7 +109,7 @@ class LogisticRegression(Learner):
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
-                 convergance_decimals=2):
+                 convergance_decimals=2, shuffle=False):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -145,6 +145,7 @@ class LogisticRegression(Learner):
         self.logger_callback = None
         self.updater = None
         self.minibatch_size = minibatch_size or self.training_set.N
+        self.shuffle = shuffle
 
 
         if self.bias:
@@ -289,11 +290,21 @@ class LogisticRegression(Learner):
         self.iteration_count = 0
         log_state()
         number_of_batches = (self.training_set.N + 1) // self.minibatch_size
-        transformed_challenges_batches = array_split(self.transformed_challenges, number_of_batches)
-        response_batches = array_split(self.training_set.responses, number_of_batches)
+        transformed_challenges_batches = []
+        response_batches = []
+        if not self.shuffle:
+            transformed_challenges_batches = array_split(self.transformed_challenges, number_of_batches)
+            response_batches = array_split(self.training_set.responses, number_of_batches)
         while not converged and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
             self.epoch_count += 1
+
+            if self.shuffle:
+                if self.epoch_count > 1:
+                    RandomState(seed=self.epoch_count).shuffle(self.transformed_challenges)
+                    RandomState(seed=self.epoch_count).shuffle(self.training_set.responses)
+                transformed_challenges_batches = array_split(self.transformed_challenges, number_of_batches)
+                response_batches = array_split(self.training_set.responses, number_of_batches)
 
             # compute gradient & update model
             for batch in range(number_of_batches):
