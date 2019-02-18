@@ -18,7 +18,7 @@ class ExperimentLogisticRegression(Experiment):
 
     def __init__(
             self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_challenge=0x5A551,
-            seed_chl_distance=0xB055,
+            seed_chl_distance=0xB055, minibatch_size=None, convergance_decimals=None,
     ):
         """
         :param log_name: string
@@ -76,6 +76,8 @@ class ExperimentLogisticRegression(Experiment):
         self.learner = None
         self.model = None
         self.accuracy = None
+        self.minibatch_size = minibatch_size
+        self.convergance_decimals = convergance_decimals or 2
 
     def run(self):
         """
@@ -96,6 +98,8 @@ class ExperimentLogisticRegression(Experiment):
             combiner=self.combiner,
             weights_prng=self.model_prng,
             logger=self.progress_logger,
+            minibatch_size=self.minibatch_size,
+            convergance_decimals=self.convergance_decimals
         )
         self.model = self.learner.learn()
 
@@ -122,22 +126,28 @@ class ExperimentLogisticRegression(Experiment):
         result.transformation = self.transformation.__name__
         result.combiner = self.combiner.__name__
         result.iteration_count = self.learner.iteration_count
+        result.epoch_count = self.learner.epoch_count
+        result.gradient_step_count = self.learner.gradient_step_count
         result.measured_time = self.measured_time
         result.accuracy = self.accuracy
         result.model = self.model.weight_array.flatten() / norm(self.model.weight_array.flatten())
+        result.minibatch_size = self.minibatch_size
+        result.convergance_decimals = self.convergance_decimals
 
         self.result_logger.info(
-            # seed_instance  seed_model i      n      k      N      trans  comb   iter   time   accuracy  model values
-            '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%f\t' '%f\t'    '%s',
+            # seed_instance  seed_model minibatch n   k      N      trans  comb   epoch  grad  converg time   accuracy  model
+            '0x%x\t'        '0x%x\t'   '%s\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%i\t' '%f\t'  '%f\t' '%f\t'    '%s',
             self.seed_instance,
             self.seed_model,
-            0,  # restart count, kept for compatibility to old log files
+            str(self.minibatch_size) or '-',
             self.n,
             self.k,
             self.N,
             self.transformation.__name__,
             self.combiner.__name__,
-            self.learner.iteration_count,
+            self.learner.epoch_count,
+            self.learner.gradient_step_count,
+            self.convergance_decimals,
             self.measured_time,
             self.accuracy,
             ','.join(

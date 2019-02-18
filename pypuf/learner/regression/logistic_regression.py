@@ -4,7 +4,7 @@ Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on phys
 of the 17th ACM conference on Computer and communications security. ACM, 2010.
 """
 from numpy import sign, dot, exp, minimum, dtype, sign, dot, exp, array, seterr, minimum, abs, full, amin, amax, ones, \
-    int8
+    int8, array_split
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
@@ -108,7 +108,8 @@ class LogisticRegression(Learner):
             return self.step
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
-                 weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, bias=False):
+                 weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
+                 convergance_decimals=2):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -125,6 +126,8 @@ class LogisticRegression(Learner):
                        Logger which is used to log detailed information of learn iterations.
         """
         self.iteration_count = 0
+        self.epoch_count = 0
+        self.gradient_step_count = 0
         self.training_set = t_set
         self.n = n
         self.k = k
@@ -132,9 +135,7 @@ class LogisticRegression(Learner):
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
         self.iteration_limit = iteration_limit
-        self.convergence_decimals = 2
-        self.sign_combined_model_responses = None
-        self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
+        self.convergence_decimals = convergance_decimals
         self.transformation = transformation
         self.combiner = combiner
         self.transformed_challenges = self.transformation(self.training_set.challenges, k)
@@ -143,6 +144,7 @@ class LogisticRegression(Learner):
         self.bias = True
         self.logger_callback = None
         self.updater = None
+        self.minibatch_size = minibatch_size or self.training_set.N
 
 
         if self.bias:
@@ -167,7 +169,7 @@ class LogisticRegression(Learner):
         # pylint: disable-msg=W0201
         self.__training_set = val
 
-    def gradient(self, model):
+    def gradient(self, model, transformed_challenges_batch, responses_batch):
         """
         Compute the gradient of the given model.
         :param model: pypuf.simulation.arbiter_based.LTFArray
@@ -175,9 +177,8 @@ class LogisticRegression(Learner):
         """
 
         # compute model responses
-        model_responses = model.ltf_eval(self.transformed_challenges[:,:,:-1])  # cut off that bias 1
+        model_responses = model.ltf_eval(transformed_challenges_batch[:,:,:-1])  # cut off that bias 1
         combined_model_responses = self.combiner(model_responses)
-        self.sign_combined_model_responses = sign(combined_model_responses)
 
         # cap the absolute value of this to avoid overflow errors
         max_response_abs_value = 50
@@ -188,7 +189,7 @@ class LogisticRegression(Learner):
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
-        self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
+        sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - responses_batch)
 
         # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
@@ -234,8 +235,8 @@ class LogisticRegression(Learner):
         ret = array([
             # sum over all challenges to the l-th Arbiter chain
             dot(
-                self.sigmoid_derivative * model_gradient(l),  # gradient
-                self.transformed_challenges[:, l]  # all challenges to the l-th Arbiter chain
+                sigmoid_derivative * model_gradient(l),  # gradient
+                transformed_challenges_batch[:, l]  # all challenges to the l-th Arbiter chain
             )
             for l in range(self.k)
         ])
@@ -287,18 +288,26 @@ class LogisticRegression(Learner):
         distance = 1
         self.iteration_count = 0
         log_state()
+        number_of_batches = (self.training_set.N + 1) // self.minibatch_size
+        transformed_challenges_batches = array_split(self.transformed_challenges, number_of_batches)
+        response_batches = array_split(self.training_set.responses, number_of_batches)
         while not converged and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
+            self.epoch_count += 1
 
             # compute gradient & update model
-            gradient = self.gradient(model)
-            model.weight_array += self.updater.update(gradient)
+            for batch in range(number_of_batches):
+                gradient = self.gradient(model, transformed_challenges_batches[batch], response_batches[batch])
+                model.weight_array += self.updater.update(gradient)
+                self.gradient_step_count += 1
 
-            # check convergence
-            converged = norm(self.updater.step) < 10**-self.convergence_decimals
+                # check convergence
+                converged = norm(self.updater.step) < 10**-self.convergence_decimals
 
-            # log
-            log_state()
+                # log
+                log_state()
+
+                if converged: break
 
         if not converged:
             self.converged = False
