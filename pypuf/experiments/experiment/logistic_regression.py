@@ -18,7 +18,7 @@ class ExperimentLogisticRegression(Experiment):
 
     def __init__(
             self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_challenge=0x5A551,
-            seed_chl_distance=0xB055, minibatch_size=None, convergance_decimals=None,
+            seed_chl_distance=0xB055, minibatch_size=None, convergance_decimals=None, shuffle=True,
     ):
         """
         :param log_name: string
@@ -78,6 +78,7 @@ class ExperimentLogisticRegression(Experiment):
         self.accuracy = None
         self.minibatch_size = minibatch_size
         self.convergance_decimals = convergance_decimals or 2
+        self.shuffle = shuffle
 
     def run(self):
         """
@@ -99,7 +100,8 @@ class ExperimentLogisticRegression(Experiment):
             weights_prng=self.model_prng,
             logger=self.progress_logger,
             minibatch_size=self.minibatch_size,
-            convergance_decimals=self.convergance_decimals
+            convergance_decimals=self.convergance_decimals,
+            shuffle=self.shuffle,
         )
         self.model = self.learner.learn()
 

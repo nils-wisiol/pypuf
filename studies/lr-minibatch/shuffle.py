@@ -2,7 +2,7 @@
 Success Rate for Logistic Regression With and Without Mini Batches
 
 Experiments in this file demonstrate that mini batches in our LR are
-ineffective when there is no shuffling.
+ineffective in terms of the success rate when there is no shuffling.
 """
 from pypuf.experiments.experimenter import Experimenter
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
@@ -11,13 +11,13 @@ from pypuf.plots import SuccessRatePlot
 from numpy.random import RandomState
 
 
-samples_per_point = 50
+samples_per_point = 10
 
 definitions = [
     (64, 2, [300, 400, 500, 600, 750, 1000, 1500]),
-    (64, 4, [1000, 1500, 2000, 5000, 10000]),
-    (128, 2, [600, 750, 1000, 1500, 2000, 5000, 10000]),
-    (128, 4, [1000, 2000, 5000, 7500, 10000, 12000, 15000]),
+    #(64, 4, [1000, 1500, 2000, 5000, 10000]),
+    #(128, 2, [600, 750, 1000, 1500, 2000, 5000, 10000]),
+    #(128, 4, [1000, 2000, 5000, 7500, 10000, 12000, 15000]),
 ]
 
 minibatch_sizes = [100, 250, 500, 1000, 2000]
@@ -29,12 +29,12 @@ for size in minibatch_sizes:
 
 for (n, k, training_set_sizes) in definitions:
     experiments = []
-    log = 'minibatch-no-shuffle-ineffective-%i-%i.log' % (n, k)
+    log = 'minibatch-shuffle-%i-%i.log' % (n, k)
     e = Experimenter(log, experiments)
     for training_set_size in training_set_sizes:
         for i in range(samples_per_point):
             for minibatch_size in [None] + minibatch_sizes:
-                if minibatch_size and minibatch_size >= training_set_size: break
+                if minibatch_size and minibatch_size > training_set_size: break
                 experiments.append(
                     ExperimentLogisticRegression(
                         log_name=log,
@@ -49,12 +49,13 @@ for (n, k, training_set_sizes) in definitions:
                         seed_chl_distance=846264 + i,
                         minibatch_size=minibatch_size,
                         convergance_decimals=1.5 if not minibatch_size else 2.9,
+                        shuffle=True,
                     )
                 )
     RandomState(seed=1).shuffle(experiments)
 
     result_plot = SuccessRatePlot(
-        filename='figures/minibatch-no-shuffle-ineffective-%i-%i.pdf' % (n, k),
+        filename='figures/minibatch-shuffle-%i-%i.pdf' % (n, k),
         results=e.results,
         group_by='minibatch_size',
         group_labels=group_labels,
