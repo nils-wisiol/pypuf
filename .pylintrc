@@ -43,4 +43,4 @@ max-line-length=120
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
 # E1111 is buggy for certain numpy functions, see github.com/PyCQA/pylint/issues/2435
-disable=E1111
+disable=E1111,C0103,C0411,W0221
