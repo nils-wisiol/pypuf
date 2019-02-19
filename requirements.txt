@@ -5,3 +5,4 @@ pylint~=2.2
 pypuf-helper==0.2
 scipy~=1.2
 astroid~=2.1
+matplotlib~=3.0
