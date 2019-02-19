@@ -141,17 +141,6 @@ class TestExperimenter(unittest.TestCase):
         """
         This test check if process file handles are deleted. Some Systems have have limit of open file handles.
         """
-        class ExperimentDummy(Experiment):
-            """
-            This is an empty experiment class which can be used to run a huge amount of experiments with an
-            experimenter.
-            """
-            def run(self):
-                pass
-
-            def analyze(self):
-                pass
-
         experiments = []
         n = 1024
         for i in range(n):
@@ -160,3 +149,15 @@ class TestExperimenter(unittest.TestCase):
 
         experimenter = Experimenter(LOG_PATH+'test_file_handle', experiments)
         experimenter.run()
+
+
+class ExperimentDummy(Experiment):
+    """
+    This is an empty experiment class which can be used to run a huge amount of experiments with an
+    experimenter.
+    """
+    def run(self):
+        pass
+
+    def analyze(self):
+        pass
