@@ -59,6 +59,7 @@ class Experimenter(object):
         # Counters
         self.jobs_finished = 0
         self.jobs_total = len(self.experiments)
+        self.jobs_errored = 0
 
     def run(self):
         """
@@ -81,16 +82,17 @@ class Experimenter(object):
             def output_status():
                 progress = self.jobs_finished / self.jobs_total
                 elapsed_time = datetime.now() - start_time
+                errors = "" if self.jobs_errored == 0 else " %i ERRORED, " % self.jobs_errored
                 sys.stdout.write(
-                    "%s: %i jobs total, %i finished, %i queued, %.2f, ~remaining: %s\n" %
+                    ("%s: %i jobs total, %i finished, %i queued," + errors + " %.0f%%, ~remaining: %s\n") %
                     (
                         datetime.now().strftime('%c'),
                         self.jobs_total,
                         self.jobs_finished,
                         self.jobs_total - self.jobs_finished,
-                        progress,
+                        progress * 100,
                         timedelta(seconds=(elapsed_time * (
-                                    1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                            1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
                     )
                 )
                 self.update_callback()
@@ -104,10 +106,11 @@ class Experimenter(object):
             def update_status_error(exception):
                 print('Experiment exception: ', exception, file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
-                raise exception
+                self.jobs_errored += 1
+                update_status(exception)
 
             # experiment execution
-            for i, experiment in enumerate(self.experiments):
+            for experiment in self.experiments:
                 pool.apply_async(
                     experiment.execute,
                     (logging_queue, self.logger_name),
@@ -115,12 +118,19 @@ class Experimenter(object):
                     error_callback=update_status_error,
                 )
 
-            # block until we're ready
+            # show status, then block until we're ready
+            output_status()
             pool.close()
             pool.join()
 
             # quit logger
             logging_queue.put_nowait(None)
+            listener.join()
+
+            # check if we got any exceptions as results
+            exceptions = [ex for ex in self.results if isinstance(ex, Exception)]
+            if exceptions:
+                raise Exception(exceptions)
 
     @staticmethod
     def disable_auto_multiprocessing():
@@ -161,6 +171,7 @@ def setup_logger(logger_name):
     file_handler.setLevel(logging.INFO)
 
     root.addHandler(file_handler)
+    return file_handler
 
 
 def log_listener(queue, configurer, logger_name):
@@ -172,11 +183,13 @@ def log_listener(queue, configurer, logger_name):
     :param logger_name: String
                         Path to or name to the log file
     """
-    configurer(logger_name)
+    handler = configurer(logger_name)
     while True:
         try:
             record = queue.get()
             if record is None:  # We send this as a sentinel to tell the listener to quit.
+                handler.close()
+                logging.getLogger(logger_name).removeHandler(handler)
                 break
             logger = logging.getLogger(record.name)
             logger.handle(record)  # No level or filter logic applied - just do it!
