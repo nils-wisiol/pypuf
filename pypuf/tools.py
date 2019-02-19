@@ -4,13 +4,13 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from random import sample
 
-RESULT_TYPE = 'int8'
+BIT_TYPE = int8
 
 
 def random_input(n, random_instance=RandomState()):
@@ -35,7 +35,7 @@ def all_inputs(n):
     :returns: array of int8
               An array with all possible different {-1,1}-vectors of length `n`.
     """
-    return (array(list(itertools.product((-1, +1), repeat=n)))).astype(RESULT_TYPE)
+    return (array(list(itertools.product((-1, +1), repeat=n)))).astype(BIT_TYPE)
 
 
 def random_inputs(n, num, random_instance=RandomState()):
@@ -51,7 +51,7 @@ def random_inputs(n, num, random_instance=RandomState()):
     :return: array of num {-1,1} int8 arrays
              An array with num random {-1,1} int arrays.
     """
-    return 2 * random_instance.randint(0, 2, (num, n), dtype=RESULT_TYPE) - 1
+    return 2 * random_instance.randint(0, 2, (num, n), dtype=BIT_TYPE) - 1
 
 
 def sample_inputs(n, num, random_instance=RandomState()):
@@ -89,7 +89,7 @@ def append_last(arr, item):
     # the lowest level should contain one item
     dimension[-1] = 1
     # create an array white shape(array) where the lowest level contains only one item
-    item_arr = full(dimension, item, dtype=RESULT_TYPE)
+    item_arr = full(dimension, item, dtype=BIT_TYPE)
     # the item should be appended at the lowest level
     axis = len(dimension) - 1
     return append(arr, item_arr, axis=axis)
@@ -143,8 +143,8 @@ def chi_vectorized(s, inputs):
     assert len(s) == len(inputs[0])
     result = inputs[:, s > 0]
     if result.size == 0:
-        return ones(len(inputs), dtype=RESULT_TYPE)
-    return prod(result, axis=1, dtype=RESULT_TYPE)
+        return ones(len(inputs), dtype=BIT_TYPE)
+    return prod(result, axis=1, dtype=BIT_TYPE)
 
 
 def compare_functions(function1, function2):
@@ -224,7 +224,7 @@ def poly_mult_div(challenge, irreducible_polynomial, k):
             res = array([challenge], dtype='int8')
         else:
             res = vstack((res, challenge))
-    res = res.astype(RESULT_TYPE)
+    res = res.astype(BIT_TYPE)
     assert_result_type(res)
     return res
 
@@ -257,7 +257,7 @@ def assert_result_type(arr):
     This function checks the type of the array to match the RESULT_TYPE
     :param arr: array of arbitrary type
     """
-    assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
+    assert arr.dtype == dtype(BIT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(BIT_TYPE, arr.dtype)
 
 
 class TrainingSet():

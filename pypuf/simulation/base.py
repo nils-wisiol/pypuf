@@ -12,10 +12,10 @@ class Simulation(object, metaclass=abc.ABCMeta):
     challenges as input in order to evaluate them. The return values of the evaluation are the responses of the PUF.
     """
     @abc.abstractmethod
-    def eval(self, inputs):
+    def eval(self, challenges):
         """
         This is the function which evaluates the PUF simulation.
-        :param inputs: the type is not so strict and depends on the implementation
+        :param challenges: the type is not so strict and depends on the implementation
                        Input challenges
         :return the type is not so strict and depends on the implementation
                 Response of the PUF simulation
