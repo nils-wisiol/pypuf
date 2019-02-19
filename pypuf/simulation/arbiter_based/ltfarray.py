@@ -10,17 +10,35 @@ from pypuf.simulation.base import Simulation
 import pypuf_helper as ph
 
 
-class CompoundTransformation():
+class CompoundTransformation:
+    """
+    Defines an input transformation that is build from a generator function.
+    The purpose of this class is mainly to define generated input transformations in a way they can be pickled.
+    """
+
     def __init__(self, generator, args):
+        """
+        Defines a compound input transformation
+        :param generator: Generator function to be used.
+        :param args: Arguments for the generator function.
+        """
         self.generator = generator
         self.args = args
         self.__name__ = generator(*args).__name__
         self._transform = None
 
     def build(self):
+        """
+        Calls the generator function, supplies the defined arguments and returns the result
+        :return: The compound input transformation as defined for this instance.
+        """
         return self.generator(*self.args)
 
     def __call__(self, *args, **kwargs):
+        """
+        If called directly, we build and cache the compound transformation. Hence, this class
+        behaves transparent if treated directly as input transformation with few overhead.
+        """
         if not self._transform:
             self._transform = self.build()
         return self._transform(*args, **kwargs)

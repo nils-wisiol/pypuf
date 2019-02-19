@@ -111,11 +111,11 @@ class ExperimentLogisticRegression(Experiment):
         """
         assert self.model is not None
         self.accuracy = 1.0 - tools.approx_dist(
-                self.instance,
-                self.model,
-                min(10000, 2 ** self.n),
-                random_instance=self.distance_prng,
-            )
+            self.instance,
+            self.model,
+            min(10000, 2 ** self.n),
+            random_instance=self.distance_prng,
+        )
 
         result = ExperimentResult()
         result.experiment = self.__class__.__name__
@@ -137,8 +137,8 @@ class ExperimentLogisticRegression(Experiment):
         result.convergance_decimals = self.convergance_decimals
 
         self.result_logger.info(
-            # seed_instance  seed_model minibatch n   k      N      trans  comb   epoch  grad  converg time   accuracy  model
-            '0x%x\t'        '0x%x\t'   '%s\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%i\t' '%f\t'  '%f\t' '%f\t'    '%s',
+            # seed_instance seed_model minibatch n   k      N      trans  comb   epoch  grad  converg time   acc   model
+            '0x%x\t'       '0x%x\t'   '%s\t' '%i\t' '%i\t' '%i\t' '%s\t' '%s\t' '%i\t' '%i\t' '%f\t' '%f\t' '%f\t' '%s',
             self.seed_instance,
             self.seed_model,
             str(self.minibatch_size) or '-',

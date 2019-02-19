@@ -260,7 +260,58 @@ def assert_result_type(arr):
     assert arr.dtype == dtype(BIT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(BIT_TYPE, arr.dtype)
 
 
-class TrainingSet():
+class ChallengeResponseSet:
+    """
+    A set of challenges and corresponding responses.
+    """
+
+    def __init__(self, challenges, responses):
+        """
+        Create a set of challenges and corresponding responses. Note that the order of the
+        challenges and responses parameter is relevant.
+        :param challenges: List of challenges
+        :param responses: List of responses, ordered accordingly
+        """
+        self.challenges = challenges
+        self.responses = responses
+        assert len(self.challenges) == len(self.responses)
+        self.N = len(self.challenges)
+
+    def random_subset(self, N):
+        """
+        Gives a random subset of this challenge response set.
+        :param N: Either a relative (to the total number) or absolute number of challenges.
+        :return: A random subset samples from this challenge response set.
+        """
+        if N < 1:
+            N = int(self.N * N)
+        return self.subset(sample(range(self.N), N))
+
+    def block_subset(self, i, total):
+        """
+        Gives the i-th block of this challenge response set.
+        :param i: Index of the block that is to be returned.
+        :param total: Total number of blocks.
+        :return: A challenge response set.
+        """
+        return self.subset(range(
+            int(i / total * self.N),
+            int((i + 1) / total * self.N)
+        ))
+
+    def subset(self, subset_slice):
+        """
+        Gives the subset of this challenge response set defined by the slice given.
+        :param subset_slice: A python array slice
+        :return: A challenge response set defined accordingly
+        """
+        return ChallengeResponseSet(
+            challenges=self.challenges[subset_slice],
+            responses=self.responses[subset_slice]
+        )
+
+
+class TrainingSet(ChallengeResponseSet):
     """
     Basic data structure to hold a collection of challenge response pairs.
     Note that this is, strictly speaking, not a set.
@@ -276,6 +327,8 @@ class TrainingSet():
                                 PRNG which is used to draft challenges.
         """
         self.instance = instance
-        self.challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        self.responses = instance.eval(self.challenges)
-        self.N = N
+        challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        super().__init__(
+            challenges=challenges,
+            responses=instance.eval(challenges)
+        )

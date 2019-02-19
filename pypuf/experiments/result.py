@@ -1,2 +1,9 @@
+"""
+Storage classes for experimental results that can be pickled.
+"""
+
+
 class ExperimentResult:
-    pass
+    """
+    Generic result class without any specialization.
+    """
