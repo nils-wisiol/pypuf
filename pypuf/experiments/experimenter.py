@@ -193,6 +193,7 @@ def log_listener(queue, configurer, logger_name):
                 break
             logger = logging.getLogger(record.name)
             logger.handle(record)  # No level or filter logic applied - just do it!
-        except Exception:  # pylint: disable=W
+        except Exception as ex:  # pylint: disable=W
             print('Whoops! Problem:', file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
+            raise ex
