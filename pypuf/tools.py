@@ -110,6 +110,20 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
 
 
+def approx_dist_nonrandom(instance, test_set):
+    """
+    Approximate the distance of function instance to the hypothetical function
+    that generated the challenge-response pairs in test_set.
+    :param instance: pypuf.simulation.arbiter_based.base.Simulation
+                     Model to evaluate
+    :param test_set: pypuf.tools.TrainingSet
+                     Challenge-response pairs to test instance with
+    :return: float
+             Ratio of correctly to incorrectly predicted responses
+    """
+    return (test_set.N - count_nonzero(instance.eval(test_set.challenges) == test_set.responses)) / test_set.N
+
+
 def approx_fourier_coefficient(s, training_set):
     """
     Approximate the Fourier coefficient of a function on the subset `s`
@@ -251,16 +265,54 @@ def assert_result_type(arr):
     assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
 
 
+def parse_file(filename, n, start=1, num=0):
+    """
+    Reads challenge-response pairs from a file.
+    The format is one pair per line, first all n inputs separated by spaces
+    followed by a single output value.
+    :param filename: string
+                     Path of the file to read the challenge-response pairs from
+    :param n: int
+              Challenge bits
+    :param start: int
+                  First line to read
+    :param num: int
+                Number of lines to read, 0 to read the whole file
+    """
+    if num == 0:
+        stop = float('inf')
+    else:
+        stop = start + num
+
+    challenges, responses = [], []
+
+    with open(filename) as f:
+        for ln, line in enumerate(f):
+            if start <= ln + 1 < stop:
+                vals = line.split()
+                assert len(vals) == n + 1, 'Lines must contain {} values (line {} has {} values)'.format(n + 1, ln + 1, len(vals))
+                challenges.append(vals[:n])
+                responses.append(vals[n])
+
+    if num == 0:
+        num = len(challenges)
+    assert len(challenges) == num, 'File contains insufficient lines ({} instead of {})'.format(len(challenges), num)
+
+    return TrainingSet(
+        array(challenges).astype(RESULT_TYPE),
+        array(responses).astype(RESULT_TYPE),
+        num
+    )
+
+
 class TrainingSet():
     """
-    Basic data structure to hold a collection of challenge response pairs.
+    Basic data structure to hold a collection of challenge-response pairs.
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, challenges, responses, N):
+    def __init__(self, challenges, responses, N):
         """
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
         :param challenge: array of int8
                           Challenge vector in -1,1 notation
         :param responses: array of int8
@@ -268,10 +320,10 @@ class TrainingSet():
         :param N: int
                   Number of challenges
         """
-        self.instance = instance
         self.challenges = challenges
         self.responses = responses
         self.N = N
+
 
     @classmethod
     def random_set(obj, instance, N, random_instance=RandomState()):
@@ -288,39 +340,7 @@ class TrainingSet():
         """
         challenges = sample_inputs(instance.n, N, random_instance=random_instance)
         responses = instance.eval(challenges)
-        return obj(instance, challenges, responses, N)
-
-    @classmethod
-    def from_file(obj, instance, N, filename):
-        """
-        This method constructs a TrainingSet from challenge-response pairs in a file.
-        The format is one pair per line, first all inputs separated by spaces
-        followed by the output value.
-        :param obj: TrainingSet
-                    Object to construct
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
-        :param N: int
-                  Number of desired challenges
-        :param filename: string
-                  Path of the file to read the challenge-response pairs from
-        """
-        with open(filename) as f:
-            lines = f.readlines()
-
-        assert len(lines) >= N, 'File contains too few challenges ({} instead of {})'.format(len(lines), N)
-
-        challenges, responses = [], []
-        for ln, line in enumerate(lines, 1):
-            vals = line.split()
-
-            assert len(vals) == instance.n + 1, 'Lines must contain {} values (line {} has {} values)'.format(instance.n + 1, ln, len(vals))
-
-            challenges.append(vals[:instance.n])
-            responses.append(vals[instance.n])
-
         return obj(
-            instance,
             array(challenges).astype(RESULT_TYPE),
             array(responses).astype(RESULT_TYPE),
             N
