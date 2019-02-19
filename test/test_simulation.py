@@ -85,7 +85,7 @@ class TestInputTransformation(unittest.TestCase):
                 [-1, -1, -1, -1, -1],
                 [-1, 1, -1, -1, -1],
             ]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         for challenges in test_challenges:
             assert_array_equal(
                 LTFArray.transform_id(challenges, k=4),
@@ -120,7 +120,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, 1, -1, -1],
             [-1, -1, -1, -1, -1],
             [-1, 1, -1, -1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_atf(test_array, k=3),
             [
@@ -165,7 +165,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, -1, -1, -1],
             [1, 1, -1, -1, -1],
             [1, 2, 3, 4, 5],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_shift(test_array, k=3),
             [
@@ -202,7 +202,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_lightweight_secure(test_array, k=3),
             [
@@ -224,7 +224,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([[
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ]], dtype=tools.RESULT_TYPE)
+        ]], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.att(test_array),
             [[
@@ -238,7 +238,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([[
             [-1, -1, 1, -1, -1, 1],
             [-1, 1, 1, 1, -1, 1],
-        ]], dtype=tools.RESULT_TYPE)
+        ]], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.att_inverse(test_array),
             [[
@@ -254,7 +254,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, 1, -1],
             [-1, -1, 1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_stacked_transform(
                 transform_1=LTFArray.transform_id,
@@ -282,7 +282,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, 2, 3, 4],
             [5, 6, 2, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
@@ -329,7 +329,7 @@ class TestInputTransformation(unittest.TestCase):
         """
         test_array = array([
             [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
                 transform_1=LTFArray.transform_id,
@@ -352,7 +352,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=4),
             [
@@ -380,7 +380,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=1),
             [
@@ -397,7 +397,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_permutation_atf(test_array, k=4),
             [

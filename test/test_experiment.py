@@ -47,7 +47,7 @@ class TestExperimentLogisticRegression(TestBase):
         """
         This test the experiment to have a deterministic result.
         """
-        n = 8
+        n = 64
         k = 2
         N = 8
         seed_instance = 0xBAE55E

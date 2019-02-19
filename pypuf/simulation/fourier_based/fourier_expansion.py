@@ -38,16 +38,16 @@ class FourierExpansion(Simulation):
         self.fourier_coefficients = fourier_coefficients
         self.n = len(fourier_coefficients[0].s)
 
-    def eval(self, inputs):
+    def eval(self, challenges):
         """
         Evaluates a given array of inputs.
-        :param inputs: array of int shape(N,n)
+        :param challenges: array of int shape(N,n)
                        {-1,1}-valued inputs to be evaluated.
         :return: array of float
                  real valued responses
         """
         vals = np.array(
-            [coefficient.val * tools.chi_vectorized(coefficient.s, inputs)
+            [coefficient.val * tools.chi_vectorized(coefficient.s, challenges)
              for coefficient in self.fourier_coefficients]
         ).T
         return np.sum(vals, axis=1)
@@ -59,22 +59,22 @@ class FourierExpansionSign(FourierExpansion):
     Use val() to access the real number value.
     """
 
-    def eval(self, inputs):
+    def eval(self, challenges):
         """
         Evaluates a given array of inputs.
-        :param inputs: array of int shape(N,n)
+        :param challenges: array of int shape(N,n)
                        {-1,1}-valued inputs to be evaluated.
         :return: array of float
                  {-1,1}-valued responses
         """
-        return np.sign(super(FourierExpansionSign, self).eval(inputs))
+        return np.sign(super(FourierExpansionSign, self).eval(challenges))
 
-    def val(self, inputs):
+    def val(self, challenges):
         """
         Evaluates a given array of inputs.
-        :param inputs: array of int shape(N,n)
+        :param challenges: array of int shape(N,n)
                        {-1,1}-valued inputs to be evaluated.
         :return: array of float
                  real valued responses
         """
-        return super(FourierExpansionSign, self).eval(inputs)
+        return super(FourierExpansionSign, self).eval(challenges)
