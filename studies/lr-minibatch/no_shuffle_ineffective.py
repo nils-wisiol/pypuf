@@ -34,7 +34,8 @@ for (n, k, training_set_sizes) in definitions:
     for training_set_size in training_set_sizes:
         for i in range(samples_per_point):
             for minibatch_size in [None] + minibatch_sizes:
-                if minibatch_size and minibatch_size >= training_set_size: break
+                if minibatch_size and minibatch_size >= training_set_size:
+                    break
                 experiments.append(
                     ExperimentLogisticRegression(
                         log_name=log,
@@ -60,13 +61,10 @@ for (n, k, training_set_sizes) in definitions:
         group_labels=group_labels,
     )
 
-
     def update_plot():
         result_plot.plot()
-
 
     e.update_callback = update_plot
     e.run()
 
     result_plot.plot()
-
