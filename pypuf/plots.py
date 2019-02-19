@@ -62,6 +62,8 @@ class SuccessRatePlot():
 
         self.groups = sorted(set([str(getattr(r, self.group_by)) for r in self.results]))
         n_k_combinations = set([(r.n, r.k) for r in self.results])
+        if not n_k_combinations:
+            return
         assert len(n_k_combinations) == 1,\
             "For SuccesRatePlot, all experiments must be run with same n and k, but there were %s." % n_k_combinations
         self.n = self.results[0].n
