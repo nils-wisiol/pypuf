@@ -1,10 +1,26 @@
+"""
+Plots to visualize results by experiments or studies.
+"""
 import matplotlib.pyplot as plt
 from itertools import cycle
 from numpy import zeros
 
 
 class SuccessRatePlot():
-    def __init__(self, filename, results, group_by, success_threshold=.7, group_labels={}):
+    """
+    Show the ratio of experiment results with accuracy higher than a given threshold to the total number of results,
+    dependent on the number of examples in the training set.
+    """
+    def __init__(self, filename, results, group_by, success_threshold=.7, group_labels=None):
+        """
+        Prepare a plot
+        :param filename: destination file (PDF)
+        :param results: results to be plotted
+        :param group_by: determines among which groups success rates are computed
+        :param success_threshold: defines what is considered a success
+        :param group_labels: can be used to translate group_by values to human-readable names, e.g.
+            { 'permutation_fixed': 'A fixed permutation', ... }
+        """
         self.title_size = 6
         self.tick_size = 4
         self.x_label_size = 5
@@ -20,7 +36,7 @@ class SuccessRatePlot():
         self.results = results
         self.success_threshold = success_threshold
         self.group_by = group_by
-        self.group_labels = group_labels
+        self.group_labels = {} if group_labels is None else group_labels
 
         self.figure = plt.figure()
         self.figure.set_size_inches(w=3.34, h=1.7)
@@ -29,7 +45,10 @@ class SuccessRatePlot():
         self.plot_data = None
 
     def plot(self):
-        if len(self.results) == 0:
+        """
+        Draw the plot and save it to the file system.
+        """
+        if self.results == 0:
             return
 
         self.axis.clear()
@@ -76,7 +95,7 @@ class SuccessRatePlot():
             for idx, N in enumerate(Ns):
                 success_rate[idx, 0] = N
                 success_rate[idx, 1] = len([r for r in results if r.N == N and r.accuracy > self.success_threshold]) / \
-                                       len([r for r in results if r.N == N])
+                    len([r for r in results if r.N == N])
             success_rate.sort(axis=0)
             self.plot_data[group] = success_rate
 

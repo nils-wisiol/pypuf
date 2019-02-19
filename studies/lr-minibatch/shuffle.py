@@ -6,35 +6,46 @@ ineffective in terms of the success rate when there is no shuffling.
 """
 from pypuf.experiments.experimenter import Experimenter
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.plots import SuccessRatePlot
 from numpy.random import RandomState
 
 
-samples_per_point = 10
+SAMPLES_PER_POINT = 10
 
-definitions = [
+DEFINITIONS = [
     (64, 2, [300, 400, 500, 600, 750, 1000, 1500]),
-    #(64, 4, [1000, 1500, 2000, 5000, 10000]),
-    #(128, 2, [600, 750, 1000, 1500, 2000, 5000, 10000]),
-    #(128, 4, [1000, 2000, 5000, 7500, 10000, 12000, 15000]),
+    (64, 4, [1000, 1500, 2000, 5000, 10000]),
+    (128, 2, [600, 750, 1000, 1500, 2000, 5000, 10000]),
+    (128, 4, [1000, 2000, 5000, 7500, 10000, 12000, 15000]),
 ]
 
-minibatch_sizes = [100, 250, 500, 1000, 2000]
-group_labels = {}
-group_labels['None'] = 'No Mini Batches'
-for size in minibatch_sizes:
-    group_labels[str(size)] = '%i per Mini Batch' % size
+MINIBATCH_SIZES = [100, 250, 500, 1000, 2000]
+GROUP_LABELS = {}
+GROUP_LABELS['None'] = 'No Mini Batches'
+for size in MINIBATCH_SIZES:
+    GROUP_LABELS[str(size)] = '%i per Mini Batch' % size
+
+plots = []
 
 
-for (n, k, training_set_sizes) in definitions:
+def update_plots():
+    """
+    Updates the result plot.
+    """
+    for plot in plots:
+        plot.plot()
+
+
+for (n, k, training_set_sizes) in DEFINITIONS:
     experiments = []
     log = 'minibatch-shuffle-%i-%i.log' % (n, k)
     e = Experimenter(log, experiments)
     for training_set_size in training_set_sizes:
-        for i in range(samples_per_point):
-            for minibatch_size in [None] + minibatch_sizes:
-                if minibatch_size and minibatch_size > training_set_size: break
+        for i in range(SAMPLES_PER_POINT):
+            for minibatch_size in [None] + MINIBATCH_SIZES:
+                if minibatch_size and minibatch_size > training_set_size:
+                    break
                 experiments.append(
                     ExperimentLogisticRegression(
                         log_name=log,
@@ -54,20 +65,14 @@ for (n, k, training_set_sizes) in definitions:
                 )
     RandomState(seed=1).shuffle(experiments)
 
-    result_plot = SuccessRatePlot(
+    plots.append(SuccessRatePlot(
         filename='figures/minibatch-shuffle-%i-%i.pdf' % (n, k),
         results=e.results,
         group_by='minibatch_size',
-        group_labels=group_labels,
-    )
+        group_labels=GROUP_LABELS,
+    ))
 
-
-    def update_plot():
-        result_plot.plot()
-
-
-    e.update_callback = update_plot
+    e.update_callback = update_plots
     e.run()
 
-    result_plot.plot()
-
+update_plots()

@@ -41,7 +41,6 @@ class Experiment(object):
         Used for preparation work that shall be not timed.
         Executed just before run()
         """
-        pass
 
     @abc.abstractmethod
     def run(self):
