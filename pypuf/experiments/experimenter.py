@@ -18,6 +18,7 @@ experimenter.run()
 """
 import multiprocessing
 import logging
+import random
 import sys
 import traceback
 import os
@@ -29,7 +30,7 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, log_name, experiments, cpu_limit=2**16, auto_multiprocessing=False, update_callback=None):
+    def __init__(self, log_name, cpu_limit=2**16, auto_multiprocessing=False, update_callback=None):
         """
         :param experiments: A list of pypuf.experiments.experiment.base.Experiment
         :param log_name: A unique file path where to output should be logged.
@@ -37,7 +38,7 @@ class Experimenter(object):
         """
 
         # Store experiments list
-        self.experiments = experiments
+        self.experiments = {}
 
         # Store logger name
         self.logger_name = log_name
@@ -47,7 +48,7 @@ class Experimenter(object):
         self.semaphore = None
 
         # experimental results
-        self.results = []
+        self.results = {}
 
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
@@ -58,10 +59,19 @@ class Experimenter(object):
 
         # Counters
         self.jobs_finished = 0
-        self.jobs_total = len(self.experiments)
+        self.jobs_total = 0
         self.jobs_errored = 0
 
-    def run(self):
+    def queue(self, experiment):
+        """
+        Add an experiment to the queue.
+        """
+        self.experiments[experiment.id] = experiment
+        self.results[experiment.id] = None
+        self.jobs_total = len(self.experiments)
+        return experiment.id
+
+    def run(self, shuffle=False):
         """
         Runs all experiments. Blocks until all experiment are finished.
         """
@@ -100,7 +110,7 @@ class Experimenter(object):
             # define callbacks, they are run within the main process, but in separate threads
             def update_status(result):
                 self.jobs_finished += 1
-                self.results.append(result)
+                self.results[result.experiment_id] = result
                 output_status()
 
             def update_status_error(exception):
@@ -109,8 +119,14 @@ class Experimenter(object):
                 self.jobs_errored += 1
                 update_status(exception)
 
+            # randomize order
+            experiments = list(self.experiments.values())
+            if shuffle:
+                random.seed(0xdeadbeef)
+                random.shuffle(experiments)
+
             # experiment execution
-            for experiment in self.experiments:
+            for experiment in experiments:
                 pool.apply_async(
                     experiment.execute,
                     (logging_queue, self.logger_name),
@@ -124,13 +140,13 @@ class Experimenter(object):
             pool.join()
 
             # quit logger
-            logging_queue.put_nowait(None)
+            logging_queue.put(None)  # trigger listener to quit
             listener.join()
 
             # check if we got any exceptions as results
-            exceptions = [ex for ex in self.results if isinstance(ex, Exception)]
+            exceptions = [ex for ex in self.results.values() if isinstance(ex, Exception)]
             if exceptions:
-                raise Exception(exceptions)
+                raise FailedExperimentsException(exceptions)
 
     @staticmethod
     def disable_auto_multiprocessing():
@@ -197,3 +213,9 @@ def log_listener(queue, configurer, logger_name):
             print('Whoops! Problem:', file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             raise ex
+
+
+class FailedExperimentsException(Exception):
+    """
+    Indicates that the experimenter's run included failed experiments.
+    """
