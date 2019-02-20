@@ -56,7 +56,7 @@ for (n, k, training_set_sizes) in DEFINITIONS:
                         break
                     experiment_id = e.queue(
                         ExperimentLogisticRegression(
-                            log_name=log_name,
+                            progress_log_prefix=log_name,
                             n=n,
                             k=k,
                             N=training_set_size,

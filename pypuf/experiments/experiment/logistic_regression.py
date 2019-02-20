@@ -17,12 +17,13 @@ class ExperimentLogisticRegression(Experiment):
     """
 
     def __init__(
-            self, log_name, n, k, N, seed_instance, seed_model, transformation, combiner, seed_challenge=0x5A551,
-            seed_chl_distance=0xB055, minibatch_size=None, convergance_decimals=None, shuffle=True,
+            self, progress_log_prefix, n, k, N, seed_instance, seed_model, transformation, combiner,
+            seed_challenge=0x5A551, seed_chl_distance=0xB055, minibatch_size=None, convergance_decimals=None,
+            shuffle=True,
     ):
         """
-        :param log_name: string
-                         Prefix of the path or name of the experiment log file.
+        :param progress_log_prefix: string
+                         Prefix of the path or name of the experiment progress log file.
         :param n: int
                   Number of stages of the PUF
         :param k: int
@@ -47,18 +48,17 @@ class ExperimentLogisticRegression(Experiment):
                                   The seed which is used to initialize the pseudo-random number generator
                                   which is used to draft challenges for the accuracy calculation.
         """
-        super().__init__(
-            log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
-                log_name,
-                seed_model,
-                seed_instance,
-                n,
-                k,
-                N,
-                transformation.__name__,
-                combiner.__name__,
-            ),
-        )
+        progress_log_name = None if progress_log_prefix is None else '%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
+            progress_log_prefix,
+            seed_model,
+            seed_instance,
+            n,
+            k,
+            N,
+            transformation.__name__,
+            combiner.__name__,
+            )
+        super().__init__(progress_log_name)
         self.n = n
         self.k = k
         self.N = N

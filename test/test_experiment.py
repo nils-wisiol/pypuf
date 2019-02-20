@@ -1,6 +1,5 @@
 """This module tests the different experiment classes."""
 import unittest
-from multiprocessing import Queue
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
 from numpy import array
 from numpy.testing import assert_array_equal
@@ -67,8 +66,8 @@ class TestExperimentLogisticRegression(TestBase):
             experiment_1.execute(logger.queue, logger.logger_name)
             experiment_2.execute(logger.queue, logger.logger_name)
             # Open logs
-            exp_1_result_log = open('logs/' + experiment_1.log_name + '.log', 'r')
-            exp_2_result_log = open('logs/' + experiment_2.log_name + '.log', 'r')
+            exp_1_result_log = open('logs/' + experiment_1.progress_log_name + '.log', 'r')
+            exp_2_result_log = open('logs/' + experiment_2.progress_log_name + '.log', 'r')
             # Save the results
             result_1 = exp_1_result_log.read()
             result_2 = exp_2_result_log.read()
@@ -76,12 +75,12 @@ class TestExperimentLogisticRegression(TestBase):
             exp_1_result_log.close()
             exp_2_result_log.close()
             # Check the results to be not empty
-            self.assertFalse(result_1 == '', 'The experiment log {0} was empty.'.format(experiment_1.log_name))
-            self.assertFalse(result_2 == '', 'The experiment log {0} was empty.'.format(experiment_2.log_name))
+            self.assertFalse(result_1 == '', 'The experiment log {0} was empty.'.format(experiment_1.progress_log_name))
+            self.assertFalse(result_2 == '', 'The experiment log {0} was empty.'.format(experiment_2.progress_log_name))
             # Compare logs
             self.assertTrue(result_1 == result_2,
-                            'The results of {0} and {1} must be equal.'.format(experiment_1.log_name,
-                                                                               experiment_2.log_name))
+                            'The results of {0} and {1} must be equal.'.format(experiment_1.progress_log_name,
+                                                                               experiment_2.progress_log_name))
 
         def get_exp(name, trans, comb):
             """Experiment creation shortcut
@@ -165,7 +164,7 @@ class TestExperimentLogisticRegression(TestBase):
             transformation=LTFArray.transform_id,
             combiner=LTFArray.combiner_xor,
         )
-        experiment.execute(Queue(-1), 'testlog')
+        experiment.execute(None, 'testlog')
         experiment.model = LTFArray(
             weight_array=array([[1, 10E-13]]),
             transform=LTFArray.transform_id,
@@ -190,7 +189,7 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         """
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger.logger_name,
+            progress_log_prefix=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -221,7 +220,7 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         """
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger.logger_name,
+            progress_log_prefix=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -253,7 +252,7 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         """
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
-            log_name=logger.logger_name,
+            progress_log_prefix=logger.logger_name,
             n=n,
             k=2,
             challenge_count=2 ** 8,
@@ -292,7 +291,7 @@ class TestExperimentPropertyTest(TestBase):
             measurements = 10
             challenge_seed = 0xDE5
             return ExperimentPropertyTest(
-                log_name=logger.logger_name,
+                progress_log_name=logger.logger_name,
                 test_function=test_function,
                 challenge_count=N,
                 measurements=measurements,
@@ -319,5 +318,5 @@ class TestExperimentPropertyTest(TestBase):
             exp_rel = create_experiment(N, test_function,
                                         ExperimentPropertyTest.create_noisy_ltf_arrays, array_parameter)
             exp_rel.execute(logger.queue, logger.logger_name)
-            with open('logs/' + exp_rel.log_name+'.log', 'r') as log_file:
+            with open('logs/' + exp_rel.progress_log_name + '.log', 'r') as log_file:
                 self.assertNotEqual(log_file.read(), '')

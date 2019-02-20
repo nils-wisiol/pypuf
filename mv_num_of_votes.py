@@ -75,7 +75,7 @@ def main(args):
         for k in range(args.k_range, args.k_max + 1, args.k_range):
             log_name = args.log_name+'{0}'.format(k)
             experimenter.queue(ExperimentMajorityVoteFindVotes(
-                log_name=log_name,
+                progress_log_prefix=log_name,
                 n=n,
                 k=k,
                 challenge_count=N,

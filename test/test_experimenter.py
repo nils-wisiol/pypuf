@@ -42,7 +42,7 @@ class TestExperimenter(unittest.TestCase):
             n = 8
             logger_name = LOG_PATH+'test_mv_exp{0}'.format(i)
             experiment = ExperimentMajorityVoteFindVotes(
-                log_name=logger_name,
+                progress_log_prefix=logger_name,
                 n=n,
                 k=2,
                 challenge_count=2 ** 8,
@@ -85,7 +85,7 @@ class TestExperimenter(unittest.TestCase):
         for i in range(n):
             log_name = LOG_PATH+'test_multiprocessing_logs{0}'.format(i)
             experiment = ExperimentMajorityVoteFindVotes(
-                log_name=log_name,
+                progress_log_prefix=log_name,
                 n=8,
                 k=2,
                 challenge_count=2 ** 8,
