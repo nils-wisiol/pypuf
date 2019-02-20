@@ -2,12 +2,11 @@
 This module provides several different implementations of arbiter PUF simulations. The linear threshold function array
 model is the core of each simulation class.
 """
-from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to
+from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append, int8
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
-import pypuf_helper as ph
 
 
 class CompoundTransformation:
@@ -59,7 +58,7 @@ class LTFArray(Simulation):
         :return: array of float or int shape(N)
                  Array of responses for the N different challenges.
         """
-        return ph.combiner_xor(responses)
+        return prod(responses, axis=1)
 
     @classmethod
     def combiner_ip_mod2(cls, responses):
@@ -678,7 +677,7 @@ class LTFArray(Simulation):
         assert self.weight_array.shape == (self.k, self.n + 1),\
             'LTFArray\'s weight array was expected have shape (k, n+1) = {}, '\
             'but had shape {} when core_eval was called.'.format((self.k, self.n + 1), self.weight_array.shape)
-        return ph.eval(efba_sub_challenges, self.weight_array)
+        return einsum('ji,...ji->...j', self.weight_array, efba_sub_challenges, optimize=True)
 
 
 class NoisyLTFArray(LTFArray):
