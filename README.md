@@ -10,7 +10,7 @@ pypuf provides simulations and attacks on PUFs; it aims at helping to understand
 It also provides some tools for running experiments with the simulations and attacks.
 
 Technically, pypuf heavily relies on numpy.
-Some operations base on additional modules that have been written in C (see installation section below).
+Some operations base on an additional module that has been written in C (see installation section below).
 
 ## Installation
 
@@ -34,7 +34,7 @@ In your pypuf clone directory,
     # upgrade pip
     python3 -m pip install --upgrade pip
 
-    # install requirements (polynmath needs c99)
+    # install requirements (polymath needs c99)
     CC="gcc -std=c99" pip3 install -r requirements.txt
 
 Afterwards, confirm a correct setup by running the tests:
@@ -50,7 +50,7 @@ You can run pypuf installing numpy and scipy from your distribution's repository
 This will prevent you from using any features that rely on `polymath` and is hence not recommended.
 It is an easier way however to get started quickly.
 After installing `python3`, `numpy`, and `scipy` run the example to make sure everything is setup okay.
-(Unit tests for features relying on `polymath` etc. will fail in this scenario!)
+(Unit tests for features relying on `polymath` will fail in this scenario!)
 
 ## Idea
 
