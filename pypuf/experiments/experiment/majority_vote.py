@@ -16,11 +16,11 @@ class ExperimentMajorityVoteFindVotes(Experiment):
     satisfy the chosen desired_stability and overall_desired_stability.
     """
 
-    def __init__(self, log_name, n, k, challenge_count, seed_instance, seed_instance_noise, transformation,
+    def __init__(self, progress_log_prefix, n, k, challenge_count, seed_instance, seed_instance_noise, transformation,
                  combiner, mu, sigma, sigma_noise_ratio, seed_challenges, desired_stability, overall_desired_stability,
                  minimum_vote_count, iterations, bias=None):
         """
-        :param log_name: string
+        :param progress_log_prefix: string
                          The prefix of the self.progress_logger.
         :param n: int
                   The number of stages of the PUF.
@@ -65,8 +65,8 @@ class ExperimentMajorityVoteFindVotes(Experiment):
                      Use a single value if you want the same bias for all weight_vectors.
         """
         super().__init__(
-            log_name='%s.0x%x_0_%i_%i_%i_%s_%s' % (
-                log_name,
+            progress_log_name='%s.0x%x_0_%i_%i_%i_%s_%s' % (
+                progress_log_prefix,
                 seed_instance,
                 n,
                 k,

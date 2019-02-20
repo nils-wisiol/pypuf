@@ -30,18 +30,19 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, log_name, cpu_limit=2**16, auto_multiprocessing=False, update_callback=None):
+    def __init__(self, result_log_name, cpu_limit=2 ** 16, auto_multiprocessing=False, update_callback=None):
         """
-        :param experiments: A list of pypuf.experiments.experiment.base.Experiment
-        :param log_name: A unique file path where to output should be logged.
+        :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
+        :param auto_multiprocessing: Whether to use numpy automatic multithreading/multiprocessing. Defaults to False.
+        :param update_callback: If set, will be called every time an experiment finishes.
         """
 
         # Store experiments list
         self.experiments = {}
 
         # Store logger name
-        self.logger_name = log_name
+        self.result_log_name = result_log_name
 
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
@@ -77,9 +78,9 @@ class Experimenter(object):
         """
 
         # Setup multiprocessing logging
-        logging_queue = multiprocessing.Manager().Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(logging_queue, setup_logger, self.logger_name,))
+        result_log_queue = multiprocessing.Manager().Queue()
+        listener = multiprocessing.Process(target=result_log_listener,
+                                           args=(result_log_queue, setup_result_logger, self.result_log_name,))
         listener.start()
 
         # setup process pool
@@ -129,7 +130,7 @@ class Experimenter(object):
             for experiment in experiments:
                 pool.apply_async(
                     experiment.execute,
-                    (logging_queue, self.logger_name),
+                    (result_log_queue, self.result_log_name),
                     callback=update_status,
                     error_callback=update_status_error,
                 )
@@ -140,7 +141,7 @@ class Experimenter(object):
             pool.join()
 
             # quit logger
-            logging_queue.put(None)  # trigger listener to quit
+            result_log_queue.put(None)  # trigger listener to quit
             listener.join()
 
             # check if we got any exceptions as results
@@ -173,24 +174,24 @@ class Experimenter(object):
             os.environ[key] = val
 
 
-def setup_logger(logger_name):
+def setup_result_logger(result_log_name):
     """
     This method is used to open the file handler for a logger_name. The resulting log file will have the format
     'logger_namer.log'.
-    :param logger_name: string
+    :param result_log_name: string
                         Path to or name to the log file
     """
-    root = logging.getLogger(logger_name)
+    root = logging.getLogger(result_log_name)
 
     # Setup logging to both file and console
-    file_handler = logging.FileHandler(filename='logs/%s.log' % logger_name, mode='w')
+    file_handler = logging.FileHandler(filename='logs/%s.log' % result_log_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
     root.addHandler(file_handler)
     return file_handler
 
 
-def log_listener(queue, configurer, logger_name):
+def result_log_listener(queue, configurer, logger_name):
     """
     This is the root function of logging process which is responsible to log the experiment results.
     :param queue: multiprocessing.queue
