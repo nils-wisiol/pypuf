@@ -7,6 +7,8 @@ import logging
 import logging.handlers
 import sys
 from time import time, clock
+from uuid import uuid4
+from pypuf.experiments.result import ExperimentResult
 
 
 class Experiment(object):
@@ -19,6 +21,7 @@ class Experiment(object):
         """
         :param log_name: A unique name, used for log path.
         """
+        self.id = uuid4()
         self.log_name = log_name
 
         # This must be set at run, loggers can (under circumstances) not be pickled
@@ -59,32 +62,40 @@ class Experiment(object):
         :param logger_name: string
                         Name of the experimenter result logger
         """
-        # set up the progress logger
-        self.progress_logger = logging.getLogger(self.log_name)
-        self.progress_logger.setLevel(logging.DEBUG)
+        try:
+            # set up the progress logger
+            self.progress_logger = logging.getLogger(self.log_name)
+            self.progress_logger.setLevel(logging.DEBUG)
 
-        # set up the result logger
-        self.result_logger = setup_result_logger(logging_queue, logger_name)
-        file_handler = logging.FileHandler('logs/%s.log' % self.log_name, mode='w')
-        file_handler.setLevel(logging.DEBUG)
-        self.progress_logger.addHandler(file_handler)
+            # set up the result logger
+            self.result_logger = setup_result_logger(logging_queue, logger_name)
+            file_handler = logging.FileHandler('logs/%s.log' % self.log_name, mode='w')
+            file_handler.setLevel(logging.DEBUG)
+            self.progress_logger.addHandler(file_handler)
 
-        # run preparations (not timed)
-        self.prepare()
+            # run preparations (not timed)
+            self.prepare()
 
-        # run the actual experiment
-        start_time = self.timer()
-        self.run()
-        self.measured_time = self.timer() - start_time
+            # run the actual experiment
+            start_time = self.timer()
+            self.run()
+            self.measured_time = self.timer() - start_time
 
-        # analyze the result
-        result = self.analyze()
+            # analyze the result
+            result = self.analyze()
+            if not result:
+                result = ExperimentResult()
+            result.experiment_id = self.id
 
-        # clean up and return
-        self.progress_logger.removeHandler(file_handler)
-        file_handler.close()
+            # clean up and return
+            self.progress_logger.removeHandler(file_handler)
+            file_handler.close()
 
-        return result
+            return result
+        except Exception as ex:
+            # If anything goes wrong, we attach the experiment id for identification
+            ex.experiment_id = self.id
+            raise ex
 
 
 def setup_result_logger(queue, logger_name):
