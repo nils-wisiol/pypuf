@@ -1,0 +1,53 @@
+"""
+This module is used for learning a PUF from known CRPs.
+"""
+import argparse
+from pypuf import tools
+from pypuf.learner.regression.logistic_regression import LogisticRegression
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+
+
+def main():
+    """
+    Learn and evaluate a PUF.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('n', type=int,
+                        help='challange bits')
+    parser.add_argument('k', type=int,
+                        help='number of arbiter chains')
+    parser.add_argument('num_tr', type=int,
+                        help='number of CRPs to use for training')
+    parser.add_argument('num_te', type=int,
+                        help='number of CRPs to use for testing')
+    parser.add_argument('file', type=str,
+                        help='file to read CRPs from')
+    parser.add_argument('-1', '--11-notation', dest='in_11_notation',
+                        action='store_true', default=False,
+                        help='file is in -1,1 notation (default is 0,1)')
+    args = parser.parse_args()
+
+    # read pairs from file
+    training_set = tools.parse_file(args.file, args.n, 1, args.num_tr, args.in_11_notation)
+    testing_set = tools.parse_file(args.file, args.n, args.num_tr, args.num_te, args.in_11_notation)
+
+    # create the learner
+    lr_learner = LogisticRegression(
+        t_set=training_set,
+        n=args.n,
+        k=args.k,
+        transformation=LTFArray.transform_atf,
+        combiner=LTFArray.combiner_xor,
+    )
+
+    # learn and test the model
+    model = lr_learner.learn()
+    accuracy = 1 - tools.approx_dist_nonrandom(model, testing_set)
+
+    # output the result
+    print('Learned a {}-bit {}-xor XOR Arbiter PUF from {} CRPs with accuracy {}'
+          .format(args.n, args.k, args.num_tr, accuracy))
+
+
+if __name__ == '__main__':
+    main()
