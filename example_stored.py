@@ -11,15 +11,15 @@ def main():
     Run an example how to use pypuf.
     Developers Notice: Changes here need to be mirrored to README!
     """
-    n = 128  # challenge bits
-    k = 1    # k-xor PUF
-    N = 1200 # total number of CRPs
-    T = 200  # number of CRPs to use for testing
-    filename = 'test/data/random-crps.txt'
+    n = 128    # challenge bits
+    k = 1      # k-xor PUF
+    N = 12000  # total number of CRPs
+    T = 10000  # number of CRPs to use for testing
+    filename = 'test/data/fpga-puf-crps.txt'
 
     # read pairs from file
     training_set = tools.parse_file(filename, n, 1, N - T)
-    test_set = tools.parse_file(filename, n, N - T, T)
+    testing_set = tools.parse_file(filename, n, N - T, T)
 
     # create the learner
     lr_learner = LogisticRegression(
@@ -32,7 +32,7 @@ def main():
 
     # learn and test the model
     model = lr_learner.learn()
-    accuracy = 1 - tools.approx_dist_nonrandom(model, test_set)
+    accuracy = 1 - tools.approx_dist_nonrandom(model, testing_set)
 
     # output the result
     print('Learned a {}-bit {}-xor XOR Arbiter PUF from {} CRPs with accuracy {}'.format(n, k, N, accuracy))
