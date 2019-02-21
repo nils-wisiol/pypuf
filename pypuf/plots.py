@@ -58,7 +58,7 @@ class SuccessRatePlot():
                 if result and isinstance(result, ExperimentResult):
                     results.append(result)
         else:
-            results = self.results.values()
+            results = [r for r in self.results.values() if r]
 
         if results == 0:
             return
