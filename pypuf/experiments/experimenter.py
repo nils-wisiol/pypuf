@@ -23,6 +23,7 @@ import sys
 import traceback
 import os
 from datetime import datetime, timedelta
+from threading import Timer, Lock
 
 
 class Experimenter(object):
@@ -30,12 +31,16 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, result_log_name, cpu_limit=2 ** 16, auto_multiprocessing=False, update_callback=None):
+    def __init__(self, result_log_name, cpu_limit=2 ** 16, auto_multiprocessing=False, update_callback=None,
+                 update_callback_min_pause=0):
         """
         :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
         :param auto_multiprocessing: Whether to use numpy automatic multithreading/multiprocessing. Defaults to False.
-        :param update_callback: If set, will be called every time an experiment finishes.
+        :param update_callback: If set, will be called every time an experiment finishes, see also
+                update_callback_min_pause.
+        :param update_callback_min_pause: If set, update_callbacks will be delayed to at least the number of seconds
+                given here. If another experiment finishes during the pause, the earlier callback will be canceled.
         """
 
         # Store experiments list
@@ -57,6 +62,9 @@ class Experimenter(object):
 
         # Callback for new results
         self.update_callback = update_callback if update_callback else lambda *args: None
+        self.update_callback_min_pause = update_callback_min_pause
+        self.next_callback = None
+        self.last_callback = None
 
         # Counters
         self.jobs_finished = 0
@@ -83,6 +91,19 @@ class Experimenter(object):
                                            args=(result_log_queue, setup_result_logger, self.result_log_name,))
         listener.start()
 
+        # Setup callback throttling
+        result_lock = Lock()
+
+        def call_callback(experiment_id=None, print_status=False):
+            with result_lock:
+                if print_status:
+                    output_status(prefix='C')
+                self.last_callback = datetime.now()
+                self.update_callback(experiment_id)
+
+        self.next_callback = Timer(0, call_callback)
+        self.next_callback.start()
+
         # setup process pool
         self.jobs_total = len(self.experiments)
         start_time = datetime.now()
@@ -90,13 +111,14 @@ class Experimenter(object):
         with multiprocessing.Pool(self.cpu_limit, maxtasksperchild=1) as pool:
 
             # print status function
-            def output_status():
+            def output_status(prefix='F'):
                 progress = self.jobs_finished / self.jobs_total
                 elapsed_time = datetime.now() - start_time
                 errors = "" if self.jobs_errored == 0 else " %i ERRORED, " % self.jobs_errored
                 sys.stdout.write(
-                    ("%s: %i jobs total, %i finished, %i queued," + errors + " %.0f%%, ~remaining: %s\n") %
+                    ("%s %s: %i jobs, %i finished, %i queued," + errors + " %.0f%%, ~remaining: %s\n") %
                     (
+                        prefix,
                         datetime.now().strftime('%c'),
                         self.jobs_total,
                         self.jobs_finished,
@@ -106,13 +128,26 @@ class Experimenter(object):
                             1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
                     )
                 )
-                self.update_callback()
 
             # define callbacks, they are run within the main process, but in separate threads
             def update_status(result):
                 self.jobs_finished += 1
-                self.results[result.experiment_id] = result
+                with result_lock:
+                    self.results[result.experiment_id] = result
                 output_status()
+
+                # If there is already a callback waiting, we will replace it and therefore cancel it
+                if self.next_callback.is_alive():
+                    self.next_callback.cancel()
+
+                # Schedule callback either immediately (0) or after the pause expired
+                pause = max(0.0, self.update_callback_min_pause - (datetime.now() - self.last_callback).total_seconds())
+                self.next_callback = Timer(
+                    pause,
+                    call_callback,
+                    args=[result.experiment_id, pause != 0.0],
+                )
+                self.next_callback.start()
 
             def update_status_error(exception):
                 print('Experiment exception: ', exception, file=sys.stderr)
