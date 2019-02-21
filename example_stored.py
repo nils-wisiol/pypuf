@@ -18,8 +18,8 @@ def main():
     filename = 'test/data/fpga-puf-crps.txt'
 
     # read pairs from file
-    training_set = tools.parse_file(filename, n, 1, N - T)
-    testing_set = tools.parse_file(filename, n, N - T, T)
+    training_set = tools.transform_challenge_01_to_11(tools.parse_file(filename, n, 1, N - T))
+    testing_set = tools.transform_challenge_01_to_11(tools.parse_file(filename, n, N - T, T))
 
     # create the learner
     lr_learner = LogisticRegression(
