@@ -265,7 +265,7 @@ def assert_result_type(arr):
     assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
 
 
-def parse_file(filename, n, start=1, num=0):
+def parse_file(filename, n, start=1, num=0, in_11_notation=False):
     """
     Reads challenge-response pairs from a file.
     The format is one pair per line, first all n inputs separated by spaces
@@ -278,6 +278,9 @@ def parse_file(filename, n, start=1, num=0):
                   First line to read
     :param num: int
                 Number of lines to read, 0 to read the whole file
+    :param in_11_notation: bool
+                           Format the file is in
+                           True for -1,1 notation, False for 0,1
     """
     if num == 0:
         stop = float('inf')
@@ -298,11 +301,14 @@ def parse_file(filename, n, start=1, num=0):
         num = len(challenges)
     assert len(challenges) == num, 'File contains insufficient lines ({} instead of {})'.format(len(challenges), num)
 
-    return TrainingSet(
-        array(challenges).astype(RESULT_TYPE),
-        array(responses).astype(RESULT_TYPE),
-        num
-    )
+    challenges = array(challenges).astype(RESULT_TYPE)
+    responses = array(responses).astype(RESULT_TYPE)
+
+    if not in_11_notation:
+        challenges = transform_challenge_01_to_11(challenges)
+        responses = transform_challenge_01_to_11(responses)
+
+    return TrainingSet(challenges, responses, num)
 
 
 class TrainingSet():
