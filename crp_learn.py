@@ -28,8 +28,10 @@ def main():
     args = parser.parse_args()
 
     # read pairs from file
-    training_set = tools.parse_file(args.file, args.n, 1, args.num_tr, args.in_11_notation)
-    testing_set = tools.parse_file(args.file, args.n, args.num_tr, args.num_te, args.in_11_notation)
+    training_set = tools.parse_file(args.file, args.n, 1, args.num_tr,
+                                    args.in_11_notation)
+    testing_set = tools.parse_file(args.file, args.n, args.num_tr + 1,
+                                   args.num_te, args.in_11_notation)
 
     # create the learner
     lr_learner = LogisticRegression(
