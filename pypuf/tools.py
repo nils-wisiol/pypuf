@@ -268,8 +268,8 @@ def assert_result_type(arr):
 def parse_file(filename, n, start=1, num=0, in_11_notation=False):
     """
     Reads challenge-response pairs from a file.
-    The format is one pair per line, first all n inputs separated by spaces
-    followed by a single output value.
+    The format is one pair per line, first all n inputs (challenge) separated
+    by spaces followed by a single output (response) value.
     :param filename: string
                      Path of the file to read the challenge-response pairs from
     :param n: int
@@ -281,6 +281,8 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
     :param in_11_notation: bool
                            Format the file is in
                            True for -1,1 notation, False for 0,1
+    :return: tools.TrainingSet
+             A TraningSet with the num challenges and responses that were read
     """
     if num == 0:
         stop = float('inf')
@@ -293,13 +295,17 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
         for ln, line in enumerate(f):
             if start <= ln + 1 < stop:
                 vals = line.split()
-                assert len(vals) == n + 1, 'Lines must contain {} values (line {} has {} values)'.format(n + 1, ln + 1, len(vals))
+                assert len(vals) == n + 1, \
+                    'Lines must contain {} values (line {} has {} values)' \
+                    .format(n + 1, ln + 1, len(vals))
                 challenges.append(vals[:n])
                 responses.append(vals[n])
 
     if num == 0:
         num = len(challenges)
-    assert len(challenges) == num, 'File contains insufficient lines ({} instead of {})'.format(len(challenges), num)
+    assert len(challenges) == num, \
+        'File contains insufficient lines ({} read, {} needed)' \
+        .format(len(challenges), num)
 
     challenges = array(challenges).astype(RESULT_TYPE)
     responses = array(responses).astype(RESULT_TYPE)
