@@ -15,11 +15,26 @@ class Study:
     EXPERIMENTER_CALLBACK_MIN_PAUSE = 30
     SHUFFLE = False
 
-    def __init__(self):
+    def __init__(self, cpu_limit=None):
         """
         Initialize the study.
         """
         self.results = None
+
+        # Callback method
+        def callback(experiment_id):
+            self._callback(experiment_id)
+
+        # Create experimenter
+        self.experimenter = Experimenter(
+            self.name(),
+            update_callback=callback,
+            update_callback_min_pause=self.EXPERIMENTER_CALLBACK_MIN_PAUSE,
+            cpu_limit=cpu_limit
+        )
+
+        # Expose results
+        self.results = self.experimenter.results
 
     def name(self):
         """
@@ -37,32 +52,17 @@ class Study:
         Generates this study's output
         """
 
-    def run(self, cpu_limit=None):
+    def run(self):
         """
         runs the study, that is, create the experiments, run them through an experimenter,
         collect the results and plot the output
         """
-        # Callback method
-        def callback(experiment_id):
-            self._callback(experiment_id)
-
-        # Create experimenter
-        experimenter = Experimenter(
-            self.name(),
-            update_callback=callback,
-            update_callback_min_pause=self.EXPERIMENTER_CALLBACK_MIN_PAUSE,
-            cpu_limit=cpu_limit
-        )
-
-        # Expose results
-        self.results = experimenter.results
-
         # Queue experiments
         for e in self.experiments():
-            experimenter.queue(e)
+            self.experimenter.queue(e)
 
         # Run experiments
-        experimenter.run(shuffle=self.SHUFFLE)
+        self.experimenter.run(shuffle=self.SHUFFLE)
 
         # Plot results
         self.plot()
