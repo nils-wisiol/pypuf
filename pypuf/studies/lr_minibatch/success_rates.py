@@ -42,7 +42,7 @@ class LRMiniBatchSuccessRate(Study):
         for (n, k, training_set_sizes) in self.DEFINITIONS:
             for shuffle in [True, False]:
                 plot = SuccessRatePlot(
-                    filename='figures/lr-minibatch' + ('' if shuffle else '-no') + '-success_rate-%i-%i.pdf' % (
+                    filename='figures/lr-minibatch-' + ('shuffle' if shuffle else 'noshuffle') + '-success_rate-%i-%i.pdf' % (
                     n, k),
                     results=self.experimenter.results,
                     group_by='minibatch_size',
@@ -68,6 +68,7 @@ class LRMiniBatchSuccessRate(Study):
                                 seed_chl_distance=846264 + i,
                                 minibatch_size=minibatch_size,
                                 convergance_decimals=1.5 if not minibatch_size else 2.7,
+                                shuffle=shuffle,
                             )
                             experiments.append(e)
                             plot.experiment_ids.append(e.id)
