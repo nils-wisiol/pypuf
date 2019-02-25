@@ -126,8 +126,8 @@ class SuccessRatePlot():
             label = self.group_labels[group] if group in self.group_labels else group
             col = next(color)
             mar = next(marker)
-            self.axis.scatter(success_rate[:, 0], success_rate[:, 1], 8, color=col, label=label, marker=mar)
-            self.axis.plot(success_rate[:, 0], success_rate[:, 1], '-', color=col, linewidth=0.8)
+            self.axis.scatter(success_rate[:, 0], success_rate[:, 1], 8, color=col, label=label, marker=mar, alpha=.7)
+            self.axis.plot(success_rate[:, 0], success_rate[:, 1], '-', color=col, linewidth=0.8, alpha=.7)
 
         if self.axis.has_data():
             legend = self.axis.legend(loc=2, fontsize=self.legend_size)
