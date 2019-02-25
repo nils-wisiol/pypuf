@@ -31,7 +31,7 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, result_log_name, cpu_limit=2 ** 16, auto_multiprocessing=False, update_callback=None,
+    def __init__(self, result_log_name, cpu_limit=None, auto_multiprocessing=False, update_callback=None,
                  update_callback_min_pause=0):
         """
         :param result_log_name: A unique file path where to output should be logged.
@@ -50,7 +50,7 @@ class Experimenter(object):
         self.result_log_name = result_log_name
 
         # Setup parallel execution limit
-        self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
+        self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count()) if cpu_limit else multiprocessing.cpu_count()
         self.semaphore = None
 
         # experimental results
