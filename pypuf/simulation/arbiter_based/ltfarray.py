@@ -599,8 +599,22 @@ class LTFArray(Simulation):
         """
         (self.k, self.n) = shape(weight_array)
         self.weight_array = weight_array
-        self.transform = transform.build() if isinstance(transform, CompoundTransformation) else transform
-        self.combiner = combiner
+
+        if isinstance(transform, CompoundTransformation):
+            self.transform = transform.build()
+        elif isinstance(transform, str):
+            if not transform.startswith('transform_'):
+                transform = 'transform_' + transform
+            self.transform = getattr(self, transform)
+        else:
+            self.transform = transform
+
+        if isinstance(combiner, str):
+            if not combiner.startswith('combiner_'):
+                combiner = 'combiner_' + combiner
+            self.combiner = getattr(self, combiner)
+        else:
+            self.combiner = combiner
 
         # If necessary, convert bias definition
         if bias is None:
