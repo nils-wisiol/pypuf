@@ -1,13 +1,12 @@
 """This module tests the different experiment classes."""
 import unittest
 from test.utility import remove_test_logs, logging, get_functions_with_prefix, LOG_PATH
-from numpy import array
+from numpy import around
 from numpy.testing import assert_array_equal
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
-from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
-from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
-from pypuf.property_test.base import PropertyTest
-from pypuf.experiments.experiment.property_test import ExperimentPropertyTest
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression, Parameters as LRParameters
+from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes, Parameters as MVParameters
+from pypuf.experiments.experiment.property_test import ExperimentPropertyTest, Parameters as PTParameters
 
 
 class TestBase(unittest.TestCase):
@@ -36,8 +35,13 @@ class TestExperimentLogisticRegression(TestBase):
         This method only runs the experiment.
         """
         lr16_4 = ExperimentLogisticRegression(
-            LOG_PATH + 'exp1', 8, 2, 2 ** 8, 0xbeef, 0xbeef, LTFArray.transform_id,
-            LTFArray.combiner_xor,
+            LOG_PATH + 'exp1',
+            LRParameters(
+                n=8, k=2, N=2 ** 8, seed_model=0xbeef, seed_distance=0xbeef,
+                seed_instance=0xdead, seed_challenge=0xdead,
+                transformation='id', combiner='xor',
+                mini_batch_size=2, shuffle=False, convergence_decimals=2
+            )
         )
         lr16_4.execute(logger.queue, logger.logger_name)
 
@@ -89,15 +93,12 @@ class TestExperimentLogisticRegression(TestBase):
             """
             return ExperimentLogisticRegression(
                 LOG_PATH + name,
-                n,
-                k,
-                N,
-                seed_instance,
-                seed_model,
-                trans,
-                comb,
-                seed_challenge=seed_challenge,
-                seed_chl_distance=seed_distance,
+                LRParameters(
+                    n=n, k=k, N=N, seed_model=seed_model, seed_distance=seed_distance,
+                    seed_instance=seed_instance, seed_challenge=seed_challenge,
+                    transformation=trans, combiner=comb,
+                    mini_batch_size=0, shuffle=False, convergence_decimals=1
+                )
             )
 
         # Result check
@@ -122,57 +123,34 @@ class TestExperimentLogisticRegression(TestBase):
         seed_distance = 0xB0C
         experiment = ExperimentLogisticRegression(
             LOG_PATH + 'exp',
-            n,
-            k,
-            N,
-            seed_instance,
-            seed_model,
-            LTFArray.transform_soelter_lightweight_secure,
-            LTFArray.combiner_xor,
-            seed_challenge=seed_challenge,
-            seed_chl_distance=seed_distance,
+            LRParameters(
+                n=n, k=k, N=N, seed_model=seed_model, seed_distance=seed_distance,
+                seed_instance=seed_instance, seed_challenge=seed_challenge,
+                transformation='soelter_lightweight_secure', combiner='xor',
+                mini_batch_size=0, shuffle=False, convergence_decimals=2
+            )
         )
         experiment.execute(logger.queue, logger.logger_name)
 
-        legacy_result = ['0xbae55e', '0x5c6ae1e', 'None', '8', '2', '255',
-                         'transform_soelter_lightweight_secure',
-                         'combiner_xor', '256', '256', '2.000000', '0.988281',
-                         '0.003990716152,-0.005655328619,0.016386240611,0.005377622618,0.007297814222,-0.003351419305,'
-                         '-0.002956429735,0.009401146144,0.000000126573,0.034918353082,0.368758330023,-0.078502828629,'
-                         '0.417595993772,0.509973673286,0.513855115932,0.000297216086,-0.396978991707,-0.005413902281'
-                         '\n']
         result_str = logger.read_result_log()
         self.assertFalse(result_str == '', 'The result log was empty.')
-        experiment_result = result_str.split('\t')
-        # remove execution time
-        del experiment_result[11]
-        assert_array_equal(experiment_result, legacy_result, 'You changed the Logistic Regression Learner'
-                                                             'significantly.')
 
-    def test_mathematica_compatibility(self):
-        """
-        Tests if the result log of Logistic Regression learning is compatible with Mathematica input, i.e. it must not
-        contain numbers in scientific notation.
-        """
-        experiment = ExperimentLogisticRegression(
-            LOG_PATH + 'exp',
-            n=2,
-            k=1,
-            N=1,
-            seed_instance=1,
-            seed_model=2,
-            transformation=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
+        error = 'LR learning results deviate from legacy learning results.'
+        self.assertEqual(experiment.result.iteration_count, 256, error)
+        self.assertEqual(experiment.result.epoch_count, 256, error)
+        self.assertEqual(experiment.result.gradient_step_count, 256, error)
+        self.assertEqual(experiment.result.accuracy, 0.98828125, error)
+        assert_array_equal(
+            around(experiment.result.model, decimals=8),
+            around([
+                3.99071615e-03, -5.65532862e-03, 1.63862406e-02, 5.37762262e-03,
+                7.29781422e-03, -3.35141930e-03, -2.95642974e-03, 9.40114614e-03,
+                1.26572532e-07, 3.49183531e-02, 3.68758330e-01, -7.85028286e-02,
+                4.17595994e-01, 5.09973673e-01, 5.13855116e-01, 2.97216086e-04,
+                -3.96978992e-01, -5.41390228e-03
+            ], decimals=8),
+            error
         )
-        experiment.execute(None, 'testlog')
-        experiment.model = LTFArray(
-            weight_array=array([[1, 10E-13]]),
-            transform=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
-        )
-        with self.assertLogs('testlog', level='DEBUG') as mock_logger:
-            experiment.analyze()
-        self.assertEqual(mock_logger.output[0].split('\t')[13], '1.000000000000,0.000000000001,0.000000000000')
 
 
 class TestExperimentMajorityVoteFindVotes(TestBase):
@@ -190,26 +168,28 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
             progress_log_prefix=logger.logger_name,
-            n=n,
-            k=2,
-            challenge_count=2 ** 8,
-            seed_instance=0xC0DEBA5E,
-            seed_instance_noise=0xdeadbeef,
-            transformation=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
-            mu=0,
-            sigma=1,
-            sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
-            seed_challenges=0xf000,
-            desired_stability=0.95,
-            overall_desired_stability=0.8,
-            minimum_vote_count=1,
-            iterations=2,
-            bias=None
+            parameters=MVParameters(
+                n=n,
+                k=2,
+                challenge_count=2 ** 8,
+                seed_instance=0xC0DEBA5E,
+                seed_instance_noise=0xdeadbeef,
+                transformation='id',
+                combiner='xor',
+                mu=0,
+                sigma=1,
+                sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+                seed_challenges=0xf000,
+                desired_stability=0.95,
+                overall_desired_stability=0.8,
+                minimum_vote_count=1,
+                iterations=2,
+                bias=None
+            )
         )
         experiment.execute(logger.queue, logger.logger_name)
 
-        self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
+        self.assertGreaterEqual(experiment.result.overall_stab, experiment.parameters.overall_desired_stability,
                                 'No vote_count was found.')
 
     @logging
@@ -221,27 +201,29 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
             progress_log_prefix=logger.logger_name,
-            n=n,
-            k=2,
-            challenge_count=2 ** 8,
-            seed_instance=0xC0DEBA5E,
-            seed_instance_noise=0xdeadbeef,
-            transformation=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
-            mu=0,
-            sigma=1,
-            sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
-            seed_challenges=0xf000,
-            desired_stability=0.95,
-            overall_desired_stability=0.8,
-            minimum_vote_count=1,
-            iterations=2,
-            bias=[0.001, 0.002]
+            parameters=MVParameters(
+                n=n,
+                k=2,
+                challenge_count=2 ** 8,
+                seed_instance=0xC0DEBA5E,
+                seed_instance_noise=0xdeadbeef,
+                transformation='id',
+                combiner='xor',
+                mu=0,
+                sigma=1,
+                sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+                seed_challenges=0xf000,
+                desired_stability=0.95,
+                overall_desired_stability=0.8,
+                minimum_vote_count=1,
+                iterations=2,
+                bias=[0.001, 0.002],
+            )
         )
 
         experiment.execute(logger.queue, logger.logger_name)
 
-        self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
+        self.assertGreaterEqual(experiment.result.overall_stab, experiment.parameters.overall_desired_stability,
                                 'No vote_count was found.')
 
     @logging
@@ -253,27 +235,29 @@ class TestExperimentMajorityVoteFindVotes(TestBase):
         n = 8
         experiment = ExperimentMajorityVoteFindVotes(
             progress_log_prefix=logger.logger_name,
-            n=n,
-            k=2,
-            challenge_count=2 ** 8,
-            seed_instance=0xC0DEBA5E,
-            seed_instance_noise=0xdeadbeef,
-            transformation=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
-            mu=0,
-            sigma=1,
-            sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
-            seed_challenges=0xf000,
-            desired_stability=0.95,
-            overall_desired_stability=0.8,
-            minimum_vote_count=1,
-            iterations=2,
-            bias=0.56
+            parameters=MVParameters(
+                n=n,
+                k=2,
+                challenge_count=2 ** 8,
+                seed_instance=0xC0DEBA5E,
+                seed_instance_noise=0xdeadbeef,
+                transformation='id',
+                combiner='xor',
+                mu=0,
+                sigma=1,
+                sigma_noise_ratio=NoisyLTFArray.sigma_noise_from_random_weights(n, 1, .5),
+                seed_challenges=0xf000,
+                desired_stability=0.95,
+                overall_desired_stability=0.8,
+                minimum_vote_count=1,
+                iterations=2,
+                bias=0.56
+            )
         )
 
         experiment.execute(logger.queue, logger.logger_name)
 
-        self.assertGreaterEqual(experiment.result_overall_stab, experiment.overall_desired_stability,
+        self.assertGreaterEqual(experiment.result.overall_stab, experiment.parameters.overall_desired_stability,
                                 'No vote_count was found.')
 
 
@@ -292,14 +276,16 @@ class TestExperimentPropertyTest(TestBase):
             challenge_seed = 0xDE5
             return ExperimentPropertyTest(
                 progress_log_name=logger.logger_name,
-                test_function=test_function,
-                challenge_count=N,
-                measurements=measurements,
-                challenge_seed=challenge_seed,
-                ins_gen_function=ins_gen_function,
-                param_ins_gen=param_ins_gen,
+                parameters=PTParameters(
+                    test_function=test_function,
+                    challenge_count=N,
+                    measurements=measurements,
+                    challenge_seed=challenge_seed,
+                    ins_gen_function=ins_gen_function,
+                    param_ins_gen=param_ins_gen,
+                )
             )
-        tests = [PropertyTest.reliability_statistic, PropertyTest.uniqueness_statistic]
+        tests = ['reliability_statistic', 'uniqueness_statistic']
         N = 255
         array_parameter = {
             'n': 16,
@@ -316,7 +302,7 @@ class TestExperimentPropertyTest(TestBase):
         }
         for test_function in tests:
             exp_rel = create_experiment(N, test_function,
-                                        ExperimentPropertyTest.create_noisy_ltf_arrays, array_parameter)
+                                        'create_noisy_ltf_arrays', array_parameter)
             exp_rel.execute(logger.queue, logger.logger_name)
             with open('logs/' + exp_rel.progress_log_name + '.log', 'r') as log_file:
                 self.assertNotEqual(log_file.read(), '')

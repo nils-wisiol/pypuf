@@ -29,13 +29,12 @@ class TestMvNumOfVotes(unittest.TestCase):
                               log_name])
 
         # Check if the number of results is correct
-        log_file = open('logs/' + log_name + '.log', 'r')
-        line = log_file.readline()
-        log_file.close()
+        with open('logs/' + log_name + '.log', 'r') as log_file:
+            line = log_file.readline()
 
         # If the line is '' then no stability where found which satisfy overall_desired_stability
         self.assertNotEqual(line, '', 'no stability where found which satisfy overall_desired_stability')
         # Get the stability entry
-        stability = float(line.split('\t')[6])
+        stability = float(line.split(',')[2][14:])
         # Check the stability
         self.assertGreaterEqual(stability, overall_desired_stability)

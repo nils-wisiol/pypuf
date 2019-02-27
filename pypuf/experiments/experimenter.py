@@ -20,10 +20,11 @@ import multiprocessing
 import logging
 import random
 import sys
-import traceback
 import os
+import traceback
 from datetime import datetime, timedelta
 from threading import Timer, Lock
+from time import sleep
 
 
 class Experimenter(object):
@@ -32,7 +33,7 @@ class Experimenter(object):
     """
 
     def __init__(self, result_log_name, cpu_limit=None, auto_multiprocessing=False, update_callback=None,
-                 update_callback_min_pause=0):
+                 update_callback_min_pause=0, results_file=None):
         """
         :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
@@ -54,7 +55,11 @@ class Experimenter(object):
         self.semaphore = None
 
         # experimental results
-        self.results = {}
+        from pandas import DataFrame
+        self.results = DataFrame()
+        self.exceptions = []
+        self.results_file = results_file
+        self.load_results()
 
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
@@ -76,9 +81,8 @@ class Experimenter(object):
         Add an experiment to the queue.
         """
         self.experiments[experiment.id] = experiment
-        self.results[experiment.id] = None
         self.jobs_total = len(self.experiments)
-        return experiment.id
+        return experiment.hash
 
     def run(self, shuffle=False):
         """
@@ -93,13 +97,18 @@ class Experimenter(object):
 
         # Setup callback throttling
         result_lock = Lock()
+        callback_lock = Lock()
 
-        def call_callback(experiment_id=None, print_status=False):
-            with result_lock:
-                if print_status:
-                    output_status(prefix='C')
-                self.last_callback = datetime.now()
-                self.update_callback(experiment_id)
+        def call_callback(experiment_id=None, pause=0):
+            with callback_lock:
+                with result_lock:
+                    if pause:
+                        output_status(prefix='C')
+                    self.last_callback = datetime.now()
+                    sys.stdout.write('Digesting results (pause=%f) ... ' % pause)
+                    sys.stdout.flush()
+                    self.update_callback(experiment_id)
+                    sys.stdout.write('done\n')
 
         self.next_callback = Timer(0, call_callback)
         self.next_callback.start()
@@ -108,7 +117,7 @@ class Experimenter(object):
         self.jobs_total = len(self.experiments)
         start_time = datetime.now()
         print("Using up to %i CPUs with numpy multi-threading disabled" % self.cpu_limit)
-        with multiprocessing.Pool(self.cpu_limit, maxtasksperchild=1) as pool:
+        with multiprocessing.Pool(self.cpu_limit) as pool:
 
             # print status function
             def output_status(prefix='F'):
@@ -130,22 +139,38 @@ class Experimenter(object):
                 )
 
             # define callbacks, they are run within the main process, but in separate threads
-            def update_status(result):
-                self.jobs_finished += 1
+            def update_status(result=None):
+                from pandas import DataFrame
                 with result_lock:
-                    self.results[result.experiment_id] = result
-                output_status()
+                    self.jobs_finished += 1
+                    output_status()
+                    if not result:
+                        return
+
+                    row = {}
+                    experiment = self.experiments[result.experiment_id]
+                    row.update({'experiment_id': result.experiment_id, 'experiment_hash': experiment.hash})
+                    row.update(experiment.parameters._asdict())
+                    row.update(result._asdict())
+                    self.results = self.results.append(DataFrame([row]), sort=True)
+                    self.save_results()
 
                 # If there is already a callback waiting, we will replace it and therefore cancel it
                 if self.next_callback.is_alive():
-                    self.next_callback.cancel()
+                    sleep(0)  # let other threads run first
+                    if callback_lock.acquire(blocking=False):
+                        self.next_callback.cancel()
+                        callback_lock.release()
+                    else:
+                        # the callback is currently waiting for the result_lock
+                        return
 
                 # Schedule callback either immediately (0) or after the pause expired
                 pause = max(0.0, self.update_callback_min_pause - (datetime.now() - self.last_callback).total_seconds())
                 self.next_callback = Timer(
                     pause,
                     call_callback,
-                    args=[result.experiment_id, pause != 0.0],
+                    args=[result.experiment_id, pause],
                 )
                 self.next_callback.start()
 
@@ -153,13 +178,22 @@ class Experimenter(object):
                 print('Experiment exception: ', exception, file=sys.stderr)
                 traceback.print_exception(type(exception), exception, exception.__traceback__, file=sys.stderr)
                 self.jobs_errored += 1
-                update_status(exception)
+                self.exceptions.append(exception)
+                update_status()
 
             # randomize order
             experiments = list(self.experiments.values())
             if shuffle:
                 random.seed(0xdeadbeef)
                 random.shuffle(experiments)
+
+            # filter loaded experiments
+            if not self.results.empty:
+                loaded_experiment_hashes = self.results.loc[:, ['experiment_hash']].values[:, 0]
+                experiments = [ex for ex in experiments if ex.hash not in loaded_experiment_hashes]
+                if loaded_experiment_hashes.size:
+                    print('Continuing from %s' % self.results_file)
+                    self.jobs_finished = len(loaded_experiment_hashes)
 
             # experiment execution
             for experiment in experiments:
@@ -180,9 +214,8 @@ class Experimenter(object):
             listener.join()
 
             # check if we got any exceptions as results
-            exceptions = [ex for ex in self.results.values() if isinstance(ex, Exception)]
-            if exceptions:
-                raise FailedExperimentsException(exceptions)
+            if self.exceptions:
+                raise FailedExperimentsException(self.exceptions)
 
     @staticmethod
     def disable_auto_multiprocessing():
@@ -207,6 +240,25 @@ class Experimenter(object):
                                     'following environment: ' + str(desired_environment))
         for key, val in desired_environment.items():
             os.environ[key] = val
+
+    def save_results(self):
+        """
+        Save current results to `results_file`.
+        """
+        if not self.results_file:
+            return
+        self.results.to_csv('results/' + self.results_file)
+
+    def load_results(self):
+        """
+        Try to read results from `results_file`. Does nothing if that file does not exist.
+        """
+        try:
+            if self.results_file:
+                from pandas import read_csv
+                self.results = read_csv('results/' + self.results_file)
+        except FileNotFoundError:
+            pass
 
 
 def setup_result_logger(result_log_name):

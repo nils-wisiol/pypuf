@@ -6,9 +6,20 @@ import abc
 import logging
 import logging.handlers
 import sys
+from _sha256 import sha256
+from os import getpid
 from time import time, clock
 from uuid import uuid4
-from pypuf.experiments.result import ExperimentResult
+
+
+class NoResultException(Exception):
+    """Indicates that an experiment did not yield a result."""
+
+    def __init__(self, experiment_id=None, experiment_pid=None, experiment_class=None):
+        super().__init__()
+        self.experiment_id = experiment_id
+        self.experiment_pid = experiment_pid
+        self.experiment_class = experiment_class
 
 
 class Experiment(object):
@@ -17,12 +28,16 @@ class Experiment(object):
     analyze(), respectively). It can be used with the Experimenter class to run Experiments in parallel.
     """
 
-    def __init__(self, progress_log_name):
+    def __init__(self, progress_log_name, parameters):
         """
         :param progress_log_name: A unique name, used for log path.
+        :param parameters: NamedTuple object holding all experiment parameters
         """
         self.id = uuid4()
         self.progress_log_name = progress_log_name
+        self.parameters = parameters
+        self.hash = sha256((self.__class__.__name__ + ': ' + str(parameters)).encode()).hexdigest()
+        self.result = None
 
         # This must be set at run, loggers can (under circumstances) not be pickled
         self.progress_logger = None
@@ -36,6 +51,7 @@ class Experiment(object):
     def analyze(self):
         """
         This method analyzes the results of the experiment.
+        :return Instance of ExperimentResult, holding all relevant results.
         """
         raise NotImplementedError('users must define analysis to use this base class')
 
@@ -55,8 +71,9 @@ class Experiment(object):
     def execute(self, result_log_queue, result_log_name):
         """
         Executes the experiment at hand by
-        (1) calling run() and measuring the run time of run() and
-        (2) calling analyze().
+        (1) calling run() and measuring the run time of run(),
+        (2) calling analyze(),
+        (3) logging the result
         :param result_log_queue: multiprocessing.queue
                       Multiprocessing safe queue which is used to coordinate the logging
         :param result_log_name: string
@@ -91,10 +108,14 @@ class Experiment(object):
             self.measured_time = self.timer() - start_time
 
             # analyze the result
-            result = self.analyze()
-            if not result:
-                result = ExperimentResult()
-            result.experiment_id = self.id
+            self.result = self.analyze()
+            if not self.result:
+                raise NoResultException(
+                    experiment_id=self.id,
+                    experiment_pid=getpid(),
+                    experiment_class=self.__class__.__name__
+                )
+            self.result_logger.info(str(self.result).replace("\n", ''))
 
             # clean up and return
             if self.progress_logger and file_handler:
@@ -104,8 +125,9 @@ class Experiment(object):
                 self.result_logger.removeHandler(queue_handler)
                 queue_handler.close()
 
-            return result
+            return self.result
         except Exception as ex:
             # If anything goes wrong, we attach the experiment id for identification
             ex.experiment_id = self.id
+            ex.pid = getpid()
             raise ex
