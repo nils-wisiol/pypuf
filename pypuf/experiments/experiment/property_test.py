@@ -1,4 +1,8 @@
 """This module can be used to characterize the properties of a puf class."""
+from collections import OrderedDict
+from typing import NamedTuple
+from uuid import UUID
+
 from numpy import array
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
@@ -7,77 +11,84 @@ from pypuf.property_test.base import PropertyTest
 from pypuf.tools import sample_inputs
 
 
+class Parameters(NamedTuple):
+    """
+    Parameter for PropertyTest experiment.
+    """
+
+    # PropertyTest.uniqueness_statistic or reliability_statistic
+    # Function which is used to calculate a statistic.
+    test_function: str
+
+    # Number of challenges used.
+    challenge_count: int
+
+    # Number of calculations see test_function for more details.
+    measurements: int
+
+    # The seed which is used to initialize the pseudo-random number generator
+    # which is used to generate challenges.
+    challenge_seed: int
+
+    # A Function: *kwargs -> list of pypuf.simulation.base.Simulation
+    # This function is used to generate a list of simulation instances which are inspected.
+    ins_gen_function: str
+
+    # A collections.OrderedDict with keyword arguments
+    # This keyword arguments are passed to ins_gen_function to generate
+    # pypuf.simulation.base.Simulation instances and saved into the result log.
+    param_ins_gen: OrderedDict
+
+
+class Result(NamedTuple):
+    """
+    Result of PropertyTest experiment.
+    """
+
+    experiment_id: UUID
+    mean: float
+    median: float
+    minimum: float
+    maximum: float
+    sample_variance: float
+    measured_time: float
+    samples_string: str
+
+
 class ExperimentPropertyTest(Experiment):
     """
     This class can be used to test several puf simulations instances with the pypuf.property_test.base.PropertyTest
     class.
     """
-    def __init__(self, progress_log_name, test_function, challenge_count, measurements, challenge_seed,
-                 ins_gen_function, param_ins_gen):
-        """
-        :param test_function: PropertyTest.uniqueness_statistic or reliability_statistic
-                              Function which is used to calculate a statistic.
-        :param challenge_count: int
-                                Number of challenges used.
-        :param measurements: int
-                             Number of calculations see test_function for more details.
-        :param challenge_seed: int
-                               The seed which is used to initialize the pseudo-random number generator
-                               which is used to generate challenges.
-        :param ins_gen_function: A Function: *kwargs -> list of pypuf.simulation.base.Simulation
-                                 This function is used to generate a list of simulation instances which are inspected.
-        :param param_ins_gen: A collections.OrderedDict with keyword arguments
-                              This keyword arguments are passed to ins_gen_function to generate
-                              pypuf.simulation.base.Simulation instances and saved into the result log.
-        """
-        super().__init__(progress_log_name=progress_log_name)
-        self.progress_log_name = progress_log_name
-        self.test_function = test_function
-        self.challenge_count = challenge_count
-        self.challenge_seed = challenge_seed
-        self.measurements = measurements
-        self.ins_gen_function = ins_gen_function
-        self.param_ins_gen = param_ins_gen
+    def __init__(self, progress_log_name, parameters):
+        super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.result = None
 
     def run(self):
         """Runs a property test."""
-        instances = self.ins_gen_function(**self.param_ins_gen)
-        n = self.param_ins_gen['n']
-        challenge_prng = RandomState(self.challenge_seed)
-        challenges = array(list(sample_inputs(n, self.challenge_count, random_instance=challenge_prng)))
+        ins_gen_function = getattr(self, self.parameters.ins_gen_function)
+        instances = ins_gen_function(**self.parameters.param_ins_gen)
+        n = self.parameters.param_ins_gen['n']
+        challenge_prng = RandomState(self.parameters.challenge_seed)
+        challenges = array(list(sample_inputs(n, self.parameters.challenge_count, random_instance=challenge_prng)))
         property_test = PropertyTest(instances, logger=self.progress_logger)
-        self.result = self.test_function(property_test, challenges, measurements=self.measurements)
+        test_function = getattr(PropertyTest, self.parameters.test_function)
+        self.result = test_function(property_test, challenges, measurements=self.parameters.measurements)
 
     def analyze(self):
         """Summarize the results of the search process."""
         assert self.result is not None
-        mean = self.result.get('mean', float("inf"))
-        median = self.result.get('median', float("inf"))
-        minimum = self.result.get('min', float("inf"))
-        maximum = self.result.get('max', float("inf"))
-        sample_variance = self.result.get('sv', float("inf"))
-        samples = self.result.get('samples', [])
-        # create a string from samples
-        string_samples = list(map(str, samples))
-        samples_string = ','.join(string_samples)
-        # prepare a string representation for the instance parameter
-        instance_param = []
-        for value in self.param_ins_gen.values():
-            if callable(value):
-                instance_param.append(value.__name__)
-            else:
-                instance_param.append(str(value))
-        instance_param_str = '\t'.join(instance_param)
-        # create a unique identifier
-        unique_id = '{}{}{}{}'.format(
-            ''.join(instance_param), self.challenge_count, self.measurements, self.challenge_seed
+
+        return Result(
+            experiment_id=self.id,
+            mean=self.result.get('mean', float("inf")),
+            median=self.result.get('median', float("inf")),
+            minimum=self.result.get('min', float("inf")),
+            maximum=self.result.get('max', float("inf")),
+            sample_variance=self.result.get('sv', float("inf")),
+            measured_time=self.measured_time,
+            samples_string=','.join(list(map(str, self.result.get('samples', []))))
         )
-        msg = '{}\t{}\t{}\t{}\t{:f}\t{:f}\t{:f}\t{:f}\t{:f}\t{:f}\t{}\t{}'.format(
-            instance_param_str, self.challenge_count, self.measurements, self.challenge_seed, mean, median,
-            minimum, maximum, sample_variance, self.measured_time, unique_id, samples_string
-        )
-        self.result_logger.info(msg)
 
     @classmethod
     def create_ltf_arrays(cls, n=8, k=1, instance_count=10, transformation=LTFArray.transform_id,

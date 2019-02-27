@@ -9,8 +9,7 @@ Results are:
 
 Overall, the results in terms of success rates are inconclusive.
 """
-from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression, Parameters
 from pypuf.plots import SuccessRatePlot
 from pypuf.studies.base import Study
 
@@ -58,39 +57,40 @@ class LRMiniBatchSuccessRate(Study):
                            ('shuffle' if shuffle else 'noshuffle') + '-success_rate-%i-%i.pdf' % (n, k)
                 plot = SuccessRatePlot(
                     filename=filename,
-                    results=self.experimenter.results,
-                    group_by='minibatch_size',
+                    group_by='mini_batch_size',
                     group_labels=self.GROUP_LABELS,
                 )
                 self.result_plots.append(plot)
                 for training_set_size in training_set_sizes:
                     for i in range(self.SAMPLES_PER_POINT):
-                        for minibatch_size in [None] + self.MINI_BATCH_SIZES[k]:
-                            if minibatch_size and minibatch_size >= training_set_size:
+                        for mini_batch_size in [None] + self.MINI_BATCH_SIZES[k]:
+                            if mini_batch_size and mini_batch_size >= training_set_size:
                                 break
 
                             e = ExperimentLogisticRegression(
                                 progress_log_prefix=None,
-                                n=n,
-                                k=k,
-                                N=training_set_size,
-                                seed_instance=314159 + i,
-                                seed_model=265358 + i,
-                                transformation=LTFArray.transform_id,
-                                combiner=LTFArray.combiner_xor,
-                                seed_challenge=979323 + i,
-                                seed_chl_distance=846264 + i,
-                                minibatch_size=minibatch_size,
-                                convergance_decimals=1.5 if not minibatch_size else 2.7,
-                                shuffle=shuffle,
+                                parameters=Parameters(
+                                    n=n,
+                                    k=k,
+                                    N=training_set_size,
+                                    seed_instance=314159 + i,
+                                    seed_model=265358 + i,
+                                    transformation='id',
+                                    combiner='xor',
+                                    seed_challenge=979323 + i,
+                                    seed_distance=846264 + i,
+                                    mini_batch_size=mini_batch_size or 0,
+                                    convergence_decimals=1.5 if not mini_batch_size else 2.7,
+                                    shuffle=False if mini_batch_size is None else shuffle,
+                                )
                             )
                             experiments.append(e)
-                            plot.experiment_ids.append(e.id)
+                            plot.experiment_hashes.append(e.hash)
         return experiments
 
     def plot(self):
-        if not self.results:
+        if self.experimenter.results.empty:
             return
 
         for plot in self.result_plots:
-            plot.plot()
+            plot.plot(self.experimenter.results)

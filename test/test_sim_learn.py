@@ -128,9 +128,9 @@ class TestSimLearn(unittest.TestCase):
         with open(path, 'r') as file:
             line = file.readline()
             while line != '':
-                values = line.split('\t')
-                # Drop the time value
-                del values[9]
+                values = line.split(',')
+                del values[0]  # Drop UUID
+                del values[3]  # Drop measured time
                 lines.append(values)
                 line = file.readline()
         remove_test_logs(path)
@@ -150,9 +150,12 @@ class TestSimLearn(unittest.TestCase):
         res_param_set2 = self.read_log('logs/' + log_path)
 
         # Test challenge seed impact
+        # remove pid
+        del res_param_set1[0][0]
+        del res_param_set2[0][0]
         # remove timing info
-        del res_param_set1[0][10]
-        del res_param_set2[0][10]
+        del res_param_set1[0][2]
+        del res_param_set2[0][2]
         self.assertNotEqual(res_param_set1, res_param_set2)
 
         sim_learn.main(parameter_set1)
@@ -162,9 +165,12 @@ class TestSimLearn(unittest.TestCase):
         res_param_set2_2 = self.read_log('logs/' + log_path)
 
         # Test challenge to be deterministic
+        # remove pid
+        del res_param_set1_2[0][0]
+        del res_param_set2_2[0][0]
         # remove timing info
-        del res_param_set1_2[0][10]
-        del res_param_set2_2[0][10]
+        del res_param_set1_2[0][2]
+        del res_param_set2_2[0][2]
         self.assertEqual(res_param_set2, res_param_set2_2)
         self.assertEqual(res_param_set1, res_param_set1_2)
 

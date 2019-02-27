@@ -33,8 +33,7 @@ restarts: int
 from sys import stderr, argv
 import argparse
 from pypuf.experiments.experimenter import Experimenter
-from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.experiments.experiment.majority_vote import ExperimentMajorityVoteFindVotes, Parameters
 
 
 def main(args):
@@ -76,22 +75,24 @@ def main(args):
             log_name = args.log_name+'{0}'.format(k)
             experimenter.queue(ExperimentMajorityVoteFindVotes(
                 progress_log_prefix=log_name,
-                n=n,
-                k=k,
-                challenge_count=N,
-                seed_instance=0xC0DEBA5E + i,
-                seed_instance_noise=0xdeadbeef + i,
-                transformation=LTFArray.transform_id,
-                combiner=LTFArray.combiner_xor,
-                mu=0,
-                sigma=1,
-                sigma_noise_ratio=args.s_ratio,
-                seed_challenges=seed_challenges + i,
-                desired_stability=args.stab_c,
-                overall_desired_stability=args.stab_all,
-                minimum_vote_count=1,
-                iterations=iterations,
-                bias=None
+                parameters=Parameters(
+                    n=n,
+                    k=k,
+                    challenge_count=N,
+                    seed_instance=0xC0DEBA5E + i,
+                    seed_instance_noise=0xdeadbeef + i,
+                    transformation='id',
+                    combiner='xor',
+                    mu=0,
+                    sigma=1,
+                    sigma_noise_ratio=args.s_ratio,
+                    seed_challenges=seed_challenges + i,
+                    desired_stability=args.stab_c,
+                    overall_desired_stability=args.stab_all,
+                    minimum_vote_count=1,
+                    iterations=iterations,
+                    bias=None
+                )
             ))
 
     experimenter.run()

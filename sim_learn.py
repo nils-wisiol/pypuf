@@ -7,7 +7,7 @@ import sys
 import argparse
 from pypuf.experiments.experimenter import Experimenter
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression, Parameters
 
 
 def main(args):
@@ -65,8 +65,8 @@ def main(args):
 
     n = args.n
     k = args.k
-    transformation_name = args.transformation
-    combiner_name = args.combiner
+    transformation = args.transformation
+    combiner = args.combiner
     N = args.N
     restarts = args.restarts
 
@@ -82,19 +82,16 @@ def main(args):
     if args.seed_distance is not None:
         seed_distance = int(args.seed_distance, 16)
 
-    transformation = None
-    combiner = None
-
     try:
-        transformation = getattr(LTFArray, 'transform_%s' % transformation_name)
+        getattr(LTFArray, 'transform_%s' % transformation)
     except AttributeError:
-        sys.stderr.write('Transformation %s unknown or currently not implemented\n' % transformation_name)
+        sys.stderr.write('Transformation %s unknown or currently not implemented\n' % transformation)
         quit()
 
     try:
-        combiner = getattr(LTFArray, 'combiner_%s' % combiner_name)
+        getattr(LTFArray, 'combiner_%s' % combiner)
     except AttributeError:
-        sys.stderr.write('Combiner %s unknown or currently not implemented\n' % combiner_name)
+        sys.stderr.write('Combiner %s unknown or currently not implemented\n' % combiner)
         quit()
 
     log_name = args.log_name
@@ -114,15 +111,20 @@ def main(args):
             l_name = '%s_%i_%i' % (log_name, j, start_number)
             experiment = ExperimentLogisticRegression(
                 progress_log_prefix=l_name,
-                n=n,
-                k=k,
-                N=N,
-                seed_instance=seed_instance + j,
-                seed_model=seed_model + j + start_number,
-                transformation=transformation,
-                combiner=combiner,
-                seed_challenge=seed_challenges,
-                seed_chl_distance=seed_distance,
+                parameters=Parameters(
+                    n=n,
+                    k=k,
+                    N=N,
+                    seed_instance=seed_instance + j,
+                    seed_model=seed_model + j + start_number,
+                    transformation=transformation,
+                    combiner=combiner,
+                    seed_challenge=seed_challenges,
+                    seed_distance=seed_distance,
+                    convergence_decimals=2,
+                    mini_batch_size=0,
+                    shuffle=False,
+                )
             )
             experimenter.queue(experiment)
 

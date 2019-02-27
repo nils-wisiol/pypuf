@@ -99,7 +99,7 @@ def get_functions_with_prefix(prefix, obj):
                 Object to investigate
     :return list of function objects
     """
-    return [getattr(obj, func) for func in dir(obj) if func.startswith(prefix)]
+    return [func for func in dir(obj) if func.startswith(prefix)]
 
 
 class _RedirectStream:
