@@ -288,16 +288,22 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
         stop = float('inf')
     else:
         stop = start + num
+    if in_11_notation:
+        allowed_vals = ['-1', '1']
+    else:
+        allowed_vals = ['0', '1']
 
     challenges, responses = [], []
-
     with open(filename) as f:
         for ln, line in enumerate(f):
             if start <= ln + 1 < stop:
                 vals = line.split()
                 assert len(vals) == n + 1, \
-                    'Lines must contain {} values (line {} has {} values)' \
-                    .format(n + 1, ln + 1, len(vals))
+                    'Line {} contains {} values, expected {}' \
+                    .format(ln + 1, len(vals), n + 1)
+                assert set(vals).issubset(allowed_vals), \
+                    'Line {} contains an invalid value: {}' \
+                    .format(ln + 1, next(iter(set(vals).difference(allowed_vals))))
                 challenges.append(vals[:n])
                 responses.append(vals[n])
 

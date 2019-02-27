@@ -6,19 +6,25 @@ from pypuf import tools
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
+def uint(val):
+    ival = int(val)
+    if ival <= 0:
+        raise argparse.ArgumentTypeError('{} is not a positive integer'.format(val))
+    return ival
+
 
 def main():
     """
     Learn and evaluate a PUF.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('n', type=int,
-                        help='challange bits')
-    parser.add_argument('k', type=int,
+    parser.add_argument('n', type=uint,
+                        help='challenge bits')
+    parser.add_argument('k', type=uint,
                         help='number of arbiter chains')
-    parser.add_argument('num_tr', type=int,
+    parser.add_argument('num_tr', type=uint,
                         help='number of CRPs to use for training')
-    parser.add_argument('num_te', type=int,
+    parser.add_argument('num_te', type=uint,
                         help='number of CRPs to use for testing')
     parser.add_argument('file', type=str,
                         help='file to read CRPs from')
