@@ -12,8 +12,8 @@ class ExperimentPropertyTest(Experiment):
     This class can be used to test several puf simulations instances with the pypuf.property_test.base.PropertyTest
     class.
     """
-    def __init__(self, log_name, test_function, challenge_count, measurements, challenge_seed, ins_gen_function,
-                 param_ins_gen):
+    def __init__(self, progress_log_name, test_function, challenge_count, measurements, challenge_seed,
+                 ins_gen_function, param_ins_gen):
         """
         :param test_function: PropertyTest.uniqueness_statistic or reliability_statistic
                               Function which is used to calculate a statistic.
@@ -30,8 +30,8 @@ class ExperimentPropertyTest(Experiment):
                               This keyword arguments are passed to ins_gen_function to generate
                               pypuf.simulation.base.Simulation instances and saved into the result log.
         """
-        super().__init__(log_name=log_name)
-        self.log_name = log_name
+        super().__init__(progress_log_name=progress_log_name)
+        self.progress_log_name = progress_log_name
         self.test_function = test_function
         self.challenge_count = challenge_count
         self.challenge_seed = challenge_seed

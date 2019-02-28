@@ -35,7 +35,7 @@ class TestLowDegree(unittest.TestCase):
         )
 
         low_degree_learner = LowDegreeAlgorithm(
-            TrainingSet.random_set(instance=instance, N=TestLowDegree.N),
+            TrainingSet(instance=instance, N=TestLowDegree.N),
             degree=TestLowDegree.degree
         )
         low_degree_learner.learn()

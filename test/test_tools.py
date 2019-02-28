@@ -6,7 +6,7 @@ from numpy.testing import assert_array_equal
 from tempfile import NamedTemporaryFile
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import random_input, all_inputs, random_inputs, sample_inputs, chi_vectorized, append_last, \
-    TrainingSet, RESULT_TYPE, transform_challenge_11_to_01, transform_challenge_01_to_11, poly_mult_div, \
+    TrainingSet, BIT_TYPE, transform_challenge_11_to_01, transform_challenge_01_to_11, poly_mult_div, \
     parse_file
 
 
@@ -68,8 +68,8 @@ class TestAppendLast(unittest.TestCase):
 
         challenge_seed = 0xAB17D
 
-        training_set_1 = TrainingSet.random_set(instance=instance, N=N, random_instance=RandomState(challenge_seed))
-        training_set_2 = TrainingSet.random_set(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+        training_set_1 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
+        training_set_2 = TrainingSet(instance=instance, N=N, random_instance=RandomState(challenge_seed))
 
         self.assertTrue(
             array_equal(training_set_1.challenges, training_set_2.challenges),
@@ -85,7 +85,7 @@ class TestInputFunctions(unittest.TestCase):
         n = 8
         rand_arr = random_input(n, random_instance=RandomState(0x5A11B))
         self.assertEqual(len(rand_arr), n, 'Array must be of length n.')
-        self.assertEqual(rand_arr.dtype, dtype(RESULT_TYPE), 'Array must be of type {0}'.format(RESULT_TYPE))
+        self.assertEqual(rand_arr.dtype, dtype(BIT_TYPE), 'Array must be of type {0}'.format(BIT_TYPE))
 
         array_sum = sum(rand_arr)
         # Checks for different values
@@ -97,43 +97,43 @@ class TestInputFunctions(unittest.TestCase):
         n = 8
         N = 2 ** n
         arr = all_inputs(n)
-        self.check_multi_dimensional_array(arr, N, n, RESULT_TYPE)
+        self.check_multi_dimensional_array(arr, N, n, BIT_TYPE)
 
     def test_random_inputs(self):
         """This checks the shape and type of the returned multidimensional array."""
         n = 8
         N = 2 ** (int(n / 2))
         rand_arrays = random_inputs(n, N)
-        self.check_multi_dimensional_array(rand_arrays, N, n, RESULT_TYPE)
+        self.check_multi_dimensional_array(rand_arrays, N, n, BIT_TYPE)
 
     def test_sample_inputs(self):
         """This checks the shape and type of the returned multidimensional array."""
         n = 8
         N = 2 ** n
         all_arr = sample_inputs(n, N)
-        self.check_multi_dimensional_array(all_arr, N, n, RESULT_TYPE)
+        self.check_multi_dimensional_array(all_arr, N, n, BIT_TYPE)
 
         N = 2 ** int(n / 2)
         rand_arr = sample_inputs(n, N)
-        self.check_multi_dimensional_array(rand_arr, N, n, RESULT_TYPE)
+        self.check_multi_dimensional_array(rand_arr, N, n, BIT_TYPE)
 
     def test_transform_challenge_01_to_11(self):
         """This function checks the correct behavior of the challenge transformation."""
-        challenge_01 = array([0, 1, 0, 1, 1, 0, 0, 0], dtype=RESULT_TYPE)
-        challenge_11 = array([1, -1, 1, -1, -1, 1, 1, 1], dtype=RESULT_TYPE)
+        challenge_01 = array([0, 1, 0, 1, 1, 0, 0, 0], dtype=BIT_TYPE)
+        challenge_11 = array([1, -1, 1, -1, -1, 1, 1, 1], dtype=BIT_TYPE)
         transformed_challenge = transform_challenge_01_to_11(challenge_01)
         assert_array_equal(challenge_11, transformed_challenge)
-        self.assertEqual(transformed_challenge.dtype, dtype(RESULT_TYPE),
-                         'The array is not of type {0}.'.format(RESULT_TYPE))
+        self.assertEqual(transformed_challenge.dtype, dtype(BIT_TYPE),
+                         'The array is not of type {0}.'.format(BIT_TYPE))
 
     def test_transform_challenge_11_to_01(self):
         """This function checks the correct behavior of the challenge transformation."""
-        challenge_11 = array([-1, 1, 1, 1, -1, 1, -1, 1], dtype=RESULT_TYPE)
-        challenge_01 = array([1, 0, 0, 0, 1, 0, 1, 0], dtype=RESULT_TYPE)
+        challenge_11 = array([-1, 1, 1, 1, -1, 1, -1, 1], dtype=BIT_TYPE)
+        challenge_01 = array([1, 0, 0, 0, 1, 0, 1, 0], dtype=BIT_TYPE)
         transformed_challenge = transform_challenge_11_to_01(challenge_11)
         assert_array_equal(challenge_01, transformed_challenge)
-        self.assertEqual(transformed_challenge.dtype, dtype(RESULT_TYPE),
-                         'The array is not of type {0}.'.format(RESULT_TYPE))
+        self.assertEqual(transformed_challenge.dtype, dtype(BIT_TYPE),
+                         'The array is not of type {0}.'.format(BIT_TYPE))
 
     def test_chi_vectorized(self):
         """This function checks the return type of this function."""
@@ -143,7 +143,7 @@ class TestInputFunctions(unittest.TestCase):
         inputs = random_inputs(n, N)
         chi_arr = chi_vectorized(s, inputs)
         self.assertEqual(len(chi_arr), N, 'The array must contain {0} arrays.'.format(N))
-        self.assertEqual(chi_arr.dtype, RESULT_TYPE, 'The array must be of type {0}'.format(RESULT_TYPE))
+        self.assertEqual(chi_arr.dtype, BIT_TYPE, 'The array must be of type {0}'.format(BIT_TYPE))
 
     def test_poly_mult_div(self):
         """This method checks the shape and type of two dimensional arrays."""
@@ -151,16 +151,16 @@ class TestInputFunctions(unittest.TestCase):
         k = 2
         N = 2 ** int(n / 2)
         challenges_11 = random_inputs(n, N)
-        challenges_01 = array([transform_challenge_11_to_01(c) for c in challenges_11], dtype=RESULT_TYPE)
-        irreducible_polynomial = array([1, 0, 1, 0, 0, 1, 1, 0, 1], dtype=RESULT_TYPE)
+        challenges_01 = array([transform_challenge_11_to_01(c) for c in challenges_11], dtype=BIT_TYPE)
+        irreducible_polynomial = array([1, 0, 1, 0, 0, 1, 1, 0, 1], dtype=BIT_TYPE)
         poly_mult_div(challenges_01, irreducible_polynomial, k)
-        self.check_multi_dimensional_array(challenges_01, N, n, RESULT_TYPE)
+        self.check_multi_dimensional_array(challenges_01, N, n, BIT_TYPE)
 
     def test_parse_file(self):
         """This method checks reading challenge-response pairs from a file."""
         n, k, N = 128, 1, 10
         instance = LTFArray(LTFArray.normal_weights(n, k), LTFArray.transform_atf, LTFArray.combiner_xor)
-        original = TrainingSet.random_set(instance, N)
+        original = TrainingSet(instance, N)
 
         f = NamedTemporaryFile('w')
         for vals in column_stack((original.challenges, original.responses)):

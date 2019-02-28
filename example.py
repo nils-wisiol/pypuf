@@ -22,7 +22,7 @@ def main():
 
     # create the learner
     lr_learner = LogisticRegression(
-        t_set=tools.TrainingSet.random_set(instance=instance, N=12000),
+        t_set=tools.TrainingSet(instance=instance, N=12000),
         n=64,
         k=2,
         transformation=LTFArray.transform_atf,

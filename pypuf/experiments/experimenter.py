@@ -18,10 +18,12 @@ experimenter.run()
 """
 import multiprocessing
 import logging
+import random
 import sys
 import traceback
 import os
 from datetime import datetime, timedelta
+from threading import Timer, Lock
 
 
 class Experimenter(object):
@@ -29,115 +31,158 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, log_name, experiments, cpu_limit=2**16, auto_multiprocessing=False):
+    def __init__(self, result_log_name, cpu_limit=None, auto_multiprocessing=False, update_callback=None,
+                 update_callback_min_pause=0):
         """
-        :param experiments: A list of pypuf.experiments.experiment.base.Experiment
-        :param log_name: A unique file path where to output should be logged.
+        :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
+        :param auto_multiprocessing: Whether to use numpy automatic multithreading/multiprocessing. Defaults to False.
+        :param update_callback: If set, will be called every time an experiment finishes, see also
+                update_callback_min_pause.
+        :param update_callback_min_pause: If set, update_callbacks will be delayed to at least the number of seconds
+                given here. If another experiment finishes during the pause, the earlier callback will be canceled.
         """
 
         # Store experiments list
-        self.experiments = experiments
+        self.experiments = {}
 
         # Store logger name
-        self.logger_name = log_name
+        self.result_log_name = result_log_name
 
         # Setup parallel execution limit
-        self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count())
-        self.semaphore = multiprocessing.BoundedSemaphore(self.cpu_limit)
+        self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count()) if cpu_limit else multiprocessing.cpu_count()
+        self.semaphore = None
+
+        # experimental results
+        self.results = {}
 
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
             self.disable_auto_multiprocessing()
 
-    def run(self):
+        # Callback for new results
+        self.update_callback = update_callback if update_callback else lambda *args: None
+        self.update_callback_min_pause = update_callback_min_pause
+        self.next_callback = None
+        self.last_callback = None
+
+        # Counters
+        self.jobs_finished = 0
+        self.jobs_total = 0
+        self.jobs_errored = 0
+
+    def queue(self, experiment):
         """
-        Runs all experiments.
+        Add an experiment to the queue.
+        """
+        self.experiments[experiment.id] = experiment
+        self.results[experiment.id] = None
+        self.jobs_total = len(self.experiments)
+        return experiment.id
+
+    def run(self, shuffle=False):
+        """
+        Runs all experiments. Blocks until all experiment are finished.
         """
 
         # Setup multiprocessing logging
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=log_listener,
-                                           args=(queue, setup_logger, self.logger_name,))
+        result_log_queue = multiprocessing.Manager().Queue()
+        listener = multiprocessing.Process(target=result_log_listener,
+                                           args=(result_log_queue, setup_result_logger, self.result_log_name,))
         listener.start()
 
-        # list of active jobs
-        active_jobs = []
+        # Setup callback throttling
+        result_lock = Lock()
 
+        def call_callback(experiment_id=None, print_status=False):
+            with result_lock:
+                if print_status:
+                    output_status(prefix='C')
+                self.last_callback = datetime.now()
+                self.update_callback(experiment_id)
+
+        self.next_callback = Timer(0, call_callback)
+        self.next_callback.start()
+
+        # setup process pool
+        self.jobs_total = len(self.experiments)
         start_time = datetime.now()
+        print("Using up to %i CPUs with numpy multi-threading disabled" % self.cpu_limit)
+        with multiprocessing.Pool(self.cpu_limit, maxtasksperchild=1) as pool:
 
-        for (i, exp) in enumerate(self.experiments):
-
-            # define experiment process
-            def run_experiment(experiment, queue, semaphore, logger_name):
-                """
-                This method is responsible to start the experiment and release the semaphore which coordinates the
-                number of parallel running processes.
-                :param experiment: pypuf.experiments.experiment.base.Experiment
-                                   A implementation of the base experiment class which should be executed
-                :param queue: multiprocessing.queue
-                              This is used to coordinate the processes in order to obtain results.
-                :param semaphore: multiprocessing.BoundedSemaphore(self.cpu_limit)
-                                  A semaphore to limit the number of concurrent running experiments
-                :param logger_name: String
-                                    Path to or name to the log file of the experiment
-                """
-                try:
-                    experiment.execute(queue, logger_name)  # run the actual experiment
-                    semaphore.release()  # release CPU
-                except Exception as experiment:  # pylint: disable=W
-                    semaphore.release()  # release CPU
-                    raise experiment
-
-            job = multiprocessing.Process(
-                target=run_experiment,
-                args=(exp, queue, self.semaphore, self.logger_name)
-            )
-
-            # wait for a free CPU
-            self.semaphore.acquire()
-
-            def list_active_jobs():
-                """
-                update list of active jobs
-                return: [multiprocessing.Process] list of active jobs
-                """
-                still_active_jobs = []
-                for j in active_jobs:
-                    j.join(0)
-                    if j.exitcode is None:
-                        still_active_jobs.append(j)
-                return still_active_jobs
-
-            # start experiment
-            job.start()
-            active_jobs = list_active_jobs()
-            active_jobs.append(job)
-
-            # output status
-            number_of_started_jobs = i + 1  # including finished ones!
-            progress = (number_of_started_jobs - len(active_jobs)) / len(self.experiments)
-            elapsed_time = datetime.now() - start_time
-            sys.stdout.write(
-                "%s %i jobs total, %i finished, %i running, %i queued, progress %.2f, remaining time: %s\n" %
-                (
-                    datetime.now().strftime('%c'),
-                    len(self.experiments),
-                    number_of_started_jobs - len(active_jobs),
-                    len(active_jobs),
-                    len(self.experiments) - number_of_started_jobs,
-                    progress,
-                    timedelta(seconds=(elapsed_time / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+            # print status function
+            def output_status(prefix='F'):
+                progress = self.jobs_finished / self.jobs_total
+                elapsed_time = datetime.now() - start_time
+                errors = "" if self.jobs_errored == 0 else " %i ERRORED, " % self.jobs_errored
+                sys.stdout.write(
+                    ("%s %s: %i jobs, %i finished, %i queued," + errors + " %.0f%%, ~remaining: %s\n") %
+                    (
+                        prefix,
+                        datetime.now().strftime('%c'),
+                        self.jobs_total,
+                        self.jobs_finished,
+                        self.jobs_total - self.jobs_finished,
+                        progress * 100,
+                        timedelta(seconds=(elapsed_time * (
+                            1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                    )
                 )
-            )
 
-        # wait for all processes to be finished
-        for job in active_jobs:
-            job.join()
+            # define callbacks, they are run within the main process, but in separate threads
+            def update_status(result):
+                self.jobs_finished += 1
+                with result_lock:
+                    self.results[result.experiment_id] = result
+                output_status()
 
-        # Quit logging process
-        queue.put_nowait(None)
-        listener.join()
+                # If there is already a callback waiting, we will replace it and therefore cancel it
+                if self.next_callback.is_alive():
+                    self.next_callback.cancel()
+
+                # Schedule callback either immediately (0) or after the pause expired
+                pause = max(0.0, self.update_callback_min_pause - (datetime.now() - self.last_callback).total_seconds())
+                self.next_callback = Timer(
+                    pause,
+                    call_callback,
+                    args=[result.experiment_id, pause != 0.0],
+                )
+                self.next_callback.start()
+
+            def update_status_error(exception):
+                print('Experiment exception: ', exception, file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                self.jobs_errored += 1
+                update_status(exception)
+
+            # randomize order
+            experiments = list(self.experiments.values())
+            if shuffle:
+                random.seed(0xdeadbeef)
+                random.shuffle(experiments)
+
+            # experiment execution
+            for experiment in experiments:
+                pool.apply_async(
+                    experiment.execute,
+                    (result_log_queue, self.result_log_name),
+                    callback=update_status,
+                    error_callback=update_status_error,
+                )
+
+            # show status, then block until we're ready
+            output_status()
+            pool.close()
+            pool.join()
+
+            # quit logger
+            result_log_queue.put(None)  # trigger listener to quit
+            listener.join()
+
+            # check if we got any exceptions as results
+            exceptions = [ex for ex in self.results.values() if isinstance(ex, Exception)]
+            if exceptions:
+                raise FailedExperimentsException(exceptions)
 
     @staticmethod
     def disable_auto_multiprocessing():
@@ -164,23 +209,24 @@ class Experimenter(object):
             os.environ[key] = val
 
 
-def setup_logger(logger_name):
+def setup_result_logger(result_log_name):
     """
     This method is used to open the file handler for a logger_name. The resulting log file will have the format
     'logger_namer.log'.
-    :param logger_name: string
+    :param result_log_name: string
                         Path to or name to the log file
     """
-    root = logging.getLogger(logger_name)
+    root = logging.getLogger(result_log_name)
 
     # Setup logging to both file and console
-    file_handler = logging.FileHandler(filename='%s.log' % logger_name, mode='w')
+    file_handler = logging.FileHandler(filename='logs/%s.log' % result_log_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
     root.addHandler(file_handler)
+    return file_handler
 
 
-def log_listener(queue, configurer, logger_name):
+def result_log_listener(queue, configurer, logger_name):
     """
     This is the root function of logging process which is responsible to log the experiment results.
     :param queue: multiprocessing.queue
@@ -189,14 +235,23 @@ def log_listener(queue, configurer, logger_name):
     :param logger_name: String
                         Path to or name to the log file
     """
-    configurer(logger_name)
+    handler = configurer(logger_name)
     while True:
         try:
             record = queue.get()
             if record is None:  # We send this as a sentinel to tell the listener to quit.
+                handler.close()
+                logging.getLogger(logger_name).removeHandler(handler)
                 break
             logger = logging.getLogger(record.name)
             logger.handle(record)  # No level or filter logic applied - just do it!
-        except Exception:  # pylint: disable=W
+        except Exception as ex:  # pylint: disable=W
             print('Whoops! Problem:', file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
+            raise ex
+
+
+class FailedExperimentsException(Exception):
+    """
+    Indicates that the experimenter's run included failed experiments.
+    """

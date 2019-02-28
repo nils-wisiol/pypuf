@@ -34,7 +34,7 @@ class TestLogisticRegression(unittest.TestCase):
         )
 
         lr_learner = LogisticRegression(
-            TrainingSet.random_set(instance=instance, N=TestLogisticRegression.N),
+            TrainingSet(instance=instance, N=TestLogisticRegression.N),
             TestLogisticRegression.n,
             TestLogisticRegression.k,
             transformation=LTFArray.transform_id,
@@ -61,7 +61,7 @@ class TestLogisticRegression(unittest.TestCase):
         )
 
         lr_learner = LogisticRegression(
-            TrainingSet.random_set(instance=instance, N=TestLogisticRegression.N),
+            TrainingSet(instance=instance, N=TestLogisticRegression.N),
             TestLogisticRegression.n,
             TestLogisticRegression.k,
             transformation=LTFArray.transform_id,

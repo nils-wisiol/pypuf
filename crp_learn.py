@@ -1,10 +1,11 @@
 """
-This module is used for learning a PUF from known CRPs.
+This module is used for learning a PUF from known challenge-response pairs.
 """
 import argparse
 from pypuf import tools
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+
 
 def uint(val):
     ival = int(val)

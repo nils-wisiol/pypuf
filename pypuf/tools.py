@@ -4,12 +4,13 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
+from random import sample
 
-RESULT_TYPE = 'int8'
+BIT_TYPE = int8
 
 
 def random_input(n, random_instance=RandomState()):
@@ -34,7 +35,7 @@ def all_inputs(n):
     :returns: array of int8
               An array with all possible different {-1,1}-vectors of length `n`.
     """
-    return (array(list(itertools.product((-1, +1), repeat=n)))).astype(RESULT_TYPE)
+    return (array(list(itertools.product((-1, +1), repeat=n)))).astype(BIT_TYPE)
 
 
 def random_inputs(n, num, random_instance=RandomState()):
@@ -50,7 +51,7 @@ def random_inputs(n, num, random_instance=RandomState()):
     :return: array of num {-1,1} int8 arrays
              An array with num random {-1,1} int arrays.
     """
-    return 2 * random_instance.randint(0, 2, (num, n), dtype=RESULT_TYPE) - 1
+    return 2 * random_instance.randint(0, 2, (num, n), dtype=BIT_TYPE) - 1
 
 
 def sample_inputs(n, num, random_instance=RandomState()):
@@ -81,12 +82,14 @@ def append_last(arr, item):
     :return: n dimensional array of type
              initial arr with appended element item
     """
+    assert arr.dtype == dtype(type(item)), 'The elements of arr and item must be of the same type, but the array has ' \
+                                           'type %s and the item has type %s.' % (arr.dtype, dtype(type(item)))
     dimension = list(shape(arr))
     assert len(dimension) >= 1, 'arr must have at least one dimension.'
     # the lowest level should contain one item
     dimension[-1] = 1
     # create an array white shape(array) where the lowest level contains only one item
-    item_arr = full(dimension, item)
+    item_arr = full(dimension, item, dtype=BIT_TYPE)
     # the item should be appended at the lowest level
     axis = len(dimension) - 1
     return append(arr, item_arr, axis=axis)
@@ -116,7 +119,7 @@ def approx_dist_nonrandom(instance, test_set):
     that generated the challenge-response pairs in test_set.
     :param instance: pypuf.simulation.arbiter_based.base.Simulation
                      Model to evaluate
-    :param test_set: pypuf.tools.TrainingSet
+    :param test_set: pypuf.tools.ChallengeResponseSet
                      Challenge-response pairs to test instance with
     :return: float
              Ratio of correctly to incorrectly predicted responses
@@ -154,8 +157,8 @@ def chi_vectorized(s, inputs):
     assert len(s) == len(inputs[0])
     result = inputs[:, s > 0]
     if result.size == 0:
-        return ones(len(inputs), dtype=RESULT_TYPE)
-    return prod(result, axis=1, dtype=RESULT_TYPE)
+        return ones(len(inputs), dtype=BIT_TYPE)
+    return prod(result, axis=1, dtype=BIT_TYPE)
 
 
 def compare_functions(function1, function2):
@@ -220,16 +223,22 @@ def poly_mult_div(challenge, irreducible_polynomial, k):
     import polymath as pm
     assert_result_type(challenge)
     assert_result_type(irreducible_polynomial)
+    # TODO Change the type to int8 or uint8
+    challenge = challenge.astype('uint8')
+    irreducible_polynomial = irreducible_polynomial.astype('uint8')
+    # TODO Change the type to int8 or uint8
+    # challenge = challenge.astype('int64')
+    # irreducible_polynomial = irreducible_polynomial.astype('int64')
     c_original = challenge
     res = None
     for i in range(k):
         challenge = pm.polymul(challenge, c_original)
         challenge = pm.polymodpad(challenge, irreducible_polynomial)
         if i == 0:
-            res = array([challenge], dtype=RESULT_TYPE)
+            res = array([challenge], dtype='int8')
         else:
             res = vstack((res, challenge))
-    res = res.astype(RESULT_TYPE)
+    res = res.astype(BIT_TYPE)
     assert_result_type(res)
     return res
 
@@ -259,10 +268,10 @@ def approx_stabilities(instance, num, reps, random_instance=RandomState()):
 
 def assert_result_type(arr):
     """
-    This function checks the type of the array to match the RESULT_TYPE
+    This function checks the type of the array to match the BIT_TYPE
     :param arr: array of arbitrary type
     """
-    assert arr.dtype == dtype(RESULT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(RESULT_TYPE, arr.dtype)
+    assert arr.dtype == dtype(BIT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(BIT_TYPE, arr.dtype)
 
 
 def parse_file(filename, n, start=1, num=0, in_11_notation=False):
@@ -281,8 +290,8 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
     :param in_11_notation: bool
                            Format the file is in
                            True for -1,1 notation, False for 0,1
-    :return: tools.TrainingSet
-             A TraningSet with the num challenges and responses that were read
+    :return: tools.ChallengeResponseSet
+             A ChallengeResponseSet with the num challenges and responses that were read
     """
     if num == 0:
         stop = float('inf')
@@ -313,42 +322,74 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
         'File contains insufficient lines ({} read, {} needed)' \
         .format(len(challenges), num)
 
-    challenges = array(challenges).astype(RESULT_TYPE)
-    responses = array(responses).astype(RESULT_TYPE)
+    challenges = array(challenges).astype(BIT_TYPE)
+    responses = array(responses).astype(BIT_TYPE)
 
     if not in_11_notation:
         challenges = transform_challenge_01_to_11(challenges)
         responses = transform_challenge_01_to_11(responses)
 
-    return TrainingSet(challenges, responses, num)
+    return ChallengeResponseSet(challenges, responses)
 
 
-class TrainingSet():
+class ChallengeResponseSet:
     """
-    Basic data structure to hold a collection of challenge-response pairs.
-    Note that this is, strictly speaking, not a set.
+    A set of challenges and corresponding responses.
     """
 
-    def __init__(self, challenges, responses, N):
+    def __init__(self, challenges, responses):
         """
-        :param challenge: array of int8
-                          Challenge vector in -1,1 notation
-        :param responses: array of int8
-                          Response vector in -1,1 notation
-        :param N: int
-                  Number of challenges
+        Create a set of challenges and corresponding responses. Note that the order of the
+        challenges and responses parameter is relevant.
+        :param challenges: List of challenges
+        :param responses: List of responses, ordered accordingly
         """
         self.challenges = challenges
         self.responses = responses
-        self.N = N
+        assert len(self.challenges) == len(self.responses)
+        self.N = len(self.challenges)
 
-
-    @classmethod
-    def random_set(obj, instance, N, random_instance=RandomState()):
+    def random_subset(self, N):
         """
-        This method constructs a TrainingSet from random challenge-response pairs.
-        :param obj: TrainingSet
-                    Object to construct
+        Gives a random subset of this challenge response set.
+        :param N: Either a relative (to the total number) or absolute number of challenges.
+        :return: A random subset samples from this challenge response set.
+        """
+        if N < 1:
+            N = int(self.N * N)
+        return self.subset(sample(range(self.N), N))
+
+    def block_subset(self, i, total):
+        """
+        Gives the i-th block of this challenge response set.
+        :param i: Index of the block that is to be returned.
+        :param total: Total number of blocks.
+        :return: A challenge response set.
+        """
+        return self.subset(range(
+            int(i / total * self.N),
+            int((i + 1) / total * self.N)
+        ))
+
+    def subset(self, subset_slice):
+        """
+        Gives the subset of this challenge response set defined by the slice given.
+        :param subset_slice: A python array slice
+        :return: A challenge response set defined accordingly
+        """
+        return ChallengeResponseSet(
+            challenges=self.challenges[subset_slice],
+            responses=self.responses[subset_slice]
+        )
+
+class TrainingSet(ChallengeResponseSet):
+    """
+    Basic data structure to hold a collection of challenge response pairs.
+    Note that this is, strictly speaking, not a set.
+    """
+
+    def __init__(self, instance, N, random_instance=RandomState()):
+        """
         :param instance: pypuf.simulation.base.Simulation
                          Instance which is used to generate responses for random challenges.
         :param N: int
@@ -356,10 +397,9 @@ class TrainingSet():
         :param random_instance: numpy.random.RandomState
                                 PRNG which is used to draft challenges.
         """
-        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        responses = instance.eval(challenges)
-        return obj(
-            array(challenges).astype(RESULT_TYPE),
-            array(responses).astype(RESULT_TYPE),
-            N
-        )
+        self.instance = instance
+        challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        super().__init__(
+            challenges=challenges,
+            responses=instance.eval(challenges)
+)

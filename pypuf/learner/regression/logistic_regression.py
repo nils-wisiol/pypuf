@@ -3,7 +3,7 @@ Module for Learning Arbiter PUFs with Logistic Regression.
 Heavily based on the work of Rührmair, Ulrich, et al. "Modeling attacks on physical unclonable functions." Proceedings
 of the 17th ACM conference on Computer and communications security. ACM, 2010.
 """
-from numpy import sign, dot, exp, array, seterr, minimum, full, amin, amax, dtype
+from numpy import dtype, sign, dot, exp, array, seterr, minimum, full, amin, amax, array_split
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from numpy.linalg import norm
@@ -58,12 +58,12 @@ class LogisticRegression(Learner):
             self.eta_plus = eta_plus
             self.delta_min = 10 ** -4
             self.delta_max = 10 ** +1
-            self.last_gradient = full((k, n), 1.0)
-            self.last_step_size = full((k, n), 0.0)
-            self.step_size = full((k, n), 1.0)
-            self.step = full((k, n), 0.0)
-            self.step_size_max = full(self.n, self.delta_max, dtype('float64'))
-            self.step_size_min = full(self.n, self.delta_min, dtype('float64'))
+            self.last_gradient = full((k, n + 1), 1.0)
+            self.last_step_size = full((k, n + 1), 0.0)
+            self.step_size = full((k, n + 1), 1.0)
+            self.step = full((k, n + 1), 0.0)
+            self.step_size_max = full(self.n + 1, self.delta_max, dtype('float64'))
+            self.step_size_min = full(self.n + 1, self.delta_min, dtype('float64'))
 
             super().__init__(model)
 
@@ -107,7 +107,8 @@ class LogisticRegression(Learner):
             return self.step
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
-                 weights_sigma=1, weights_prng=RandomState(), logger=None):
+                 weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
+                 convergance_decimals=2, shuffle=False):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -124,23 +125,24 @@ class LogisticRegression(Learner):
                        Logger which is used to log detailed information of learn iterations.
         """
         self.iteration_count = 0
+        self.epoch_count = 0
+        self.gradient_step_count = 0
         self.training_set = t_set
         self.n = n
         self.k = k
         self.weights_mu = weights_mu
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
-        self.iteration_limit = 10000
-        self.convergence_decimals = 2
-        self.sign_combined_model_responses = None
-        self.sigmoid_derivative = full(self.training_set.N, None, dtype('float64'))
+        self.iteration_limit = iteration_limit
+        self.convergence_decimals = convergance_decimals
         self.transformation = transformation
         self.combiner = combiner
-        self.transformed_challenges = self.transformation(self.training_set.challenges, k)
+        self.efba_sub_challenges = None
         self.converged = False
         self.logger = logger
-
-        assert self.n == len(self.training_set.challenges[0])
+        self.updater = None
+        self.minibatch_size = minibatch_size or self.training_set.N
+        self.shuffle = shuffle
 
     @property
     def training_set(self):
@@ -159,7 +161,7 @@ class LogisticRegression(Learner):
         # pylint: disable-msg=W0201
         self.__training_set = val
 
-    def gradient(self, model):
+    def gradient(self, model, efba_challenges_batch, responses_batch):
         """
         Compute the gradient of the given model.
         :param model: pypuf.simulation.arbiter_based.LTFArray
@@ -167,9 +169,8 @@ class LogisticRegression(Learner):
         """
 
         # compute model responses
-        model_responses = model.ltf_eval(self.transformed_challenges)
+        model_responses = model.core_eval(efba_challenges_batch)
         combined_model_responses = self.combiner(model_responses)
-        self.sign_combined_model_responses = sign(combined_model_responses)
 
         # cap the absolute value of this to avoid overflow errors
         max_response_abs_value = 50
@@ -180,7 +181,7 @@ class LogisticRegression(Learner):
         # compute the derivative from
         # the (-1,+1)-interval-sigmoid of combined model response on the all inputs
         # and the training set responses
-        self.sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - self.training_set.responses)
+        sigmoid_derivative = .5 * (2 / (1 + exp(-combined_model_responses)) - 1 - responses_batch)
 
         # equivalent to self.set.responses * (1 - 1/(1 + exp(-self.set.responses * combined_model_responses)))
 
@@ -226,14 +227,14 @@ class LogisticRegression(Learner):
         ret = array([
             # sum over all challenges to the l-th Arbiter chain
             dot(
-                self.sigmoid_derivative * model_gradient(l),  # gradient
-                self.transformed_challenges[:, l]  # all challenges to the l-th Arbiter chain
+                sigmoid_derivative * model_gradient(l),  # gradient
+                efba_challenges_batch[:, l]  # all challenges to the l-th Arbiter chain
             )
             for l in range(self.k)
         ])
         return ret
 
-    def learn(self):
+    def learn(self, init_weight_array=None, eta_minus=0.5, eta_plus=1.2, refresh_updater=True):
         """
         Compute a model according to the given LTF Array parameters and training set.
         Note that this function can take long to return.
@@ -252,13 +253,16 @@ class LogisticRegression(Learner):
                 '%i\t%f\t%f\t%s' % (
                     self.iteration_count,
                     distance,
-                    norm(updater.step),
-                    ','.join(map(str, model.weight_array.flatten()))
+                    norm(self.updater.step),
+                    ','.join(map(str, model.weight_array.flatten())),
                 )
             )
 
         # let numpy raise exceptions
         seterr(all='raise')
+
+        # Prepare challenges
+        self.efba_sub_challenges = LTFArray.efba_bit(self.transformation(self.training_set.challenges, self.k))
 
         # we start with a random model
         model = LTFArray(
@@ -266,25 +270,49 @@ class LogisticRegression(Learner):
                                                  self.weights_prng),
             transform=self.transformation,
             combiner=self.combiner,
+            bias=0.0,
         )
 
-        updater = self.RPropModelUpdate(model)
+        if init_weight_array is not None:
+            model.weight_array = init_weight_array
+
+        if refresh_updater:
+            self.updater = self.RPropModelUpdate(model, eta_minus=eta_minus, eta_plus=eta_plus)
         converged = False
         distance = 1
         self.iteration_count = 0
         log_state()
+        number_of_batches = (self.training_set.N + 1) // self.minibatch_size
+        efba_challenge_batches = []
+        response_batches = []
+        if not self.shuffle:
+            efba_challenge_batches = array_split(self.efba_sub_challenges, number_of_batches)
+            response_batches = array_split(self.training_set.responses, number_of_batches)
         while not converged and self.iteration_count < self.iteration_limit:
             self.iteration_count += 1
+            self.epoch_count += 1
+
+            if self.shuffle:
+                if self.epoch_count > 1:
+                    RandomState(seed=self.epoch_count).shuffle(self.efba_sub_challenges)
+                    RandomState(seed=self.epoch_count).shuffle(self.training_set.responses)
+                efba_challenge_batches = array_split(self.efba_sub_challenges, number_of_batches)
+                response_batches = array_split(self.training_set.responses, number_of_batches)
 
             # compute gradient & update model
-            gradient = self.gradient(model)
-            model.weight_array += updater.update(gradient)
+            for batch in range(number_of_batches):
+                gradient = self.gradient(model, efba_challenge_batches[batch], response_batches[batch])
+                model.weight_array += self.updater.update(gradient)
+                self.gradient_step_count += 1
 
-            # check convergence
-            converged = norm(updater.step) < 10**-self.convergence_decimals
+                # check convergence
+                converged = norm(self.updater.step) < 10**-self.convergence_decimals
 
-            # log
-            log_state()
+                # log
+                log_state()
+
+                if converged:
+                    break
 
         if not converged:
             self.converged = False

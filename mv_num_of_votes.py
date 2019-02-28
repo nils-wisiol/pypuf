@@ -70,12 +70,12 @@ def main(args):
     N = args.N
 
     # perform search for minimum number of votes required for each k
-    experiments = []
+    experimenter = Experimenter(args.log_name)
     for i in range(args.restarts):
         for k in range(args.k_range, args.k_max + 1, args.k_range):
             log_name = args.log_name+'{0}'.format(k)
-            exp = ExperimentMajorityVoteFindVotes(
-                log_name=log_name,
+            experimenter.queue(ExperimentMajorityVoteFindVotes(
+                progress_log_prefix=log_name,
                 n=n,
                 k=k,
                 challenge_count=N,
@@ -92,10 +92,8 @@ def main(args):
                 minimum_vote_count=1,
                 iterations=iterations,
                 bias=None
-            )
-            experiments.append(exp)
+            ))
 
-    experimenter = Experimenter(args.log_name, experiments)
     experimenter.run()
 
 

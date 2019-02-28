@@ -2,6 +2,6 @@ numpy~=1.16
 pycodestyle~=2.4
 polymath==0.1.18
 pylint~=2.2
-pypuf-helper==0.2
 scipy~=1.2
 astroid~=2.1
+matplotlib~=3.0

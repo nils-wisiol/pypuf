@@ -7,9 +7,9 @@ import multiprocessing
 import sys
 from io import StringIO
 from functools import wraps
-from pypuf.experiments.experimenter import log_listener, setup_logger
+from pypuf.experiments.experimenter import result_log_listener, setup_result_logger
 
-LOG_PATH = 'test/logs/'
+LOG_PATH = 'test/'
 LOG_NAME = 'test_log'
 
 
@@ -34,8 +34,8 @@ class TestLogger(object):
         assert self.queue is None, 'Queue should be None. You may use the class in a wrong way.'
         self.queue = multiprocessing.Queue(-1)
         self.listener = multiprocessing.Process(
-            target=log_listener,
-            args=(self.queue, setup_logger, self.logger_name,)
+            target=result_log_listener,
+            args=(self.queue, setup_result_logger, self.logger_name,)
         )
 
         self.listener.start()
@@ -53,7 +53,7 @@ class TestLogger(object):
                  Content of the result log.
         """
         self.shutdown_multiprocessing_logger()
-        result_log = open(self.logger_name+'.log', 'r')
+        result_log = open('logs/' + self.logger_name+'.log', 'r')
         result = result_log.read()
         result_log.close()
         return result
@@ -86,7 +86,7 @@ def logging(function):
 
 def remove_test_logs(log_dir_path=LOG_PATH):
     """This method removes test logs"""
-    paths = list(glob.glob(log_dir_path+'*.log'))
+    paths = list(glob.glob('logs/' + log_dir_path+'*.log'))
     for path in paths:
         os.remove(path)
 

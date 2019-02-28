@@ -5,7 +5,7 @@ This module is used to test the different simulation models.
 import unittest
 from test.utility import get_functions_with_prefix
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, array, around, array_equal
+from numpy import shape, dot, array, around, array_equal, reshape, zeros
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
 from pypuf import tools
@@ -85,7 +85,7 @@ class TestInputTransformation(unittest.TestCase):
                 [-1, -1, -1, -1, -1],
                 [-1, 1, -1, -1, -1],
             ]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         for challenges in test_challenges:
             assert_array_equal(
                 LTFArray.transform_id(challenges, k=4),
@@ -120,7 +120,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, 1, -1, -1],
             [-1, -1, -1, -1, -1],
             [-1, 1, -1, -1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_atf(test_array, k=3),
             [
@@ -165,7 +165,7 @@ class TestInputTransformation(unittest.TestCase):
             [1, 1, -1, -1, -1],
             [1, 1, -1, -1, -1],
             [1, 2, 3, 4, 5],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_shift(test_array, k=3),
             [
@@ -202,7 +202,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_lightweight_secure(test_array, k=3),
             [
@@ -224,7 +224,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([[
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ]], dtype=tools.RESULT_TYPE)
+        ]], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.att(test_array),
             [[
@@ -238,7 +238,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([[
             [-1, -1, 1, -1, -1, 1],
             [-1, 1, 1, 1, -1, 1],
-        ]], dtype=tools.RESULT_TYPE)
+        ]], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.att_inverse(test_array),
             [[
@@ -254,7 +254,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, 1, -1],
             [-1, -1, 1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_stacked_transform(
                 transform_1=LTFArray.transform_id,
@@ -282,7 +282,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, 2, 3, 4],
             [5, 6, 2, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_random_permutation_transform(
                 seed=0xbeef,
@@ -329,7 +329,7 @@ class TestInputTransformation(unittest.TestCase):
         """
         test_array = array([
             [1, -1, -1, 1, -1, 1, -1, 1, 1, -1, -1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.generate_concatenated_transform(
                 transform_1=LTFArray.transform_id,
@@ -352,7 +352,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=4),
             [
@@ -380,7 +380,7 @@ class TestInputTransformation(unittest.TestCase):
              1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1,
              1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1,
              1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_polynomial(test_array, k=1),
             [
@@ -397,7 +397,7 @@ class TestInputTransformation(unittest.TestCase):
         test_array = array([
             [1, -1, -1, 1, -1, 1],
             [-1, 1, 1, -1, -1, 1],
-        ], dtype=tools.RESULT_TYPE)
+        ], dtype=tools.BIT_TYPE)
         assert_array_equal(
             LTFArray.transform_permutation_atf(test_array, k=4),
             [
@@ -459,8 +459,8 @@ class TestLTFArray(unittest.TestCase):
             combiner=LTFArray.combiner_xor,
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
+        # the second dimension of the weight_array must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1], shape(biased_ltf_array.weight_array)[1])
 
         bias_array = biased_ltf_array.weight_array[:, -1]
         bias_array_compared = [bias == bias_array[0] for bias in bias_array]
@@ -470,7 +470,6 @@ class TestLTFArray(unittest.TestCase):
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
 
-        # The arithmetic mean of the res
         self.assertFalse(array_equal(biased_responses, responses))
 
     def test_bias_influence_array(self):
@@ -499,19 +498,16 @@ class TestLTFArray(unittest.TestCase):
             combiner=LTFArray.combiner_xor,
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
-
-        bias_array = biased_ltf_array.weight_array[:, -1]
-        bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
-        # the bias values should be different for this test. It is possible that they are all equal but this chance is
-        # low.
-        self.assertFalse(array(bias_array_compared).all())
+        # the second dimension of the weight_array must be the number of elements in biased weight_array
+        self.assertEqual(shape(ltf_array.weight_array)[1], shape(biased_ltf_array.weight_array)[1])
+        assert_array_equal(biased_ltf_array.weight_array[:, :n], ltf_array.weight_array[:, :n])
+        assert_array_equal(biased_ltf_array.weight_array[:, :n], weight_array)
+        assert_array_equal(biased_ltf_array.weight_array[:, n], reshape(bias_array, (k,)))
+        assert_array_equal(ltf_array.weight_array[:, n], zeros((k, )))
 
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
 
-        # The arithmetic mean of the res
         self.assertFalse(array_equal(biased_responses, responses))
 
     def test_random_weights(self):
@@ -536,8 +532,8 @@ class TestLTFArray(unittest.TestCase):
             """
             evaluate a single challenge with a single ltf specified by weights
             """
-            assert len(challenge) == len(weights)
-            return dot(challenge, weights)
+            assert len(challenge) == len(weights) - 1
+            return dot(challenge, weights[:n]) + weights[n]  # weights[n] is the bias
 
         for test_parameters in self.test_set:
             n = test_parameters[0]
@@ -641,8 +637,7 @@ class TestNoisyLTFArray(TestLTFArray):
             sigma_noise=sigma,
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+        self.assertEqual(ltf_array.weight_array.shape, biased_ltf_array.weight_array.shape)
 
         bias_array = biased_ltf_array.weight_array[:, -1]
         bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
@@ -684,8 +679,7 @@ class TestNoisyLTFArray(TestLTFArray):
             sigma_noise=sigma,
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1]+1, shape(biased_ltf_array.weight_array)[1])
+        self.assertEqual(ltf_array.weight_array.shape, biased_ltf_array.weight_array.shape)
 
         bias_array = biased_ltf_array.weight_array[:, -1]
         bias_array_compared = [bias == bias_array[0] for bias in bias_array]
@@ -778,7 +772,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         noise_prng = RandomState(seed=0xC0FFEE)
         weight_prng1 = RandomState(seed=0xBADA55)
         crp_count = 16  # number of random inputs per test set
-        n = 8
+        n = 64
         k = 2
         mu = 0
         sigma = 1
@@ -834,8 +828,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             random_instance_noise=RandomState(0xCCABAD),
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+        self.assertEqual(ltf_array.weight_array.shape, biased_ltf_array.weight_array.shape)
 
         bias_array = biased_ltf_array.weight_array[:, -1]
         bias_array_compared = [bias == bias_array[0] for bias in bias_array[1:]]
@@ -880,8 +873,7 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
             random_instance_noise=RandomState(0xCCABAD),
             bias=None,
         )
-        # the second dimension of the weight_array plus one must be the number of elements in biased weight_array
-        self.assertEqual(shape(ltf_array.weight_array)[1] + 1, shape(biased_ltf_array.weight_array)[1])
+        self.assertEqual(ltf_array.weight_array.shape, biased_ltf_array.weight_array.shape)
 
         bias_array = biased_ltf_array.weight_array[:, -1]
         bias_array_compared = [bias == bias_array[0] for bias in bias_array]
