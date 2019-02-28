@@ -20,14 +20,14 @@ class ExperimentCorrelationAttack(Experiment):
                  N,
                  ):
         super().__init__(
-            log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
+            progress_log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
                 log_name,
                 seed_model,
                 seed_instance,
                 n,
                 k,
                 N,
-                LTFArray.transform_lightweight_secure_original.__name__,
+                LTFArray.transform_lightweight_secure.__name__,
                 LTFArray.combiner_xor.__name__,
             ),
         )
@@ -39,7 +39,7 @@ class ExperimentCorrelationAttack(Experiment):
         self.seed_model = seed_model
         self.model_prng = RandomState(seed=self.seed_model)
         self.combiner = LTFArray.combiner_xor
-        self.transformation = LTFArray.transform_lightweight_secure_original
+        self.transformation = LTFArray.transform_lightweight_secure
         self.seed_challenge = seed_challenge
         self.challenge_prng = RandomState(self.seed_challenge)
         self.seed_chl_distance = seed_challenge_distance
@@ -58,8 +58,10 @@ class ExperimentCorrelationAttack(Experiment):
             combiner=self.combiner,
             bias=0.0
         )
-        self.training_set = TrainingSet(instance=self.instance, N=int(ceil(self.N / 1.1)), random_instance=self.challenge_prng)
-        self.validation_set = TrainingSet(instance=self.instance, N=int((self.N / 1.1) // 10), random_instance=self.distance_prng)
+        self.training_set = TrainingSet(instance=self.instance, N=int(ceil(self.N / 1.1)),
+                                        random_instance=self.challenge_prng)
+        self.validation_set = TrainingSet(instance=self.instance, N=int((self.N / 1.1) // 10),
+                                          random_instance=self.distance_prng)
         self.learner = CorrelationAttack(
             n=self.n,
             k=self.k,
@@ -82,8 +84,8 @@ class ExperimentCorrelationAttack(Experiment):
         self.result_logger.info(
             # seed_instance  seed_model n      k      N      time   initial_iterations initial_accuracy best_accuracy
             '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%f\t' '%i\t'             '%f\t'           '%f\t'
-                # accuracy correct_iteration  best_iteration  rounds  permutation_accuracy   permutations  instance weights (norm.)  initial weights permuted weights final weights
-                '%f\t'    '%s\t'               '%i\t'         '%s\t'       '%s\t'             '%s\t'        '%s\t'                    '%s\t'                '%s\t'           '%s',
+            # accuracy correct_iteration  best_iteration  rounds  permutation_accuracy   permutations  instance weights (norm.)  initial weights permuted weights final weights
+            '%f\t'    '%s\t'               '%i\t'         '%s\t'       '%s\t'             '%s\t'        '%s\t'                    '%s\t'                '%s\t'           '%s',
             self.seed_instance,
             self.seed_model,
             self.n,
@@ -99,7 +101,8 @@ class ExperimentCorrelationAttack(Experiment):
                 min(10000, 2 ** self.n),
                 random_instance=self.distance_prng,
             ),
-            str(self.find_correct_permutation(self.learner.initial_model.weight_array)) if self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND else '',
+            str(self.find_correct_permutation(
+                self.learner.initial_model.weight_array)) if self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND else '',
             self.learner.best_iteration,
             self.learner.rounds,
             str(self.permuted_model_validation_set_accuracy()) if self.learner.permuted_model else '',

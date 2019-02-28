@@ -104,8 +104,8 @@ def main(args):
     stderr.write('  model random seed:    0x%x\n' % seed_model)
     stderr.write('\n')
 
+    experimenter = Experimenter(log_name)
     # create different experiment instances
-    experiments = []
     for j in range(instances):
         for start_number in range(restarts):
             l_name = '%s_%i_%i' % (log_name, j, start_number)
@@ -119,11 +119,11 @@ def main(args):
                 seed_challenge_distance=0xbeef,
                 seed_challenge=0xdead,
             )
-            experiments.append(experiment)
+            experimenter.queue(experiment)
 
-    experimenter = Experimenter(log_name, experiments)
     # run the instances
     experimenter.run()
+
 
 if __name__ == '__main__':
     main(argv)
