@@ -3,7 +3,7 @@ from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.correlation_attack import CorrelationAttack
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import TrainingSet, approx_dist, set_dist
+from pypuf.tools import TrainingSet, approx_dist
 from math import ceil
 from itertools import permutations
 from scipy.stats import pearsonr
@@ -84,8 +84,10 @@ class ExperimentCorrelationAttack(Experiment):
         self.result_logger.info(
             # seed_instance  seed_model n      k      N      time   initial_iterations initial_accuracy best_accuracy
             '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%f\t' '%i\t'             '%f\t'           '%f\t'
-            # accuracy correct_iteration  best_iteration  rounds  permutation_accuracy   permutations  instance weights (norm.)  initial weights permuted weights final weights
-            '%f\t'    '%s\t'               '%i\t'         '%s\t'       '%s\t'             '%s\t'        '%s\t'                    '%s\t'                '%s\t'           '%s',
+            # accuracy correct_iteration  best_iteration  rounds  permutation_accuracy   permutations
+            # instance weights (norm.)  initial weights permuted weights final weights
+            '%f\t'    '%s\t'               '%i\t'         '%s\t'       '%s\t'             '%s\t'        '%s\t'
+            '%s\t'                '%s\t'           '%s',
             self.seed_instance,
             self.seed_model,
             self.n,
@@ -101,11 +103,11 @@ class ExperimentCorrelationAttack(Experiment):
                 min(10000, 2 ** self.n),
                 random_instance=self.distance_prng,
             ),
-            str(self.find_correct_permutation(
-                self.learner.initial_model.weight_array)) if self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND else '',
+            str(self.find_correct_permutation(self.learner.initial_model.weight_array)) if
+            self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND else '',
             self.learner.best_iteration,
             self.learner.rounds,
-            str(self.permuted_model_validation_set_accuracy()) if self.learner.permuted_model else '',
+            str(self.learner.approx_accuracy(self.learner.permuted_model)) if self.learner.permuted_model else '',
             ','.join(map(str, self.learner.permutations)) if self.learner.permutations else '',
             model_csv(self.instance),
             model_csv(self.learner.initial_model),
@@ -140,13 +142,3 @@ class ExperimentCorrelationAttack(Experiment):
                 best_permutation = permutation
 
         return best_permutation
-
-    def permuted_model_validation_set_accuracy(self):
-        adopted_instance = LTFArray(
-            weight_array=self.learner.permuted_model.weight_array[:, :-1],
-            transform=LTFArray._transform_none,  # note that we're using validation_set_fast below
-            combiner=LTFArray.combiner_xor,
-            bias=self.learner.permuted_model.weight_array[:, -1:]
-        )
-
-        return 1 - set_dist(adopted_instance, self.learner.validation_set_fast)

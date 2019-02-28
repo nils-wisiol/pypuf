@@ -97,15 +97,6 @@ class LTFArray(Simulation):
         return transpose(broadcast_to(challenges, (k, N, n)), axes=(1, 0, 2))
 
     @classmethod
-    def _transform_none(cls, challenges, _):
-        """
-        Use this "transform" for pre-transformed challenges. It does nothing.
-        :return: exactly the input challenges object
-        """
-        tools.assert_result_type(challenges)
-        return challenges
-
-    @classmethod
     def transform_atf(cls, challenges, k):
         """
         Input transformation that simulates an Arbiter PUF

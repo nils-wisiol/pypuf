@@ -2,16 +2,15 @@
 This module provides an attack on XOR Arbiter PUFs that is based off known correlation in sub-challenge generation of
 the input transformation.
 """
-from copy import deepcopy, copy
+from copy import deepcopy
 from itertools import permutations
-from math import ceil, factorial
 from scipy.io import loadmat
 from numpy.random import RandomState
-from numpy import empty, roll
+from numpy import empty, roll, count_nonzero, sign
 from pypuf.learner.base import Learner
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import set_dist, TrainingSet, ChallengeResponseSet
+from pypuf.tools import ChallengeResponseSet
 
 
 class CorrelationAttack(Learner):
@@ -27,13 +26,9 @@ class CorrelationAttack(Learner):
         self.n = n
         self.k = k
 
-        self.validation_set_fast = ChallengeResponseSet(
-            challenges=LTFArray.transform_lightweight_secure(validation_set.challenges, k),
+        self.validation_set_efba = ChallengeResponseSet(
+            challenges=LTFArray.efba_bit(LTFArray.transform_lightweight_secure(validation_set.challenges, k)),
             responses=validation_set.responses
-        )
-        self.training_set_fast = ChallengeResponseSet(
-            challenges=LTFArray.transform_lightweight_secure(training_set.challenges, k),
-            responses=training_set.responses
         )
 
         self.weights_mu = weights_mu
@@ -44,10 +39,10 @@ class CorrelationAttack(Learner):
         self.bias = bias
 
         self.lr_learner = LogisticRegression(
-            t_set=self.training_set_fast,
+            t_set=training_set,
             n=n,
             k=k,
-            transformation=LTFArray._transform_none,  # note that we're using training_set_fast above
+            transformation=LTFArray.transform_lightweight_secure,
             combiner=LTFArray.combiner_xor,
             weights_mu=weights_mu,
             weights_sigma=weights_sigma,
@@ -80,12 +75,14 @@ class CorrelationAttack(Learner):
         self.initial_model = initial_model = self.lr_learner.learn()
         self.logger.debug('initial weights for corr attack:')
         self.logger.debug(','.join(map(str, initial_model.weight_array.flatten())))
-        self.initial_accuracy = 1 - set_dist(initial_model, self.validation_set_fast.block_subset(0, 2))
+        self.initial_accuracy = self.approx_accuracy(initial_model, self.validation_set_efba.block_subset(0, 2))
         self.initial_iterations = self.lr_learner.iteration_count
         initial_updater = self.lr_learner.updater
 
         self.best_model = initial_model
         self.best_accuracy = self.initial_accuracy
+
+        self.logger.debug('Initial accuracy is %.4f' % self.initial_accuracy)
 
         if self.initial_accuracy < self.OPTIMIZATION_ACCURACY_LOWER_BOUND:
             self.logger.debug('initial learning below threshold, aborting')
@@ -96,8 +93,6 @@ class CorrelationAttack(Learner):
             self.logger.debug('initial learning successful, aborting')
             self.best_model.transform = LTFArray.transform_lightweight_secure
             return initial_model
-
-        self.logger.debug('Initial accuracy is %.4f' % self.initial_accuracy)
 
         self.rounds = 0
         # Try all permutations with high initial accuracy and see if any of them lead to a good final result
@@ -116,19 +111,18 @@ class CorrelationAttack(Learner):
             self.lr_learner.updater = deepcopy(initial_updater)
             self.lr_learner.updater.step_size *= 10
             model = self.lr_learner.learn(init_weight_array=weights, refresh_updater=False)
-            accuracy = 1 - set_dist(model, self.validation_set_fast.block_subset(1, 2))
+            accuracy = self.approx_accuracy(model, self.validation_set_efba.block_subset(1, 2))
             self.logger.debug(
                 'With permutation no %d=%s, after restarting the learning we achieved accuracy %.4f -> %.4f!' %
                 (iteration, permutation['permutation'], permutation['accuracy'], accuracy))
-            self.logger.debug('Difference between initial accuracy and permuted accuracy: %.4f' %
-                              abs(permutation['accuracy'] - self.initial_accuracy))
             if accuracy > 0.1 + 0.9 * self.initial_accuracy \
-                    and accuracy > self.best_accuracy:  # demand some "substantial" improvement of accuracy
+                    and accuracy > self.best_accuracy:
+                # demand some "substantial" improvement of accuracy
                 # what substantial means becomes weaker as we approach
                 # perfect accuracy
                 self.permuted_model = LTFArray(
                     weight_array=original_permuted_weights[:, :-1],
-                    transform=LTFArray._transform_none,
+                    transform=LTFArray.transform_lightweight_secure,
                     combiner=LTFArray.combiner_xor,
                     bias=original_permuted_weights[:, -1:]
                 )
@@ -156,11 +150,11 @@ class CorrelationAttack(Learner):
             adopted_weights = self.adopt_weights(weights, permutation)
             adopted_instance = LTFArray(
                 weight_array=adopted_weights[:, :-1],
-                transform=LTFArray._transform_none,  # note that we're using validation_set_fast below
+                transform=LTFArray.transform_lightweight_secure,  # note that we're using approx_accuracy below
                 combiner=LTFArray.combiner_xor,
                 bias=adopted_weights[:, -1:]
             )
-            accuracy = 1 - set_dist(adopted_instance, self.validation_set_fast)
+            accuracy = self.approx_accuracy(adopted_instance)
             self.logger.debug('For permutation %s, we have accuracy %.4f' % (permutation, accuracy))
             if accuracy >= threshold:
                 high_accuracy_permutations.append(
@@ -176,61 +170,12 @@ class CorrelationAttack(Learner):
         self.permutations = [item['permutation'] for item in high_accuracy_permutations][:5 * self.k]
         return high_accuracy_permutations[:5 * self.k]
 
-    def find_high_accuracy_weight_permutations_iteratively(self, weights, threshold):
-        """
-        Find high accuracy weight permutations by iteratively swapping elements.
-        :param weights:
-        :param threshold:
-        :return:
-        """
-        next_round_high_accuracy_permutations = [
-            {
-                'accuracy': threshold,
-                'permutation': list(range(self.k)),
-                'weights': weights,
-            },
-        ]
-        counter = 0
-        for r in range(self.k - 1):
-            self.logger.debug('--------- fitting pos %i (based on %i perms) -----------' %
-                              (r, len(next_round_high_accuracy_permutations)))
-            permutation_count = len(next_round_high_accuracy_permutations)
-            high_accuracy_permutations = next_round_high_accuracy_permutations
-            next_round_high_accuracy_permutations = []
-            for high_accuracy_permutation in high_accuracy_permutations:
-                permutation = high_accuracy_permutation['permutation']
-                old_accuracy = high_accuracy_permutation['accuracy']
-                self.logger.debug('  -> permutation %s with acc %0.4f' % (permutation, old_accuracy))
-                group_permutations = []
-                for i in range(r, self.k):
-                    permutation = copy(high_accuracy_permutation['permutation'])
-                    (permutation[r], permutation[i]) = (permutation[i], permutation[r])
-
-                    adopted_weights = self.adopt_weights(weights, permutation)
-                    adopted_instance = LTFArray(
-                        weight_array=adopted_weights[:, :-1],
-                        transform=LTFArray._transform_none,  # note that we're using validation_set_fast below
-                        combiner=LTFArray.combiner_xor,
-                        bias=adopted_weights[:, -1:]
-                    )
-                    counter += 1
-                    new_accuracy = 1 - set_dist(adopted_instance, self.validation_set_fast)
-                    self.logger.debug('      ✓ Swapping %i and %i (result: %s) we have accuracy %0.4f' %
-                                      (r, i, permutation, new_accuracy))
-                    group_permutations.append(
-                        {
-                            'accuracy': new_accuracy,
-                            'permutation': permutation,
-                            'weights': adopted_instance.weight_array,
-                        }
-                    )
-                group_permutations.sort(key=lambda x: -x['accuracy'])
-                next_round_high_accuracy_permutations.extend(group_permutations[:ceil(len(group_permutations) / 2)])
-
-                next_round_high_accuracy_permutations.sort(key=lambda x: -x['accuracy'])
-
-        print('counter: %i, %f' % (counter, counter / factorial(self.k)))
-        return high_accuracy_permutations[:5 * self.k]
+    def approx_accuracy(self, instance, efba_set=None):
+        if efba_set is None:
+            efba_set = self.validation_set_efba
+        size = efba_set.N
+        responses = sign(instance.combiner(instance.core_eval(efba_set.challenges)))
+        return count_nonzero(responses == efba_set.responses) / size
 
     def adopt_weights(self, weights, permutation):
         adopted_weights = empty(weights.shape)
