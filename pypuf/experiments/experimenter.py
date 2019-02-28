@@ -151,7 +151,7 @@ class Experimenter(object):
 
             def update_status_error(exception):
                 print('Experiment exception: ', exception, file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
+                traceback.print_exception(type(exception), exception, exception.__traceback__, file=sys.stderr)
                 self.jobs_errored += 1
                 update_status(exception)
 
