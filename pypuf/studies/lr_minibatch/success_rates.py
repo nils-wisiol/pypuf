@@ -4,9 +4,11 @@ Success Rate for Logistic Regression With and Without Mini Batches
 This study examines the effect of mini batches in our LR learner.
 Results are:
 
-- Mini batches in our LR are ineffective when there is no shuffling.
+- For small k, success rates **decrease** when using mini batches.
+- For larger k, success rates **sometimes** increase when using mini batches.
+
+Overall, the results in terms of success rates are inconclusive.
 """
-from pypuf.experiments.experimenter import Experimenter
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.plots import SuccessRatePlot
@@ -14,25 +16,36 @@ from pypuf.studies.base import Study
 
 
 class LRMiniBatchSuccessRate(Study):
+    """
+    Studies the impact of mini batches on logistic regression learning.
+    """
     SAMPLES_PER_POINT = 20
 
     DEFINITIONS = [
-        # (64, 1, [5, 10, 30, 50, 70, 90, 100, 150, 200]),  # values okay
-        # (64, 2, [200, 300, 400, 500, 600, 700, 800, 900, 1000]),  # values okay
+        (64, 1, [5, 10, 30, 50, 70, 90, 100, 150, 200]),
+        (64, 2, [200, 300, 400, 500, 600, 700, 800, 900, 1000]),
         (64, 4, [5000, 10000, 20000, 25000, 35000, 50000, 100000, 200000]),
         (64, 5, [50000, 100000, 200000, 300000, 400000, 500000]),
     ]
 
-    MINI_BATCH_SIZES = [5000, 10000]  # [20, 50, 100, 200] for n=64, k∈{1,2}
-    GROUP_LABELS = {}
-    GROUP_LABELS['None'] = 'No Mini Batches'
+    MINI_BATCH_SIZES = {
+        1: [20, 50, 100, 200],
+        2: [20, 50, 100, 200],
+        4: [5000, 10000],
+        5: [5000, 10000],
+    }
+
+    GROUP_LABELS = {
+        'None': 'No Mini Batches',
+    }
 
     def __init__(self):
         super().__init__()
         self.result_plots = []
 
-        for size in self.MINI_BATCH_SIZES:
-            self.GROUP_LABELS[str(size)] = '%i per Mini Batch' % size
+        for sizes in self.MINI_BATCH_SIZES.values():
+            for size in sizes:
+                self.GROUP_LABELS[str(size)] = '%i per Mini Batch' % size
 
     def name(self):
         return 'success_rate'
@@ -41,9 +54,10 @@ class LRMiniBatchSuccessRate(Study):
         experiments = []
         for (n, k, training_set_sizes) in self.DEFINITIONS:
             for shuffle in [True, False]:
+                filename = 'figures/lr-minibatch-' + \
+                           ('shuffle' if shuffle else 'noshuffle') + '-success_rate-%i-%i.pdf' % (n, k)
                 plot = SuccessRatePlot(
-                    filename='figures/lr-minibatch-' + ('shuffle' if shuffle else 'noshuffle') + '-success_rate-%i-%i.pdf' % (
-                    n, k),
+                    filename=filename,
                     results=self.experimenter.results,
                     group_by='minibatch_size',
                     group_labels=self.GROUP_LABELS,
@@ -51,7 +65,7 @@ class LRMiniBatchSuccessRate(Study):
                 self.result_plots.append(plot)
                 for training_set_size in training_set_sizes:
                     for i in range(self.SAMPLES_PER_POINT):
-                        for minibatch_size in [None] + self.MINI_BATCH_SIZES:
+                        for minibatch_size in [None] + self.MINI_BATCH_SIZES[k]:
                             if minibatch_size and minibatch_size >= training_set_size:
                                 break
 
