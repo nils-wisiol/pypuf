@@ -108,7 +108,7 @@ class LogisticRegression(Learner):
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
-                 convergance_decimals=2, shuffle=False):
+                 convergence_decimals=2, shuffle=False):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -134,7 +134,7 @@ class LogisticRegression(Learner):
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
         self.iteration_limit = iteration_limit
-        self.convergence_decimals = convergance_decimals
+        self.convergence_decimals = convergence_decimals
         self.transformation = transformation
         self.combiner = combiner
         self.efba_sub_challenges = None

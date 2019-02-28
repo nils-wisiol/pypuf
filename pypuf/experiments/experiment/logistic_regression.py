@@ -99,7 +99,7 @@ class ExperimentLogisticRegression(Experiment):
             weights_prng=RandomState(seed=self.parameters.seed_model),
             logger=self.progress_logger,
             minibatch_size=self.parameters.mini_batch_size,
-            convergance_decimals=self.parameters.convergence_decimals or 2,
+            convergence_decimals=self.parameters.convergence_decimals or 2,
             shuffle=self.parameters.shuffle,
         )
 
