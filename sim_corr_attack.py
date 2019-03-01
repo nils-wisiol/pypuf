@@ -110,7 +110,7 @@ def main(args):
         for start_number in range(restarts):
             l_name = '%s_%i_%i' % (log_name, j, start_number)
             experiment = ExperimentCorrelationAttack(
-                log_name=l_name,
+                progress_log_prefix=l_name,
                 n=n,
                 k=k,
                 N=N,

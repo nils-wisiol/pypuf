@@ -1,3 +1,7 @@
+"""
+This module provides an experiment class which learns an instance of LTFArray simulation PUF that uses
+the lightweight-secure transform with the correlation attack learner.
+"""
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
@@ -10,18 +14,37 @@ from scipy.stats import pearsonr
 
 
 class ExperimentCorrelationAttack(Experiment):
+    """
+    This Experiment uses the CorrelationAttack learner on an LTFArray PUF simulation.
+    """
 
-    def __init__(self, n, k,
-                 log_name,
-                 seed_model,
-                 seed_instance,
-                 seed_challenge,
-                 seed_challenge_distance,
-                 N,
-                 ):
+    def __init__(self, n, k, progress_log_prefix, seed_model, seed_instance,
+                 seed_challenge, seed_challenge_distance, N):
+        """
+        :param n: int
+                  Number of stages of the PUF
+        :param k: int
+                  Number different LTFArrays
+        :param progress_log_prefix: string
+                  Prefix of the path or name of the experiment progress log file.
+        :param seed_model: int
+                  The seed which is used to initialize the pseudo-random number generator
+                  which is used to generate the stage weights for the learner arbiter PUF simulation.
+        :param seed_instance: int
+                  The seed which is used to initialize the pseudo-random number generator
+                  which is used to generate the stage weights for the arbiter PUF simulation.
+        :param seed_challenge: int
+                  The seed which is used to initialize the pseudo-random number generator
+                  which is used to draft challenges for the TrainingSet.
+        :param seed_challenge_distance: int
+                  The seed which is used to initialize the pseudo-random number generator
+                  which is used to draft challenges for the accuracy calculation.
+        :param N: int
+                  Number of challenges which are generated in order to learn the PUF simulation.
+        """
         super().__init__(
             progress_log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
-                log_name,
+                progress_log_prefix,
                 seed_model,
                 seed_instance,
                 n,
@@ -116,6 +139,11 @@ class ExperimentCorrelationAttack(Experiment):
         )
 
     def find_correct_permutation(self, weights):
+        """
+        Finds the best permutation of the given weights to fit the original instance weights.
+        :param weights: The weight-array to permute
+        :return: The best permutation
+        """
         instance_weights = self.instance.weight_array
 
         max_correlation = 0

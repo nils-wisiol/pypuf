@@ -14,15 +14,34 @@ from pypuf.tools import ChallengeResponseSet
 
 
 class CorrelationAttack(Learner):
+    """
+    Learn an LTF-Array that uses the transform_lightweight_secure.
+
+    This Attack uses Logistic Regression (LR) to learn an initial model and subsequently exploits the correlation
+    between the weight arrays to restart the LR learner on a permuted model. This leads to a
+    faster retrieval of high-accuracy models than pure LR.
+    """
     OPTIMIZATION_ACCURACY_LOWER_BOUND = .65
     OPTIMIZATION_ACCURACY_UPPER_BOUND = .95
     OPTIMIZATION_ACCURACY_GOAL = .98
 
-    def __init__(self, n, k,
-                 training_set, validation_set,
-                 weights_mu=0, weights_sigma=1, weights_prng=RandomState(),
-                 lr_iteration_limit=1000,
-                 logger=None, bias=False):
+    def __init__(self, n, k, training_set, validation_set, weights_mu=0, weights_sigma=1, weights_prng=RandomState(),
+                 lr_iteration_limit=1000, logger=None):
+        """
+        Initialize a Correlation Attack Learner for the specified LTF Array which uses transform_lightweight_secure.
+
+        :param n: Input length
+        :param k: Number of parallel LTFs in the LTF Array
+        :param training_set: The training set, i.e. a data structure containing challenge response pairs
+        :param validation_set: The validation set, i.e. a data structure containing challenge response pairs. Used for
+        approximating accuracies of permuted models (can be smaller e.g. 0.1*training_set_size)
+        :param weights_mu: mean of the Gaussian that is used to choose the initial model
+        :param weights_sigma: standard deviation of the Gaussian that is used to choose the initial model
+        :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
+        :param lr_iteration_limit: Iteration limit for a single LR learner run
+        :param logger: logging.Logger
+                       Logger which is used to log detailed information of learn iterations.
+        """
         self.n = n
         self.k = k
 
@@ -31,12 +50,7 @@ class CorrelationAttack(Learner):
             responses=validation_set.responses
         )
 
-        self.weights_mu = weights_mu
-        self.weights_sigma = weights_sigma
-        self.weights_prng = weights_prng
-
         self.logger = logger
-        self.bias = bias
 
         self.lr_learner = LogisticRegression(
             t_set=training_set,
@@ -71,7 +85,12 @@ class CorrelationAttack(Learner):
         )['shiftOverviewData'][:, :, 0].astype('int64')
 
     def learn(self):
-        # Find any model
+        """
+        Compute a model according to the given LTF Array parameters and training set.
+        Note that this function can take long to return.
+        :return: pypuf.simulation.arbiter_based.LTFArray
+                 The computed model.
+        """
         self.initial_model = initial_model = self.lr_learner.learn()
         self.logger.debug('initial weights for corr attack:')
         self.logger.debug(','.join(map(str, initial_model.weight_array.flatten())))
@@ -145,6 +164,12 @@ class CorrelationAttack(Learner):
         return self.best_model
 
     def find_high_accuracy_weight_permutations(self, weights, threshold):
+        """
+        Gives permutations for the weight-array resulting in the highest model accuracies.
+        :param weights: The original weight-array
+        :param threshold: Minimum accuracy to consider
+        :return: The 5k permutations with the highest accuracy
+        """
         high_accuracy_permutations = []
         for permutation in list(permutations(range(self.k)))[1:]:
             adopted_weights = self.adopt_weights(weights, permutation)
@@ -165,12 +190,17 @@ class CorrelationAttack(Learner):
                     }
                 )
 
-        # return the 4k permutations with the highest initial accuracy
         high_accuracy_permutations.sort(key=lambda x: -x['accuracy'])
         self.permutations = [item['permutation'] for item in high_accuracy_permutations][:5 * self.k]
         return high_accuracy_permutations[:5 * self.k]
 
     def approx_accuracy(self, instance, efba_set=None):
+        """
+        Approximate the accuracy of the instance on the given set.
+        :param instance: pypuf.simulation.arbiter_based.LTFArray
+        :param efba_set: A challenge-response-set containing efba sub-challenges (default: self.validation_set_efba)
+        :return: Accuracy of the instance
+        """
         if efba_set is None:
             efba_set = self.validation_set_efba
         size = efba_set.N
@@ -178,6 +208,12 @@ class CorrelationAttack(Learner):
         return count_nonzero(responses == efba_set.responses) / size
 
     def adopt_weights(self, weights, permutation):
+        """
+        Adopts the weights with the given permutation exploiting the correlations of the lightweight-secure transform.
+        :param weights: A weight-array of an LTFArray
+        :param permutation: Permutation as returned from itertools.permutations
+        :return: Permuted weight-array
+        """
         adopted_weights = empty(weights.shape)
         for l in range(self.k):
             adopted_weights[permutation[l], :] = \
