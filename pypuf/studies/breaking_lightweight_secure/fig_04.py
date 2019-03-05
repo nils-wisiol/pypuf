@@ -1,142 +1,121 @@
-"""
-Accuracy distribution for learning attempts on randomly chosen
-simulated XOR Arbiter PUF instances with different input transformations.
-All experiments were run on 64-bit, 4-XOR Arbiter PUFs. When using the
-Lightweight Secure input transformation, some learning attempts end with an
-intermediate result, while both classic XOR Arbiter PUF and pseudorandom
-sub-challenges do not show intermediate solutions. It can be seen that
-using our new correlation attack, the resulting model accuracy is increased
-significantly over the plain LR attack.
-"""
-import inspect
-import sys
-
-from pypuf.experiments.experimenter import Experimenter
-from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
-from pypuf.plots import SuccessRatePlot
+from pypuf.experiments.experiment.correlation_attack import ExperimentCorrelationAttack, Parameters as CorrParameters
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression, Parameters as LRParameters
 from pypuf.studies.base import Study
+from matplotlib import pyplot
+from seaborn import distplot
+from numpy import arange, ones_like
 
 
-class BreakingLightweightSecureFig04(Study):
+class Fig04(Study):
 
-    SAMPLES_PER_HISTOGRAM = 100
+    CRPS = 30000
+    SAMPLE_SIZE = 500
+    LR_TRANSFORMATIONS = ['atf', 'random', 'lightweight_secure', 'fixed_permutation']
+    CORR_TRANSFORMATIONS = ['lightweight_secure']
+    SIZE = (64, 4)
+    FIGURE_ORDER = {
+        ('ExperimentLogisticRegression', 'atf'): 0,
+        ('ExperimentLogisticRegression', 'random'): 1,
+        ('ExperimentLogisticRegression', 'lightweight_secure'): 2,
+        ('ExperimentCorrelationAttack', 'lightweight_secure'): 3,
+        ('ExperimentLogisticRegression', 'fixed_permutation'): 4,
+    }
 
-    INPUT_TRANSFORMATIONS = [
-        LTFArray.transform_atf,
-        CompoundTransformation(
-            LTFArray.generate_stacked_transform, (LTFArray.transform_random, 1, LTFArray.transform_atf)),
-        CompoundTransformation(
-            LTFArray.generate_stacked_transform, (LTFArray.transform_random, 2, LTFArray.transform_atf)),
-        CompoundTransformation(
-            LTFArray.generate_stacked_transform, (LTFArray.transform_random, 3, LTFArray.transform_atf)),
-    ]
+    SHUFFLE = True
 
-    TRAINING_SET_SIZES = [
-        [
-            1000,
-            2000,
-            5000,
-            10000,
-            12000,
-            15000,
-            20000,
-            30000,
-            50000,
-            100000,
-            200000,
-            1000000,
-        ],
-        [
-            1000,
-            2000,
-            5000,
-            10000,
-            20000,
-            30000,
-            40000,
-            50000,
-            100000,
-            200000,
-            300000,
-            1000000,
-        ],
-        [
-            2000,
-            5000,
-            10000,
-            20000,
-            40000,
-            50000,
-            60000,
-            100000,
-            200000,
-            400000,
-            600000,
-            1000000,
-        ],
-        [
-            2000,
-            5000,
-            20000,
-            40000,
-            50000,
-            60000,
-            80000,
-            100000,
-            200000,
-            400000,
-            600000,
-            800000,
-            1000000,
-            1500000,
-            2000000,
-        ],
-    ]
-
-    def __init__(self):
-        super().__init__()
-        self.result_plot = None
+    NICE_TRANSFORMATION_NAMES = {
+        'atf': 'Classic',
+        'fixed_permutation': 'Permutation-Based',
+        'lightweight_secure': 'Lightweight Secure',
+        'random': 'Pseudorandom',
+    }
 
     def name(self):
-        return 'breaking_lightweight_secure_fig_03'
-
-    def plot(self):
-        if not self.results:
-            return
-
-        if not self.result_plot:
-            self.result_plot = SuccessRatePlot(
-                filename='figures/breaking_lightweight_secure_fig_03.pdf',
-                results=self.results,
-                group_by='transformation',
-                group_labels={
-                    'transform_atf': 'Classic',
-                    'transform_stack_random_nn1_atf': '1 Pseudorandom Sub-Challenge',
-                    'transform_stack_random_nn2_atf': '2 Pseudorandom Sub-Challenges',
-                    'transform_stack_random_nn3_atf': '3 Pseudorandom Sub-Challenges',
-                }
-            )
-
-        self.result_plot.plot()
+        return 'fig_04'
 
     def experiments(self):
-        experiments = []
-        for idx, transformation in enumerate(self.INPUT_TRANSFORMATIONS):
-            for training_set_size in self.TRAINING_SET_SIZES[idx]:
-                for i in range(self.SAMPLES_PER_POINT):
-                    experiments.append(
-                        ExperimentLogisticRegression(
-                            progress_log_prefix=self.name(),
-                            n=64,
-                            k=4,
-                            N=training_set_size,
+        e = []
+        (n, k) = self.SIZE
+        for transformation in self.LR_TRANSFORMATIONS:
+            for i in range(self.SAMPLE_SIZE):
+                e.append(
+                    ExperimentLogisticRegression(
+                        progress_log_prefix=None,
+                        parameters=LRParameters(
                             seed_instance=314159 + i,
                             seed_model=265358 + i,
-                            transformation=transformation,
-                            combiner=LTFArray.combiner_xor,
                             seed_challenge=979323 + i,
-                            seed_chl_distance=846264 + i,
+                            seed_distance=846264 + i,
+                            n=n,
+                            k=k,
+                            transformation=transformation,
+                            combiner='xor',
+                            N=self.CRPS,
+                            mini_batch_size=0,
+                            convergence_decimals=2,
+                            shuffle=False,
                         )
                     )
-        return experiments
+                )
+
+        for i in range(self.SAMPLE_SIZE):
+            e.append(
+                ExperimentCorrelationAttack(
+                    progress_log_prefix=None,
+                    parameters=CorrParameters(
+                        seed_instance=314159 + i,
+                        seed_model=265358 + i,
+                        seed_challenge=979323 + i,
+                        seed_distance=846264 + i,
+                        n=n,
+                        k=k,
+                        N=self.CRPS,
+                        lr_iteration_limit=1000,
+                        mini_batch_size=0,
+                        convergence_decimals=2,
+                        shuffle=False,
+                    )
+                )
+            )
+        return e
+
+    def plot(self):
+        subplots = []
+        experiment_groups = self.experimenter.results.groupby(['experiment'])
+        for experiment, experiment_group in experiment_groups:
+            if experiment == 'ExperimentLogisticRegression':
+                transformation_groups = experiment_group.groupby(['transformation'])
+                for transformation, transformation_group in transformation_groups:
+                    subplots.append((experiment, transformation, transformation_group))
+            else:
+                subplots.append((experiment, 'lightweight_secure', experiment_group))
+
+        subplots.sort(key=lambda x: self.FIGURE_ORDER[(x[0], x[1])])
+        figure, axes = pyplot.subplots(nrows=len(subplots), ncols=1)
+        figure.subplots_adjust(hspace=3)
+        figure.set_size_inches(w=5, h=1.5 * len(subplots))
+        for axis, (experiment, transformation, group_results) in zip(axes, subplots):
+            title = '{} using {:,} CRPs'.format(self.NICE_TRANSFORMATION_NAMES[transformation], self.CRPS)
+            if experiment == 'ExperimentCorrelationAttack':
+                title += ' (Improved Attack)'
+            axis.set_title(title)
+            axis.set_xlim([.48, 1])
+            distplot(
+                group_results[['accuracy']],
+                ax=axis,
+                kde=False,
+                bins=arange(.48, 1.01, .01),
+                hist=True,
+                norm_hist=False,
+                color='blue',
+                hist_kws={
+                    'alpha': 1,
+                    # the following line turns the histogram of absolute frequencies into one with relative frequencies
+                    'weights': ones_like(group_results[['accuracy']]) / float(len(group_results[['accuracy']]))
+                }
+            )
+        axes[-1].set_xlabel('accuracy')
+        axes[(len(subplots) - 1) // 2].set_ylabel('rel. frequency')
+        figure.tight_layout()
+        figure.savefig('figures/' + self.name() + '.pdf')
+        pyplot.close(figure)
