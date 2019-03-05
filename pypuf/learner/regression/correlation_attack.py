@@ -68,7 +68,7 @@ class CorrelationAttack(Learner):
         self.initial_accuracy = .5
         self.initial_iterations = 0
         self.initial_model = None
-        self.best_iteration = 0
+        self.best_iteration = -1
         self.rounds = ''
         self.permutations = None
         self.permuted_model = None

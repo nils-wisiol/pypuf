@@ -5,6 +5,7 @@ the lightweight-secure transform with the correlation attack learner.
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
+from pypuf.experiments.result import ExperimentResult
 from pypuf.learner.regression.correlation_attack import CorrelationAttack
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import TrainingSet, approx_dist
@@ -104,6 +105,34 @@ class ExperimentCorrelationAttack(Experiment):
         def model_csv(model):
             return ','.join(map(str, model.weight_array.flatten() / norm(model.weight_array.flatten())))
 
+        result = ExperimentResult()
+        result.experiment = self.__class__.__name__
+        result.seed_instance = self.seed_instance
+        result.seed_model = self.seed_model
+        result.restart_count = 0
+        result.n = self.n
+        result.k = self.k
+        result.N = self.validation_set.N + self.training_set.N
+        result.transformation = self.transformation.__name__
+        result.combiner = self.combiner.__name__
+        result.initial_iterations = self.learner.initial_iterations
+        result.initial_accuracy = self.learner.initial_accuracy
+        result.best_accuracy = self.learner.best_accuracy
+        result.accuracy = 1.0 - approx_dist(self.instance, self.model, min(10000, 2 ** self.n), self.distance_prng)
+        result.correct_iteration = None
+        if self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND:
+            result.correct_iteration = self.find_correct_permutation(self.learner.initial_model.weight_array)
+        result.best_iteration = self.learner.best_iteration
+        result.rounds = self.learner.rounds
+        result.permutation_accuracy = None
+        if self.learner.permuted_model:
+            result.permutation_accuracy = self.learner.approx_accuracy(self.learner.permuted_model)
+        result.permutations = self.learner.permutations
+        result.instance = self.instance
+        result.initial_model = self.learner.initial_model
+        result.permuted_model = self.learner.permuted_model
+        result.model = self.model
+
         self.result_logger.info(
             # seed_instance  seed_model n      k      N      time   initial_iterations initial_accuracy best_accuracy
             '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%f\t' '%i\t'             '%f\t'           '%f\t'
@@ -120,23 +149,19 @@ class ExperimentCorrelationAttack(Experiment):
             self.learner.initial_iterations,
             self.learner.initial_accuracy,
             self.learner.best_accuracy,
-            1.0 - approx_dist(
-                self.instance,
-                self.model,
-                min(10000, 2 ** self.n),
-                random_instance=self.distance_prng,
-            ),
-            str(self.find_correct_permutation(self.learner.initial_model.weight_array)) if
-            self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND else '',
+            result.accuracy,
+            str(result.correct_iteration) if result.correct_iteration else '',
             self.learner.best_iteration,
             self.learner.rounds,
-            str(self.learner.approx_accuracy(self.learner.permuted_model)) if self.learner.permuted_model else '',
-            ','.join(map(str, self.learner.permutations)) if self.learner.permutations else '',
+            str(result.permutation_accuracy) if result.permutation_accuracy else '',
+            ','.join(map(str, result.permutations)) if result.permutations else '',
             model_csv(self.instance),
             model_csv(self.learner.initial_model),
             model_csv(self.learner.permuted_model) if self.learner.permuted_model else '',
             model_csv(self.model)
         )
+
+        return result
 
     def find_correct_permutation(self, weights):
         """
