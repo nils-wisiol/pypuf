@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+  pypuf:
+    build: .
+    environment:
+      CC: "gcc -std=c99"
+    volumes:
+      - .:/app/
