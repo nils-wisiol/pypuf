@@ -67,7 +67,7 @@ class SuccessRatePlot:
         n_k_combinations = results.groupby(['n', 'k']).size().reset_index().values[:, :2]
         if not n_k_combinations.size:
             return
-        assert len(n_k_combinations) == 1,\
+        assert len(n_k_combinations) == 1, \
             "For SuccesRatePlot, all experiments must be run with same n and k, but there were %s." % n_k_combinations
         self.n = results['n'].unique()[0]
         self.k = results['k'].unique()[0]
@@ -119,3 +119,88 @@ class SuccessRatePlot:
         if self.axis.has_data():
             legend = self.axis.legend(loc=2, fontsize=self.legend_size)
             self.figure.savefig(self.filename, bbox_extra_artists=(legend,), bbox_inches='tight', pad_inches=0)
+
+
+class PermutationIndexPlot:
+    def __init__(self, filename, results, group_by, experiment_ids=None, group_labels=None, group_subplot_layout=None):
+        self.title_size = 4
+        self.tick_size = 3
+        self.x_label_size = 4
+        self.legend_size = 3
+
+        self.n = None
+        self.k = None
+        self.experiment = None
+        self.results = None
+
+        self.filename = filename
+        self.results = results
+        self.experiment_ids = experiment_ids or []
+        self.group_by = group_by
+        self.group_labels = {} if group_labels is None else group_labels
+
+        self.figure = plt.figure()
+        self.figure.set_size_inches(w=3.34, h=1.7)
+        self.group_subplot_layout = group_subplot_layout
+
+        self.plot_data = None
+
+    def plot(self):
+        self.figure.clear()
+        results = []
+        if self.experiment_ids:
+            for experiment_id in self.experiment_ids:
+                result = self.results[experiment_id]
+                if result and isinstance(result, ExperimentResult):
+                    results.append(result)
+        else:
+            results = [r for r in self.results.values() if r]
+
+        if len(results) == 0:
+            return
+
+        groups = sorted(set([str(getattr(r, self.group_by)) for r in results]))
+        print(groups)
+        assert len(set([r.experiment for r in results])) == 1
+
+        if self.group_subplot_layout:
+            group_subplot_layout = self.group_subplot_layout
+        else:
+            group_subplot_layout = {groups[i]: (len(groups), 1, i + 1) for i in range(len(groups))}
+
+        print(group_subplot_layout)
+        assert all(group in group_subplot_layout for group in groups), "Subplot data must be given for all groups."
+
+        self.experiment = results[0].experiment
+
+        axis, legend = None, None
+        for i, group in enumerate(groups):
+            axis = self.figure.add_subplot(*group_subplot_layout[group])
+            axis.tick_params(width=0.25, which='both', labelsize=self.tick_size, direction='in')
+            for a in ['top', 'bottom', 'left', 'right']:
+                axis.spines[a].set_linewidth(0.5)
+            axis.set_title(self.group_labels[group] if group in self.group_labels else group, size=self.title_size)
+            group_results = [r for r in results if str(getattr(r, self.group_by)) == group]
+            permutation_indices = [
+                r.best_iteration + 1 for r in group_results if r.best_iteration >= 0
+            ]
+            if len(permutation_indices) == 0:
+                continue
+            permutation_indices.sort()
+            print(permutation_indices)
+            m = max(permutation_indices)
+            amounts, _, _ = axis.hist(permutation_indices, density=True, label='Rel. Frequency', bins=range(1, m + 2),
+                                      histtype='step', linestyle='--', linewidth=0.5)
+            xs = [1]
+            ys = [0]
+            s = 0
+            for idx, amount in enumerate(amounts):
+                s += amount
+                xs.append(idx + 2)
+                ys.append(s)
+            axis.plot(xs, ys, label='Cum. Rel. Frequency', linewidth=0.5)
+            if i == len(groups) // 2:
+                axis.legend(loc=7, fontsize=self.legend_size)
+
+        plt.tight_layout()
+        self.figure.savefig(self.filename)
