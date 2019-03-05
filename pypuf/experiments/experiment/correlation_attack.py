@@ -2,16 +2,75 @@
 This module provides an experiment class which learns an instance of LTFArray simulation PUF that uses
 the lightweight-secure transform with the correlation attack learner.
 """
+from os import getpid
+from typing import NamedTuple, Tuple
+from uuid import UUID
+
 from numpy.random import RandomState
 from numpy.linalg import norm
 from pypuf.experiments.experiment.base import Experiment
-from pypuf.experiments.result import ExperimentResult
 from pypuf.learner.regression.correlation_attack import CorrelationAttack
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import TrainingSet, approx_dist
-from math import ceil
 from itertools import permutations
 from scipy.stats import pearsonr
+
+
+class Parameters(NamedTuple):
+    """
+    Holds parameters for logistic regression experiments.
+    """
+    # Seeds
+    seed_instance: int
+    seed_model: int
+    seed_challenge: int
+    seed_distance: int
+
+    # LTF array definition
+    n: int
+    k: int
+
+    # Learning setup
+    N: int
+    lr_iteration_limit: int
+    mini_batch_size: int
+    convergence_decimals: float
+    shuffle: bool
+
+
+class Result(NamedTuple):
+    """
+    Holds results from logistic regression experiments.
+    """
+    experiment_id: UUID
+    pid: int
+    measured_time: float
+
+    # Results from the initial LR run
+    initial_model: list
+    initial_lr_iterations: int
+    initial_accuracy: float
+
+    # Correlation attack specifics
+
+    # The correct permutation for the initial_model
+    correct_permutation: Tuple
+
+    # Best performing permutation found by the correlation attack
+    best_permutation: Tuple
+
+    # Number of permutations tried until best performing was found
+    best_permutation_iteration: int
+
+    # Total number of permutations tried
+    total_permutation_iterations: int
+
+    # Total number of logistic regression iterations
+    total_lr_iterations: int
+
+    # Final results
+    model: list
+    accuracy: float
 
 
 class ExperimentCorrelationAttack(Experiment):
@@ -19,55 +78,37 @@ class ExperimentCorrelationAttack(Experiment):
     This Experiment uses the CorrelationAttack learner on an LTFArray PUF simulation.
     """
 
-    def __init__(self, n, k, progress_log_prefix, seed_model, seed_instance,
-                 seed_challenge, seed_challenge_distance, N):
-        """
-        :param n: int
-                  Number of stages of the PUF
-        :param k: int
-                  Number different LTFArrays
-        :param progress_log_prefix: string
-                  Prefix of the path or name of the experiment progress log file.
-        :param seed_model: int
-                  The seed which is used to initialize the pseudo-random number generator
-                  which is used to generate the stage weights for the learner arbiter PUF simulation.
-        :param seed_instance: int
-                  The seed which is used to initialize the pseudo-random number generator
-                  which is used to generate the stage weights for the arbiter PUF simulation.
-        :param seed_challenge: int
-                  The seed which is used to initialize the pseudo-random number generator
-                  which is used to draft challenges for the TrainingSet.
-        :param seed_challenge_distance: int
-                  The seed which is used to initialize the pseudo-random number generator
-                  which is used to draft challenges for the accuracy calculation.
-        :param N: int
-                  Number of challenges which are generated in order to learn the PUF simulation.
-        """
+    def __init__(self, progress_log_prefix, parameters):
         super().__init__(
             progress_log_name='%s.0x%x_0x%x_0_%i_%i_%i_%s_%s' % (
                 progress_log_prefix,
-                seed_model,
-                seed_instance,
-                n,
-                k,
-                N,
+                parameters.seed_model,
+                parameters.seed_instance,
+                parameters.n,
+                parameters.k,
+                parameters.N,
                 LTFArray.transform_lightweight_secure.__name__,
                 LTFArray.combiner_xor.__name__,
             ),
+            parameters=parameters
         )
-        self.n = n
-        self.k = k
-        self.N = N
-        self.seed_instance = seed_instance
+        self.n = parameters.n
+        self.k = parameters.k
+        self.N = parameters.N
+        self.lr_iteration_limit = parameters.lr_iteration_limit or 1000
+        self.mini_batch_size = parameters.mini_batch_size or 0
+        self.convergence_decimals = parameters.convergence_decimals or 2
+        self.shuffle = parameters.shuffle or False
+        self.seed_instance = parameters.seed_instance
         self.instance_prng = RandomState(seed=self.seed_instance)
-        self.seed_model = seed_model
+        self.seed_model = parameters.seed_model
         self.model_prng = RandomState(seed=self.seed_model)
         self.combiner = LTFArray.combiner_xor
         self.transformation = LTFArray.transform_lightweight_secure
-        self.seed_challenge = seed_challenge
+        self.seed_challenge = parameters.seed_challenge
         self.challenge_prng = RandomState(self.seed_challenge)
-        self.seed_chl_distance = seed_challenge_distance
-        self.distance_prng = RandomState(self.seed_chl_distance)
+        self.seed_distance = parameters.seed_distance
+        self.distance_prng = RandomState(self.seed_distance)
         self.instance = None
         self.learner = None
         self.model = None
@@ -75,16 +116,16 @@ class ExperimentCorrelationAttack(Experiment):
         self.validation_set = None
 
     def run(self):
-        # TODO input transformation is computed twice. Add a shortcut to recycle results from the first computation
         self.instance = LTFArray(
             weight_array=LTFArray.normal_weights(self.n, self.k, random_instance=self.instance_prng),
             transform=self.transformation,
             combiner=self.combiner,
             bias=0.0
         )
-        self.training_set = TrainingSet(instance=self.instance, N=int(ceil(self.N / 1.1)),
+        validation_size = int((self.N / 1.1) // 10)
+        self.training_set = TrainingSet(instance=self.instance, N=self.N - validation_size,
                                         random_instance=self.challenge_prng)
-        self.validation_set = TrainingSet(instance=self.instance, N=int((self.N / 1.1) // 10),
+        self.validation_set = TrainingSet(instance=self.instance, N=validation_size,
                                           random_instance=self.distance_prng)
         self.learner = CorrelationAttack(
             n=self.n,
@@ -92,6 +133,10 @@ class ExperimentCorrelationAttack(Experiment):
             training_set=self.training_set,
             validation_set=self.validation_set,
             weights_prng=self.model_prng,
+            lr_iteration_limit=self.lr_iteration_limit,
+            mini_batch_size=self.mini_batch_size,
+            convergence_decimals=self.convergence_decimals,
+            shuffle=self.shuffle,
             logger=self.progress_logger,
         )
         self.model = self.learner.learn()
@@ -102,66 +147,32 @@ class ExperimentCorrelationAttack(Experiment):
         """
         assert self.model is not None
 
-        def model_csv(model):
-            return ','.join(map(str, model.weight_array.flatten() / norm(model.weight_array.flatten())))
-
-        result = ExperimentResult()
-        result.experiment = self.__class__.__name__
-        result.seed_instance = self.seed_instance
-        result.seed_model = self.seed_model
-        result.restart_count = 0
-        result.n = self.n
-        result.k = self.k
-        result.N = self.validation_set.N + self.training_set.N
-        result.transformation = self.transformation.__name__
-        result.combiner = self.combiner.__name__
-        result.initial_iterations = self.learner.initial_iterations
-        result.initial_accuracy = self.learner.initial_accuracy
-        result.best_accuracy = self.learner.best_accuracy
-        result.accuracy = 1.0 - approx_dist(self.instance, self.model, min(10000, 2 ** self.n), self.distance_prng)
-        result.correct_iteration = None
-        if self.learner.initial_accuracy > self.learner.OPTIMIZATION_ACCURACY_LOWER_BOUND:
-            result.correct_iteration = self.find_correct_permutation(self.learner.initial_model.weight_array)
-        result.best_iteration = self.learner.best_iteration
-        result.rounds = self.learner.rounds
-        result.permutation_accuracy = None
-        if self.learner.permuted_model:
-            result.permutation_accuracy = self.learner.approx_accuracy(self.learner.permuted_model)
-        result.permutations = self.learner.permutations
-        result.instance = self.instance
-        result.initial_model = self.learner.initial_model
-        result.permuted_model = self.learner.permuted_model
-        result.model = self.model
-
-        self.result_logger.info(
-            # seed_instance  seed_model n      k      N      time   initial_iterations initial_accuracy best_accuracy
-            '0x%x\t'        '0x%x\t'   '%i\t' '%i\t' '%i\t' '%f\t' '%i\t'             '%f\t'           '%f\t'
-            # accuracy correct_iteration  best_iteration  rounds  permutation_accuracy   permutations
-            # instance weights (norm.)  initial weights permuted weights final weights
-            '%f\t'    '%s\t'               '%i\t'         '%s\t'       '%s\t'             '%s\t'        '%s\t'
-            '%s\t'                '%s\t'           '%s',
-            self.seed_instance,
-            self.seed_model,
-            self.n,
-            self.k,
-            self.validation_set.N + self.training_set.N,
-            self.measured_time,
-            self.learner.initial_iterations,
-            self.learner.initial_accuracy,
-            self.learner.best_accuracy,
-            result.accuracy,
-            str(result.correct_iteration) if result.correct_iteration else '',
-            self.learner.best_iteration,
-            self.learner.rounds,
-            str(result.permutation_accuracy) if result.permutation_accuracy else '',
-            ','.join(map(str, result.permutations)) if result.permutations else '',
-            model_csv(self.instance),
-            model_csv(self.learner.initial_model),
-            model_csv(self.learner.permuted_model) if self.learner.permuted_model else '',
-            model_csv(self.model)
+        accuracy = 1.0 - approx_dist(
+            self.instance,
+            self.model,
+            min(10000, 2 ** self.n),
+            self.distance_prng
         )
 
-        return result
+        correct_iteration = None
+        if self.learner.total_permutation_iterations > 0:
+            correct_iteration = self.find_correct_permutation(self.learner.initial_model.weight_array)
+
+        return Result(
+            experiment_id=self.id,
+            pid=getpid(),
+            measured_time=self.measured_time,
+            initial_model=self.learner.initial_model,
+            initial_lr_iterations=self.learner.initial_lr_iterations,
+            initial_accuracy=self.learner.initial_accuracy,
+            correct_permutation=correct_iteration,
+            best_permutation=self.learner.best_permutation,
+            best_permutation_iteration=self.learner.best_permutation_iteration,
+            total_permutation_iterations=self.learner.total_permutation_iterations,
+            total_lr_iterations=self.learner.total_lr_iterations,
+            model=self.model,
+            accuracy=accuracy
+        )
 
     def find_correct_permutation(self, weights):
         """
