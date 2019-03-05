@@ -70,6 +70,7 @@ class Experimenter(object):
         self.update_callback_min_pause = update_callback_min_pause
         self.next_callback = None
         self.last_callback = None
+        self.callback_disabled = False
 
         # Counters
         self.jobs_finished = 0
@@ -98,8 +99,11 @@ class Experimenter(object):
         # Setup callback throttling
         result_lock = Lock()
         callback_lock = Lock()
+        self.callback_disabled = False
 
         def call_callback(experiment_id=None, pause=0):
+            if self.callback_disabled:
+                return
             with callback_lock:
                 with result_lock:
                     if pause:
@@ -107,8 +111,13 @@ class Experimenter(object):
                     self.last_callback = datetime.now()
                     sys.stdout.write('Digesting results ... ')
                     sys.stdout.flush()
-                    self.update_callback(experiment_id)
-                    sys.stdout.write('done\n')
+                    try:
+                        self.update_callback(experiment_id)
+                    except Exception as ex:  # pylint: disable=W
+                        sys.stdout.write('errored with {}\n\n\n'.format(ex.__class__))
+                        self.callback_disabled = True
+                    else:
+                        sys.stdout.write('done\n')
 
         self.next_callback = Timer(0, call_callback)
         self.next_callback.start()
