@@ -158,7 +158,11 @@ class Experimenter(object):
 
                     row = {}
                     experiment = self.experiments[result.experiment_id]
-                    row.update({'experiment_id': result.experiment_id, 'experiment_hash': experiment.hash})
+                    row.update({
+                        'experiment_id': result.experiment_id,
+                        'experiment_hash': experiment.hash,
+                        'experiment': experiment.__class__.__name__,
+                    })
                     row.update(experiment.parameters._asdict())
                     row.update(result._asdict())
                     self.results = self.results.append(DataFrame([row]), sort=True)
