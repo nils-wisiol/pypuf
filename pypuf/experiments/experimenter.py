@@ -105,7 +105,7 @@ class Experimenter(object):
                     if pause:
                         output_status(prefix='C')
                     self.last_callback = datetime.now()
-                    sys.stdout.write('Digesting results (pause=%f) ... ' % pause)
+                    sys.stdout.write('Digesting results ... ')
                     sys.stdout.flush()
                     self.update_callback(experiment_id)
                     sys.stdout.write('done\n')
