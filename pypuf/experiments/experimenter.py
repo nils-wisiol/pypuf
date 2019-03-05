@@ -189,11 +189,21 @@ class Experimenter(object):
 
             # filter loaded experiments
             if not self.results.empty:
+                known_hashes = [ex.hash for ex in experiments]
                 loaded_experiment_hashes = self.results.loc[:, ['experiment_hash']].values[:, 0]
                 experiments = [ex for ex in experiments if ex.hash not in loaded_experiment_hashes]
                 if loaded_experiment_hashes.size:
                     print('Continuing from %s' % self.results_file)
                     self.jobs_finished = len(loaded_experiment_hashes)
+
+                # check for experiments with results that we don't know
+                unknown_experiments = self.results.loc[~self.results['experiment_hash'].isin(known_hashes)]
+                if not unknown_experiments.empty:
+                    print('@' * 80)
+                    print('Results file %s contains %i results that are not in the study\'s' %
+                          (self.results_file, len(unknown_experiments)))
+                    print('experiment definition. Did you delete experiments from your study?')
+                    print('@' * 80)
 
             # experiment execution
             for experiment in experiments:
