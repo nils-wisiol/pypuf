@@ -6,6 +6,8 @@ import inspect
 import sys
 import argparse
 
+from pypuf.studies.base import Study
+
 
 def main(args):
     """
@@ -30,7 +32,10 @@ def main(args):
 
     studies = [
         c[1] for c in inspect.getmembers(study_module, inspect.isclass)
-        if isinstance(c, tuple) and len(c) > 1 and str(c[1].__module__).startswith(args.study)
+        if isinstance(c, tuple) and
+        len(c) > 1 and
+        str(c[1].__module__).startswith(args.study) and
+        issubclass(c[1], Study)
     ]
 
     if not studies:
