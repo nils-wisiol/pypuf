@@ -42,6 +42,9 @@ class CompoundTransformation:
             self._transform = self.build()
         return self._transform(*args, **kwargs)
 
+    def __repr__(self):
+        return self.build().__name__
+
 
 class LTFArray(Simulation):
     """
