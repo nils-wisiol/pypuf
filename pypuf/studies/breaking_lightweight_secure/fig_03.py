@@ -16,7 +16,7 @@ import inspect
 import sys
 
 from pypuf.experiments.experimenter import Experimenter
-from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
+from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression, Parameters
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
 from pypuf.plots import SuccessRatePlot
 from pypuf.studies.base import Study
@@ -24,21 +24,35 @@ from pypuf.studies.base import Study
 
 class BreakingLightweightSecureFig03(Study):
 
-    SAMPLES_PER_POINT = 250
+    SAMPLES_PER_POINT = 100
     SUCCESS_THRESHOLD = .7
+    SHUFFLE = True
 
-    INPUT_TRANSFORMATIONS = [
-        LTFArray.transform_atf,
-        CompoundTransformation(
+    INPUT_TRANSFORMATIONS = {
+        'transform_atf': LTFArray.transform_atf,
+        'transform_stack_random_nn1_atf': CompoundTransformation(
             LTFArray.generate_stacked_transform, (LTFArray.transform_random, 1, LTFArray.transform_atf)),
-        CompoundTransformation(
+        'transform_stack_random_nn2_atf': CompoundTransformation(
             LTFArray.generate_stacked_transform, (LTFArray.transform_random, 2, LTFArray.transform_atf)),
-        CompoundTransformation(
+        'transform_stack_random_nn3_atf': CompoundTransformation(
             LTFArray.generate_stacked_transform, (LTFArray.transform_random, 3, LTFArray.transform_atf)),
-    ]
+        'transform_fixed_permutation': LTFArray.transform_fixed_permutation,
+        'transform_lightweight_secure': LTFArray.transform_lightweight_secure,
+        'transform_random': LTFArray.transform_random,
+    }
 
-    TRAINING_SET_SIZES = [
-        [
+    PRETTY_TRANSFORMATION_NAMES = {
+        'transform_atf': 'Classic',
+        'transform_stack_random_nn1_atf': '1 Pseudorandom Sub-Challenge',
+        'transform_stack_random_nn2_atf': '2 Pseudorandom Sub-Challenges',
+        'transform_stack_random_nn3_atf': '3 Pseudorandom Sub-Challenges',
+        'transform_fixed_permutation': 'Permutation-Based',
+        'transform_lightweight_secure': 'Lightweight Secure',
+        'transform_random': 'Pseudorandom'
+    }
+
+    TRAINING_SET_SIZES = {
+        'transform_atf': [
             1000,
             2000,
             5000,
@@ -52,7 +66,7 @@ class BreakingLightweightSecureFig03(Study):
             200000,
             1000000,
         ],
-        [
+        'transform_stack_random_nn1_atf': [
             1000,
             2000,
             5000,
@@ -66,7 +80,7 @@ class BreakingLightweightSecureFig03(Study):
             300000,
             1000000,
         ],
-        [
+        'transform_stack_random_nn2_atf': [
             2000,
             5000,
             10000,
@@ -80,7 +94,7 @@ class BreakingLightweightSecureFig03(Study):
             600000,
             1000000,
         ],
-        [
+        'transform_stack_random_nn3_atf': [
             2000,
             5000,
             20000,
@@ -97,7 +111,41 @@ class BreakingLightweightSecureFig03(Study):
             1500000,
             2000000,
         ],
-    ]
+        'transform_fixed_permutation': [
+            2000,
+            12000,
+            30000,
+            100000,
+            150000,
+            400000,
+            600000,
+            1000000,
+        ],
+        'transform_lightweight_secure': [
+            1000,
+            2000,
+            5000,
+            10000,
+            12000,
+            15000,
+            20000,
+            30000,
+            50000,
+            100000,
+            200000,
+            1000000,
+        ],
+        'transform_random': [
+            2000,
+            12000,
+            30000,
+            100000,
+            150000,
+            400000,
+            600000,
+            1000000,
+        ],
+    }
 
     def __init__(self):
         super().__init__()
@@ -107,41 +155,54 @@ class BreakingLightweightSecureFig03(Study):
         return 'breaking_lightweight_secure_fig_03'
 
     def plot(self):
-        if not self.results:
-            return
+        results = self.experimenter.results
 
-        if not self.result_plot:
-            self.result_plot = SuccessRatePlot(
-                filename='figures/breaking_lightweight_secure_fig_03.pdf',
-                results=self.results,
-                group_by='transformation',
-                group_labels={
-                    'transform_atf': 'Classic',
-                    'transform_stack_random_nn1_atf': '1 Pseudorandom Sub-Challenge',
-                    'transform_stack_random_nn2_atf': '2 Pseudorandom Sub-Challenges',
-                    'transform_stack_random_nn3_atf': '3 Pseudorandom Sub-Challenges',
-                }
-            )
+        fig_03 = SuccessRatePlot(
+            filename='figures/breaking_lightweight_secure_fig_03.pdf',
+            group_by='transformation_name',
+            group_labels=self.PRETTY_TRANSFORMATION_NAMES
+        )
+        fig_03.plot(results[results['transformation_name'].isin([
+            'transform_atf',
+            'transform_stack_random_nn1_atf',
+            'transform_stack_random_nn2_atf',
+            'transform_stack_random_nn3_atf',
+        ])])
 
-        self.result_plot.plot()
+        fig_06 = SuccessRatePlot(
+            filename='figures/breaking_lightweight_secure_fig_06.pdf',
+            group_by='transformation_name',
+            group_labels=self.PRETTY_TRANSFORMATION_NAMES
+        )
+        fig_06.plot(results[results['transformation_name'].isin([
+            'transform_atf',
+            'transform_fixed_permutation',
+            'transform_lightweight_secure',
+            'transform_random',
+        ])])
 
     def experiments(self):
         experiments = []
-        for idx, transformation in enumerate(self.INPUT_TRANSFORMATIONS):
+        for idx, transformation in self.INPUT_TRANSFORMATIONS.items():
             for training_set_size in self.TRAINING_SET_SIZES[idx]:
                 for i in range(self.SAMPLES_PER_POINT):
                     experiments.append(
                         ExperimentLogisticRegression(
-                            progress_log_prefix=self.name(),
-                            n=64,
-                            k=4,
-                            N=training_set_size,
-                            seed_instance=314159 + i,
-                            seed_model=265358 + i,
-                            transformation=transformation,
-                            combiner=LTFArray.combiner_xor,
-                            seed_challenge=979323 + i,
-                            seed_chl_distance=846264 + i,
+                            progress_log_prefix=None,
+                            parameters=Parameters(
+                                n=64,
+                                k=4,
+                                N=training_set_size,
+                                seed_instance=314159 + i,
+                                seed_model=265358 + i,
+                                transformation=transformation,
+                                combiner='xor',
+                                seed_challenge=979323 + i,
+                                seed_distance=846264 + i,
+                                convergence_decimals=2,
+                                mini_batch_size=0,
+                                shuffle=False,
+                            )
                         )
                     )
         return experiments
