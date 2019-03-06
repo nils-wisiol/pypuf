@@ -69,7 +69,9 @@ class Study:
         collect the results and plot the output
         """
         # Queue experiments
-        for e in self.experiments():
+        experiments = self.experiments()
+        assert experiments, 'Study {} did not define any experiments.'.format(self.name())
+        for e in experiments:
             self.experimenter.queue(e)
 
         # Run experiments
@@ -83,4 +85,5 @@ class Study:
         will be called by the experimenter after every finished experiment,
         but at most every EXPERIMENTER_CALLBACK_MIN_PAUSE seconds.
         """
-        self.plot()
+        if not self.experimenter.results.empty:
+            self.plot()
