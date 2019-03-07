@@ -4,6 +4,7 @@ Plots to visualize results by experiments or studies.
 import matplotlib.pyplot as plt
 from itertools import cycle
 from numpy import zeros
+from matplotlib.ticker import MaxNLocator, MultipleLocator
 
 
 class SuccessRatePlot:
@@ -123,7 +124,7 @@ class SuccessRatePlot:
 
 
 class PermutationIndexPlot:
-    def __init__(self, filename, group_by, group_labels=None, group_subplot_layout=None,
+    def __init__(self, filename, group_by, experiment_hashes=None, group_labels=None, group_subplot_layout=None,
                  w=3.34, h=1.7):
         self.title_size = 4
         self.tick_size = 3
@@ -135,7 +136,7 @@ class PermutationIndexPlot:
         self.results = None
 
         self.filename = filename
-        # self.experiment_hashes = experiment_hashes
+        self.experiment_hashes = experiment_hashes
         self.group_by = group_by
         self.group_labels = {} if group_labels is None else group_labels
 
@@ -146,8 +147,8 @@ class PermutationIndexPlot:
         self.plot_data = None
 
     def plot(self, results):
-        # if self.experiment_hashes:
-        #    results = results.loc[results['experiment_hash'].isin(self.experiment_hashes)]
+        if self.experiment_hashes:
+            results = results.loc[results['experiment_hash'].isin(self.experiment_hashes)]
 
         if results.empty:
             return
@@ -177,9 +178,8 @@ class PermutationIndexPlot:
             if len(permutation_indices) == 0:
                 continue
             permutation_indices.sort()
-            print(name, permutation_indices)
-            m = max(permutation_indices)
-            amounts, _, _ = axis.hist(permutation_indices, density=True, label='Rel. Frequency', bins=range(1, m + 2),
+            m = int(max(permutation_indices))
+            amounts, _, _ = axis.hist(permutation_indices, density=True, label='Rel. Frequency', bins=range(1, m + 1),
                                       histtype='step', linestyle='--', linewidth=0.5)
 
             top_pos = None
@@ -198,6 +198,10 @@ class PermutationIndexPlot:
             axis.axhline(y=0.8, linewidth=0.25)
             axis.plot(xs, ys, label='Cum. Rel. Frequency', linewidth=0.5)
             axis.scatter(top_pos, 0.8, s=2, zorder=5)
+
+            axis.xaxis.set_major_locator(MaxNLocator(integer=True))
+            axis.xaxis.set_minor_locator(MultipleLocator(base=1))
+            axis.yaxis.set_minor_locator(MultipleLocator(base=0.05))
 
             if i == len(group_names) // 2:
                 axis.legend(loc=7, fontsize=self.legend_size)
