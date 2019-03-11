@@ -1,17 +1,17 @@
 """
 Index of the first successful permutation for the correlation attack.
 """
+from datetime import timedelta
+from math import ceil
+from typing import NamedTuple, Tuple
+
 from pypuf.experiments.experiment.correlation_attack import ExperimentCorrelationAttack
 from pypuf.experiments.experiment.correlation_attack import Parameters as CorrelationAttackParameters
 from pypuf.experiments.experiment.logistic_regression import ExperimentLogisticRegression
 from pypuf.experiments.experiment.logistic_regression import Parameters as LogisticRegressionParameters
-
 from pypuf.plots import PermutationIndexPlot
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.studies.base import Study
-
-from math import ceil
-from datetime import timedelta
 
 
 def time_to_string(delta):
@@ -47,11 +47,22 @@ NICE_TRANSFORM_NAMES = {
 }
 
 
+class TableEntryParameters(NamedTuple):
+    n: int
+    k: int
+    N: int
+    plot_layout: Tuple
+
+
 class BreakingLightweightSecureRuntimeTableFig05(Study):
     SAMPLES_PER_ENTRY = 1000
 
-    KS = [4, 4, 5, 6]
-    TRAINING_SET_SIZES = [12000, 30000, 300000, 1000000]
+    PARAMETERS = [
+        TableEntryParameters(64, 4, 12000, (4, 2, 1)),
+        TableEntryParameters(64, 4, 30000, (4, 2, 2)),
+        TableEntryParameters(64, 5, 300000, (4, 1, 2)),
+        TableEntryParameters(64, 6, 1000000, (4, 1, 3)),
+    ]
     TRANSFORMATIONS = [LTFArray.transform_atf, LTFArray.transform_lightweight_secure,
                        LTFArray.transform_fixed_permutation]
 
@@ -88,23 +99,17 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
             [r'\multicolumn{2}{c}{%s}' % NICE_TRANSFORM_NAMES[transform] for (attack, transform) in columns])
         latex += r'\\'
         latex += '\n  \\midrule\n'
-        for (n, k, crps) in [
-            (64, 4, 12000),
-            (64, 4, 30000),
-            (64, 5, 300000),
-            (64, 6, 1000000),
-            #    (128, 4, 500000),
-            #    (128, 5, 1000000),
-        ]:
-            latex += '  {:d}&{:d}&{:,d}&\t\t'.format(n, k, crps)
+        for p in self.PARAMETERS:
+            latex += '  {:d}&{:d}&{:,d}&\t\t'.format(p.n, p.k, p.N)
             column_latex = []
             for (attack, transformation) in columns:
-                sel = results.loc[(results['n'] == n) & (results['k'] == k) & (results['N'] == crps)]
+                sel = results.loc[(results['n'] == p.n) & (results['k'] == p.k) & (results['N'] == p.N)]
                 if attack == 'corr':
                     sel = sel.loc[sel['experiment_hash'].isin(self.corr_experiment_hashes)]
                 else:
                     sel = sel.loc[sel['transformation'] == transformation]
                 if sel.empty:
+                    column_latex.append(r'&no data yet')
                     continue
                 successful_runs = sel.loc[sel['accuracy'] > self.success_threshold]
                 failed_runs = sel.loc[sel['accuracy'] <= self.success_threshold]
@@ -155,21 +160,24 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
         experiments = []
 
         for i in range(self.SAMPLES_PER_ENTRY):
-            for idx, training_set_size in enumerate(self.TRAINING_SET_SIZES):
+            for p in self.PARAMETERS:
+                common_parameters = {
+                    'n': p.n,
+                    'k': p.k,
+                    'N': p.N,
+                    'seed_instance': 314159 + i,
+                    'seed_model': 265358 + i,
+                    'seed_challenge': 979323 + i,
+                    'seed_distance': 846264 + i,
+                    'mini_batch_size': 0,
+                    'convergence_decimals': 2,
+                    'shuffle': False
+                }
                 ex = ExperimentCorrelationAttack(
                     progress_log_prefix=self.name(),
                     parameters=CorrelationAttackParameters(
-                        n=64,
-                        k=self.KS[idx],
-                        N=training_set_size,
-                        seed_instance=314159 + i,
-                        seed_model=265358 + i,
-                        seed_challenge=979323 + i,
-                        seed_distance=846264 + i,
+                        **common_parameters,
                         lr_iteration_limit=1000,
-                        mini_batch_size=0,
-                        convergence_decimals=2,
-                        shuffle=False
                     )
                 )
                 experiments.append(ex)
@@ -179,18 +187,9 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
                     ex = ExperimentLogisticRegression(
                         progress_log_prefix=self.name(),
                         parameters=LogisticRegressionParameters(
-                            n=64,
-                            k=self.KS[idx],
-                            N=training_set_size,
-                            seed_instance=314159 + i,
-                            seed_model=265358 + i,
-                            seed_challenge=979323 + i,
-                            seed_distance=846264 + i,
+                            **common_parameters,
                             transformation=transform.__name__,
                             combiner=LTFArray.combiner_xor.__name__,
-                            mini_batch_size=0,
-                            convergence_decimals=2,
-                            shuffle=False
                         )
                     )
                     experiments.append(ex)
@@ -200,17 +199,10 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
             filename='figures/breaking_lightweight_secure_fig_05.pdf',
             group_by='N',
             experiment_hashes=self.corr_experiment_hashes,
-            group_labels={
-                self.TRAINING_SET_SIZES[i]:
-                    "Perm. Index Dist. (k={}, {:,} CRPs)".format(self.KS[i], self.TRAINING_SET_SIZES[i])
-                for i in range(len(self.TRAINING_SET_SIZES))
-            },
-            group_subplot_layout={
-                self.TRAINING_SET_SIZES[0]: (4, 2, 1),
-                self.TRAINING_SET_SIZES[1]: (4, 2, 2),
-                self.TRAINING_SET_SIZES[2]: (4, 1, 2),
-                self.TRAINING_SET_SIZES[3]: (4, 1, 3),
-            }, w=3.34, h=3.9
+            group_labels={p.N: "Perm. Index Dist. (k={}, {:,} CRPs)".format(p.k, p.N) for p in self.PARAMETERS},
+            group_subplot_layout={p.N: p.plot_layout for p in self.PARAMETERS},
+            w=3.34,
+            h=3.9
         )
 
         return experiments
