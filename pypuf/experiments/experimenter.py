@@ -271,7 +271,7 @@ class Experimenter(object):
         """
         if not self.results_file:
             return
-        self.results.to_csv('results/' + self.results_file)
+        self.results.to_csv('results/' + self.results_file, index=False)
 
     def load_results(self):
         """
