@@ -15,6 +15,10 @@ from pypuf.studies.base import Study
 
 
 def time_to_string(delta):
+    """
+    Converts the given time duration into a human readable string.
+    :param delta: time duration in seconds
+    """
     if delta.total_seconds() > 4 * 24 * 60 ** 2:
         return '%i days' % round(delta.days)
     else:
@@ -29,6 +33,10 @@ def time_to_string(delta):
 
 
 def round_time(seconds):
+    """
+    Rounds the given time duration.
+    :param seconds: time duration in seconds
+    """
     units = [
         4 * 24 * 60 ** 2,  # 4 days
         1,  # second
@@ -48,6 +56,9 @@ NICE_TRANSFORM_NAMES = {
 
 
 class TableEntryParameters(NamedTuple):
+    """
+    Parameters for the experiments for the individual entries of the resulting run-time table.
+    """
     n: int
     k: int
     N: int
@@ -55,6 +66,11 @@ class TableEntryParameters(NamedTuple):
 
 
 class BreakingLightweightSecureRuntimeTableFig05(Study):
+    """
+    Study which generates a run-time table benchmarking different combinations of (n, k, N) for different
+    transformations and attacks (pure lr vs. correlation attack). It also outputs a figure showing the index of the
+    successful permutations for the correlation attack.
+    """
     SAMPLES_PER_ENTRY = 1000
 
     PARAMETERS = [
@@ -73,9 +89,6 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
         self.optimization_threshold = .65
         self.corr_experiment_hashes = []
         self.study_experiment_hashes = []
-
-    def get_success_rate(self, results):
-        return
 
     def gen_table(self, results):
         """
@@ -120,8 +133,8 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
                 if success_rate > 0:
                     avg_success_wall_time = successful_runs['measured_time'].mean()
                     expected_tries_till_success = ceil(1 / success_rate)
-                    expected_time_till_success = (expected_tries_till_success - 1) * avg_no_success_wall_time \
-                                                 + avg_success_wall_time
+                    expected_time_till_success = \
+                        (expected_tries_till_success - 1) * avg_no_success_wall_time + avg_success_wall_time
                 else:
                     expected_time_till_success = avg_wall_time * len(sel)
 

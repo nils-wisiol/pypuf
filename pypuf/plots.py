@@ -1,10 +1,11 @@
 """
 Plots to visualize results by experiments or studies.
 """
-import matplotlib.pyplot as plt
 from itertools import cycle
-from numpy import zeros
+
+import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, MultipleLocator
+from numpy import zeros
 
 
 class SuccessRatePlot:
@@ -124,8 +125,23 @@ class SuccessRatePlot:
 
 
 class PermutationIndexPlot:
+    """
+    Show the distribution of indices of the permutations which lead to a successful learning of the instance using
+    the correlation attack.
+    """
+
     def __init__(self, filename, group_by, experiment_hashes=None, group_labels=None, group_subplot_layout=None,
                  w=3.34, h=1.7):
+        """
+
+        :param filename: destination file (PDF)
+        :param group_by: Sets the group_by column. Each unique value of this column creates an individual subplot.
+        :param experiment_hashes: hashes of experiments that shall be used
+        :param group_labels: Titles of subplots as dict (key=group_by column value, value=label)
+        :param group_subplot_layout: Layout of subplots as dict (key=group_by column value, value=subplot layout tuple)
+        :param w: Width of the resulting figure (in inches)
+        :param h: Height of the resulting figure (in inches)
+        """
         self.title_size = 4
         self.tick_size = 3
         self.x_label_size = 4
@@ -147,6 +163,9 @@ class PermutationIndexPlot:
         self.plot_data = None
 
     def plot(self, results):
+        """
+        Draw the plot and save it to the file system.
+        """
         if self.experiment_hashes:
             results = results.loc[results['experiment_hash'].isin(self.experiment_hashes)]
 
@@ -165,7 +184,7 @@ class PermutationIndexPlot:
 
         assert all(group in group_subplot_layout for group in group_names), "Subplot data must be given for all groups."
 
-        axis, legend, i = None, None, 0
+        axis, i = None, 0
         for name, group_results in grouped_results:
             axis = self.figure.add_subplot(*group_subplot_layout[name])
             axis.tick_params(width=0.25, which='both', labelsize=self.tick_size, direction='in')
@@ -175,7 +194,7 @@ class PermutationIndexPlot:
             successful_runs = group_results[group_results['best_permutation_iteration'] > 0]
             permutation_indices = successful_runs[['best_permutation_iteration',
                                                    'total_permutation_iterations']].max(axis=1).tolist()
-            if len(permutation_indices) == 0:
+            if not permutation_indices:
                 continue
             permutation_indices.sort()
             m = int(max(permutation_indices))

@@ -4,9 +4,10 @@ PUF LTFarray simulation with the logistic regression learning algorithm. If you 
 define nine parameters which define the experiment.
 """
 from sys import argv, stderr
+
+from pypuf.experiments.experiment.correlation_attack import ExperimentCorrelationAttack, Parameters
 from pypuf.experiments.experimenter import Experimenter
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.experiments.experiment.correlation_attack import ExperimentCorrelationAttack
 
 
 def main(args):
@@ -111,13 +112,19 @@ def main(args):
             l_name = '%s_%i_%i' % (log_name, j, start_number)
             experiment = ExperimentCorrelationAttack(
                 progress_log_prefix=l_name,
-                n=n,
-                k=k,
-                N=N,
-                seed_instance=seed_instance + j,
-                seed_model=seed_model + j + start_number,
-                seed_challenge_distance=0xbeef,
-                seed_challenge=0xdead,
+                parameters=Parameters(
+                    n=n,
+                    k=k,
+                    N=N,
+                    seed_instance=seed_instance + j,
+                    seed_model=seed_model + j + start_number,
+                    seed_distance=0xbeef,
+                    seed_challenge=0xdead,
+                    lr_iteration_limit=1000,
+                    convergence_decimals=2,
+                    mini_batch_size=0,
+                    shuffle=False
+                )
             )
             experimenter.queue(experiment)
 
