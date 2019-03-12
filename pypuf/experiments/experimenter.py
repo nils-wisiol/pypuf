@@ -248,7 +248,8 @@ class Experimenter(object):
                 if self.num_int > 1:
                     print("Killing all processes.")
                     sys.exit(1)
-                print("Performing graceful shutdown... (Press CTRL-C again to force. This might result in data loss.)")
+                print(
+                    "\rPerforming graceful shutdown... (Press CTRL-C again to force. This might result in data loss.)")
                 with self.interrupt_condition:
                     self.cancel_experiments.value = 1
                     self.interrupt_condition.notify_all()
@@ -261,7 +262,11 @@ class Experimenter(object):
 
             pool.join()
 
-            self.save_results()
+            if self.next_callback.is_alive():
+                with callback_lock:
+                    self.next_callback.cancel()
+
+            call_callback()
 
             # quit logger
             result_log_queue.put(None)  # trigger listener to quit
