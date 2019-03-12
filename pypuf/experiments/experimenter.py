@@ -16,15 +16,19 @@ for i in range(n):
 experimenter = Experimenter('experimenter_log_path', experiments)
 experimenter.run()
 """
-import multiprocessing
 import logging
-import random
-import sys
 import os
+import random
+import signal
+import sys
 import traceback
+import multiprocessing
+from multiprocessing.managers import SyncManager
 from datetime import datetime, timedelta
 from threading import Timer, Lock
 from time import sleep
+
+from pypuf.experiments.experiment.base import ExperimentCanceledException
 
 
 class Experimenter(object):
@@ -77,6 +81,11 @@ class Experimenter(object):
         self.jobs_total = 0
         self.jobs_errored = 0
 
+        # Interrupt Handling
+        self.num_int = 0
+        self.cancel_experiments = None
+        self.interrupt_condition = None
+
     def queue(self, experiment):
         """
         Add an experiment to the queue.
@@ -91,7 +100,11 @@ class Experimenter(object):
         """
 
         # Setup multiprocessing logging
-        result_log_queue = multiprocessing.Manager().Queue()
+        manager = SyncManager()
+        manager.start(lambda: signal.signal(signal.SIGINT, signal.SIG_IGN))
+        result_log_queue = manager.Queue()
+        self.cancel_experiments = manager.Value('b', 0)
+        self.interrupt_condition = manager.Condition()
         listener = multiprocessing.Process(target=result_log_listener,
                                            args=(result_log_queue, setup_result_logger, self.result_log_name,))
         listener.start()
@@ -111,6 +124,7 @@ class Experimenter(object):
                     self.last_callback = datetime.now()
                     sys.stdout.write('Digesting results ... ')
                     sys.stdout.flush()
+                    self.save_results()
                     try:
                         self.update_callback(experiment_id)
                     except Exception as ex:  # pylint: disable=W
@@ -142,8 +156,8 @@ class Experimenter(object):
                         self.jobs_finished,
                         self.jobs_total - self.jobs_finished,
                         progress * 100,
-                        timedelta(seconds=(elapsed_time * (
-                            1 - progress) / progress).total_seconds() // 15 * 15) if progress > 0 else '???',
+                        timedelta(seconds=(elapsed_time * (1 - progress) / progress).total_seconds() // 15 * 15)
+                        if progress > 0 else '???',
                     )
                 )
 
@@ -166,7 +180,6 @@ class Experimenter(object):
                     row.update(experiment.parameters._asdict())
                     row.update(result._asdict())
                     self.results = self.results.append(DataFrame([row]), sort=True)
-                    self.save_results()
 
                 # If there is already a callback waiting, we will replace it and therefore cancel it
                 if self.next_callback.is_alive():
@@ -188,6 +201,8 @@ class Experimenter(object):
                 self.next_callback.start()
 
             def update_status_error(exception):
+                if isinstance(exception, ExperimentCanceledException):
+                    return
                 print('Experiment exception: ', exception, file=sys.stderr)
                 traceback.print_exception(type(exception), exception, exception.__traceback__, file=sys.stderr)
                 self.jobs_errored += 1
@@ -223,15 +238,30 @@ class Experimenter(object):
             for experiment in experiments:
                 pool.apply_async(
                     experiment.execute,
-                    (result_log_queue, self.result_log_name),
+                    (result_log_queue, self.result_log_name, self.cancel_experiments, self.interrupt_condition),
                     callback=update_status,
                     error_callback=update_status_error,
                 )
 
+            def signal_handler(_sig, _frame):
+                self.num_int += 1
+                if self.num_int > 1:
+                    print("Killing all processes.")
+                    sys.exit(1)
+                print("Performing graceful shutdown... (Press CTRL-C again to force. This might result in data loss.)")
+                with self.interrupt_condition:
+                    self.cancel_experiments.value = 1
+                    self.interrupt_condition.notify_all()
+
+            signal.signal(signal.SIGINT, signal_handler)
+
             # show status, then block until we're ready
             output_status()
             pool.close()
+
             pool.join()
+
+            self.save_results()
 
             # quit logger
             result_log_queue.put(None)  # trigger listener to quit
@@ -311,6 +341,7 @@ def result_log_listener(queue, configurer, logger_name):
     :param logger_name: String
                         Path to or name to the log file
     """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     handler = configurer(logger_name)
     while True:
         try:
