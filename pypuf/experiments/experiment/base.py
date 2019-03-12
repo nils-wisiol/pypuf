@@ -22,6 +22,10 @@ class NoResultException(Exception):
         self.experiment_class = experiment_class
 
 
+class ExperimentCanceledException(Exception):
+    """Indicates that an experiment has been canceled."""
+
+
 class Experiment(object):
     """
     This class defines an experiment, mainly consisting of instructions how to run and analyze it (methods run() and
@@ -68,7 +72,7 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-    def execute(self, result_log_queue, result_log_name):
+    def execute(self, result_log_queue, result_log_name, cancel_experiment=None, interrupt_condition=None):
         """
         Executes the experiment at hand by
         (1) calling run() and measuring the run time of run(),
@@ -78,10 +82,15 @@ class Experiment(object):
                       Multiprocessing safe queue which is used to coordinate the logging
         :param result_log_name: string
                         Name of the experimenter progress logger
+        :param cancel_experiment: multiprocessing.Value indicating if experiment is canceled
+        :param interrupt_condition: multiprocessing.Condition to sync interrupt behavior
         """
+        file_handler = None
+        queue_handler = None
         try:
+            if cancel_experiment and cancel_experiment.value == 1:
+                raise ExperimentCanceledException()
             # set up the progress logger
-            file_handler = None
             if self.progress_log_name:
                 self.progress_logger = logging.getLogger(self.progress_log_name)
                 self.progress_logger.setLevel(logging.DEBUG)
@@ -91,7 +100,6 @@ class Experiment(object):
                 self.progress_logger.propagate = False
 
             # set up the result logger
-            queue_handler = None
             self.result_logger = logging.getLogger(result_log_name)
             self.result_logger.setLevel(logging.DEBUG)
             if result_log_queue:
@@ -117,6 +125,17 @@ class Experiment(object):
                 )
             self.result_logger.info(str(self.result).replace("\n", ''))
 
+            return self.result
+        except KeyboardInterrupt:
+            with interrupt_condition:
+                interrupt_condition.wait_for(lambda: cancel_experiment.value == 1)
+            raise ExperimentCanceledException()
+        except Exception as ex:
+            # If anything goes wrong, we attach the experiment id for identification
+            ex.experiment_id = self.id
+            ex.pid = getpid()
+            raise ex
+        finally:
             # clean up and return
             if self.progress_logger and file_handler:
                 self.progress_logger.removeHandler(file_handler)
@@ -124,10 +143,3 @@ class Experiment(object):
             if self.result_logger and queue_handler:
                 self.result_logger.removeHandler(queue_handler)
                 queue_handler.close()
-
-            return self.result
-        except Exception as ex:
-            # If anything goes wrong, we attach the experiment id for identification
-            ex.experiment_id = self.id
-            ex.pid = getpid()
-            raise ex
