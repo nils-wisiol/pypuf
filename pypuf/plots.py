@@ -1,11 +1,15 @@
 """
 Plots to visualize results by experiments or studies.
 """
+
 from itertools import cycle
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, MultipleLocator
+from numpy import mean as mean_np, quantile as quantile_np, sum as sum_np
 from numpy import zeros
+from pandas import read_csv, DataFrame
+from seaborn import lineplot, set_style
 
 
 class SuccessRatePlot:
@@ -120,8 +124,85 @@ class SuccessRatePlot:
             self.axis.plot(success_rate[:, 0], success_rate[:, 1], '-', color=col, linewidth=0.8, alpha=.7)
 
         if self.axis.has_data():
-            legend = self.axis.legend(loc=2, fontsize=self.legend_size)
+            legend = self.axis.legend(loc='best', fontsize=self.legend_size)
             self.figure.savefig(self.filename, bbox_extra_artists=(legend,), bbox_inches='tight', pad_inches=0)
+
+
+class AccuracyPlotter:
+
+    def __init__(self, estimator=None, group_by='transformation', grid=None):
+        self.estimator = estimator
+        self.group_by = group_by
+        self.grid = grid
+        self.df = None
+        self.figure = plt.figure()
+        self.axis = self.figure.add_subplot()
+
+    @staticmethod
+    def get_estimator(estimator):
+        if estimator is None or estimator == 'mean':
+            return mean_np
+        elif estimator[0] == 'quantile':
+            def quantile(a):
+                return quantile_np(a, estimator[1], interpolation='linear')
+            return quantile
+        elif estimator[0] == 'success':
+            def success(a):
+                return sum_np(a >= estimator[1]) / len(a)
+            return success
+        return
+
+    def get_data_frame(self, source):
+        """ names has to be removed after logs of DataFrames contains header """
+        names = ['seed_s', 'seed_m', 'n', 'k', 'N', 'accuracy', 'acc_val', 'acc_train', 'epochs', 'time',
+                 'transformation', 'combiner']
+        self.df = read_csv(source, names=names, sep='\t', header=None) if isinstance(source, str) else source
+        return
+
+    def get_title(self):
+        k = self.df['k'][0]
+        n = self.df['n'][0]
+        return 'Comparison of Accuracies \non ({0}, {1})-XOR-Arbiter PUFs \n'.format(k, n) + \
+               'using {0} as estimator'.format('{0} with p={1}'.format(self.estimator[0], self.estimator[1])
+                                               if self.estimator is tuple else 'mean')
+
+    def create_plot(self):
+        assert isinstance(self.df, DataFrame)
+        set_style('white')
+        estimator = self.get_estimator(self.estimator)
+        self.axis = lineplot(
+            x='N',
+            y='accuracy',
+            hue=self.group_by,
+            estimator=estimator,
+            ci=None,
+            data=self.df,
+            alpha=0.6,
+            sort=False,
+        )
+        legend_alpha = 1
+        self.axis.set_ylim([0.495, 1.005])
+        self.axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        self.axis.yaxis.set_minor_locator(plt.MultipleLocator(0.01))
+        self.axis.tick_params(which='major', width=1.0, length=5)
+        self.axis.tick_params(which='minor', width=0.5, length=2)
+        if self.grid is not None:
+            plt.grid(True)
+            legend_alpha = 0.5
+            self.axis.set_xlim([0, self.grid[0] + (self.grid[1] / 200)])
+            self.axis.xaxis.set_minor_locator(plt.MultipleLocator(self.grid[0]))
+            self.axis.grid(b=True, which='major', color='lightgrey', linewidth=1)
+            self.axis.grid(b=True, which='minor', color='lightgrey', linewidth=0.5)
+        legend = self.axis.legend(loc='best', framealpha=legend_alpha)
+        for l in legend.get_lines():
+            l.set_alpha(0.7)
+        self.axis.set_title(self.get_title())
+        return self.figure
+
+    def save_plot(self, path):
+        self.figure.savefig(fname=path, dpi=500, quality=95, format='pdf')
+        plt.close()
+        return
 
 
 class PermutationIndexPlot:
