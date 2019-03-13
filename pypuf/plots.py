@@ -22,7 +22,6 @@ class SuccessRatePlot:
         """
         Prepare a plot
         :param filename: destination file (PDF)
-        :param results: an object with results keyed with experiment ids
         :param group_by: determines among which groups success rates are computed
         :param experiment_hashes: ids of results that shall be used
         :param success_threshold: defines what is considered a success
@@ -130,47 +129,46 @@ class SuccessRatePlot:
 
 class AccuracyPlotter:
 
-    def __init__(self, estimator=None, group_by='transformation', grid=None):
+    def __init__(self, min_tick, max_tick, estimator='mean', group_by='transformation', grid=False):
         self.estimator = estimator
         self.group_by = group_by
+        self.min_tick = min_tick
+        self.max_tick = max_tick
         self.grid = grid
         self.df = None
-        self.figure = plt.figure()
-        self.axis = self.figure.add_subplot()
 
     @staticmethod
     def get_estimator(estimator):
-        if estimator is None or estimator == 'mean':
+        if estimator == 'mean':
             return mean_np
         elif estimator[0] == 'quantile':
-            def quantile(a):
-                return quantile_np(a, estimator[1], interpolation='linear')
+            def quantile(p):
+                return quantile_np(p, estimator[1], interpolation='linear')
             return quantile
         elif estimator[0] == 'success':
-            def success(a):
-                return sum_np(a >= estimator[1]) / len(a)
+            def success(p):
+                return sum_np(p >= estimator[1]) / len(p)
             return success
         return
 
-    def get_data_frame(self, source):
-        """ names has to be removed after logs of DataFrames contains header """
-        names = ['seed_s', 'seed_m', 'n', 'k', 'N', 'accuracy', 'acc_val', 'acc_train', 'epochs', 'time',
-                 'transformation', 'combiner']
+    def get_data_frame(self, source, names=None):
         self.df = read_csv(source, names=names, sep='\t', header=None) if isinstance(source, str) else source
         return
 
     def get_title(self):
-        k = self.df['k'][0]
-        n = self.df['n'][0]
-        return 'Comparison of Accuracies \non ({0}, {1})-XOR-Arbiter PUFs \n'.format(k, n) + \
-               'using {0} as estimator'.format('{0} with p={1}'.format(self.estimator[0], self.estimator[1])
-                                               if self.estimator is tuple else 'mean')
+        k = self.df['k'].iloc[0]
+        n = self.df['n'].iloc[0]
+        return 'Comparison of Accuracies \non ({}, {})-XOR-Arbiter PUFs \n'.format(k, n) + \
+               'using {} as estimator'.format('{} with p={}'.format(self.estimator[0], self.estimator[1])
+                                              if isinstance(self.estimator, tuple) else 'mean')
 
-    def create_plot(self):
+    def create_plot(self, save_path=None):
+        figure = plt.figure()
+        axis = figure.add_subplot()
         assert isinstance(self.df, DataFrame)
         set_style('white')
         estimator = self.get_estimator(self.estimator)
-        self.axis = lineplot(
+        axis = lineplot(
             x='N',
             y='accuracy',
             hue=self.group_by,
@@ -181,26 +179,24 @@ class AccuracyPlotter:
             sort=False,
         )
         legend_alpha = 1
-        self.axis.set_ylim([0.495, 1.005])
-        self.axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
-        self.axis.yaxis.set_minor_locator(plt.MultipleLocator(0.01))
-        self.axis.tick_params(which='major', width=1.0, length=5)
-        self.axis.tick_params(which='minor', width=0.5, length=2)
-        if self.grid is not None:
+        axis.set_ylim([-.005 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .495, 1.005])
+        axis.set_xlim([0, self.max_tick + (self.max_tick / 200)])
+        axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        axis.yaxis.set_minor_locator(plt.MultipleLocator(0.01))
+        axis.tick_params(which='major', width=1.0, length=5)
+        axis.tick_params(which='minor', width=0.5, length=2)
+        if self.grid:
             plt.grid(True)
             legend_alpha = 0.5
-            self.axis.set_xlim([0, self.grid[0] + (self.grid[1] / 200)])
-            self.axis.xaxis.set_minor_locator(plt.MultipleLocator(self.grid[0]))
-            self.axis.grid(b=True, which='major', color='lightgrey', linewidth=1)
-            self.axis.grid(b=True, which='minor', color='lightgrey', linewidth=0.5)
-        legend = self.axis.legend(loc='best', framealpha=legend_alpha)
+            axis.xaxis.set_minor_locator(plt.MultipleLocator(self.min_tick))
+            axis.grid(b=True, which='major', color='lightgrey', linewidth=1)
+            axis.grid(b=True, which='minor', color='lightgrey', linewidth=0.5)
+        legend = axis.legend(loc='best', framealpha=legend_alpha)
         for l in legend.get_lines():
             l.set_alpha(0.7)
-        self.axis.set_title(self.get_title())
-        return self.figure
-
-    def save_plot(self, path):
-        self.figure.savefig(fname=path, dpi=500, quality=95, format='pdf')
+        axis.set_title(self.get_title())
+        if save_path is not None:
+            figure.savefig(fname=save_path, dpi=500, quality=95, format='pdf')
         plt.close()
         return
 
