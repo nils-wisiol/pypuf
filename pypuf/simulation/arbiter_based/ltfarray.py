@@ -5,9 +5,11 @@ model is the core of each simulation class.
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy.random import RandomState
+from numpy.random.mtrand import RandomState
 
 from pypuf import tools
 from pypuf.simulation.base import Simulation
+from pypuf.tools import substitute_aes
 
 
 class CompoundTransformation:
@@ -440,6 +442,15 @@ class LTFArray(Simulation):
         254: [2990, 3008, 3032, 3209, 3722, 4619, 5307, 8650, 15598, 16398],
         256: [2991, 3009, 3016, 3091, 3243, 4669, 5259, 5691, 8253, 22722],
     }
+
+    @classmethod
+    def transform_aes_substitution(cls, challenges, k):
+        shifted_subchallenges = cls.transform_shift(challenges, k)
+        substituted_subchallenges = array([
+            [substitute_aes(sub_challenge) for sub_challenge in challenge] for challenge in shifted_subchallenges
+        ], dtype=tools.BIT_TYPE)
+
+        return cls.att(substituted_subchallenges)
 
     @classmethod
     def transform_fixed_permutation(cls, challenges, k):
