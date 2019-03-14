@@ -176,7 +176,7 @@ class AccuracyPlotter:
             ci=None,
             data=self.df,
             alpha=0.6,
-            sort=False,
+            sort=True,
         )
         legend_alpha = 1
         axis.set_ylim([-.005 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .495, 1.005])

@@ -9,12 +9,16 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session
+from tensorflow.python.platform.tf_logging import set_verbosity
+from tensorflow.python.training.tensorboard_logging import ERROR
+
 from pypuf.learner.base import Learner
 from pypuf.tools import ChallengeResponseSet
 
 
 SEED_RANGE = 2 ** 32
 environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+set_verbosity(ERROR)
 
 
 class MultiLayerPerceptron(Learner):
@@ -31,7 +35,7 @@ class MultiLayerPerceptron(Learner):
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(SEED_RANGE)
-        self.checkpoint = 'checkpoint.{0}_{1}_{2}_{3}_{4}'.format(
+        self.checkpoint = 'checkpoint.{}_{}_{}_{}_{}'.format(
             training_set.N, n, k, 'no_preprocess' if transformation is None else transformation.__name__,
             hex(self.seed_model)
         ) + '.hdf5'
