@@ -51,6 +51,10 @@ To do so, please first install docker and docker-compose. Afterwards, pypuf stud
 
     docker-compose run pypuf python3 -m study ltf_benchmark
 
+Remember that changes to `requirements.txt` require to rebuild the docker image, using
+
+    docker-compose build pypuf
+
 ### Lazy Installations
 
 You can run pypuf installing numpy and scipy from your distribution's repository.
