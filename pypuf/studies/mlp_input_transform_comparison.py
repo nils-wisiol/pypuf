@@ -9,6 +9,7 @@ from numpy.random.mtrand import RandomState
 
 class MLPInputTransformComparison(Study):
 
+    CPU_LIMIT = 1
     SEED_RANGE = 2 ** 32
     SAMPLES_PER_POINT = 10
     TRANSFORMATIONS = ['id', 'atf', 'lightweight_secure', 'random']     # , 'aes_substitution'
@@ -28,7 +29,7 @@ class MLPInputTransformComparison(Study):
     ]
 
     def __init__(self):
-        super().__init__()
+        super().__init__(cpu_limit=self.CPU_LIMIT)
         self.result_plots = {}
 
     def name(self):
