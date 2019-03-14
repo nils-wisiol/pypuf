@@ -7,5 +7,5 @@ scipy~=1.2.0
 matplotlib~=3.0.0
 pandas~=0.24.1
 keras~=2.2.0
-tensorflow~=1.13.0
+tensorflow==1.5.0  # newest version that does not require AVX
 seaborn~=0.9.0
