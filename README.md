@@ -12,6 +12,13 @@ It also provides some tools for running experiments with the simulations and att
 Technically, pypuf heavily relies on numpy.
 Some operations base on an additional module that has been written in C (see installation section below).
 
+## Studies and Results
+
+pypuf has been used in the following projects:
+
+- 2019, Wisiol et al.: [Why Attackers Lose: Design and Security Analysis of Arbitrarily Large XOR Arbiter PUFs](https://doi.org/10.1007/s13389-019-00204-8):
+  Simulation of the stabiltiy of Majority Vote XOR Arbiter PUFs. [Details](pypuf/studies/why_attackers_lose/README.md)
+
 ## Installation
 
 Currently pypuf relies heavily on `numpy` and is tested for Python versions 3.6 and 3.7.
