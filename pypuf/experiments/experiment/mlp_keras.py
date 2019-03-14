@@ -45,7 +45,7 @@ class ExperimentMLP(Experiment):
     """
 
     def __init__(self, progress_log_prefix, parameters):
-        progress_log_name = None if not progress_log_prefix else '{0}_MLP_0x{1}_0x{2}_0_{3}_{4}_{5}_{6}_{7}'.format(
+        progress_log_name = None if not progress_log_prefix else '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}'.format(
             progress_log_prefix,
             parameters.seed_model,
             parameters.seed_simulation,
