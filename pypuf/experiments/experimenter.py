@@ -115,23 +115,27 @@ class Experimenter(object):
         self.callback_disabled = False
 
         def call_callback(experiment_id=None, pause=0):
-            if self.callback_disabled:
-                return
             with callback_lock:
                 with result_lock:
                     if pause:
                         output_status(prefix='C')
                     self.last_callback = datetime.now()
-                    sys.stdout.write('Digesting results ... ')
-                    sys.stdout.flush()
                     self.save_results()
-                    try:
-                        self.update_callback(experiment_id)
-                    except Exception as ex:  # pylint: disable=W
-                        sys.stdout.write('errored with {}\n\n\n'.format(ex.__class__))
-                        self.callback_disabled = True
+                    sys.stdout.write('Results saved. ')
+                    sys.stdout.flush()
+                    if not self.callback_disabled:
+                        sys.stdout.write('Digesting results ... ')
+                        sys.stdout.flush()
+
+                        try:
+                            self.update_callback(experiment_id)
+                        except Exception as ex:  # pylint: disable=W
+                            sys.stdout.write('errored with {}\n\n\n'.format(ex.__class__))
+                            self.callback_disabled = True
+                        else:
+                            sys.stdout.write('done\n')
                     else:
-                        sys.stdout.write('done\n')
+                        sys.stdout.write('Digestion disabled, due to previous exception.\n')
 
         self.next_callback = Timer(0, call_callback)
         self.next_callback.start()
