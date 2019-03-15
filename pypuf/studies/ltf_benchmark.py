@@ -78,9 +78,6 @@ class LTFBenchmark(Study):
     SAMPLE_SIZE = 100
     SHUFFLE = True
 
-    def name(self):
-        return 'ltf_benchmark'
-
     def experiments(self):
         (n, k) = self.SIZE
         cpu = None
