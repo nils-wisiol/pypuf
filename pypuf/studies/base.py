@@ -27,6 +27,7 @@ class Study:
 
     EXPERIMENTER_CALLBACK_MIN_PAUSE = 5 * 60
     SHUFFLE = False
+    STUDY_MODULE_PREFIX = 'pypuf.studies.'
 
     def __init__(self, cpu_limit=None):
         """
@@ -44,13 +45,17 @@ class Study:
             update_callback=callback,
             update_callback_min_pause=self.EXPERIMENTER_CALLBACK_MIN_PAUSE,
             cpu_limit=cpu_limit,
-            results_file=self.name() + '_results.csv',
+            results_file=self.name() + '.csv',
         )
 
     def name(self):
         """
         returns the study's name
         """
+        name = self.__module__.__str__()
+        if name.startswith(self.STUDY_MODULE_PREFIX):
+            name = name[len(self.STUDY_MODULE_PREFIX):]
+        return name
 
     def experiments(self):
         """

@@ -46,9 +46,6 @@ class LRMiniBatchSuccessRate(Study):
             for size in sizes:
                 self.GROUP_LABELS[str(size)] = '%i per Mini Batch' % size
 
-    def name(self):
-        return 'success_rate'
-
     def experiments(self):
         experiments = []
         for (n, k, training_set_sizes) in self.DEFINITIONS:
