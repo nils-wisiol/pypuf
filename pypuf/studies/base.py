@@ -27,6 +27,7 @@ class Study:
 
     EXPERIMENTER_CALLBACK_MIN_PAUSE = 5 * 60
     SHUFFLE = False
+    COMPRESSION = False
     STUDY_MODULE_PREFIX = 'pypuf.studies.'
 
     def __init__(self, cpu_limit=None):
@@ -45,7 +46,7 @@ class Study:
             update_callback=callback,
             update_callback_min_pause=self.EXPERIMENTER_CALLBACK_MIN_PAUSE,
             cpu_limit=cpu_limit,
-            results_file=self.name() + '.csv',
+            results_file=self.name() + ('.csv.gz' if self.COMPRESSION else '.csv'),
         )
 
     def name(self):
