@@ -137,8 +137,7 @@ class Experimenter(object):
                     else:
                         sys.stdout.write('Digestion disabled, due to previous exception.\n')
 
-        self.next_callback = Timer(0, call_callback)
-        self.next_callback.start()
+        self.last_callback = datetime.now()
 
         # setup process pool
         self.jobs_total = len(self.experiments)
@@ -186,7 +185,7 @@ class Experimenter(object):
                     self.results = self.results.append(DataFrame([row]), sort=True)
 
                 # If there is already a callback waiting, we will replace it and therefore cancel it
-                if self.next_callback.is_alive():
+                if self.next_callback and self.next_callback.is_alive():
                     sleep(0)  # let other threads run first
                     if callback_lock.acquire(blocking=False):
                         self.next_callback.cancel()
@@ -266,7 +265,7 @@ class Experimenter(object):
 
             pool.join()
 
-            if self.next_callback.is_alive():
+            if self.next_callback and self.next_callback.is_alive():
                 with callback_lock:
                     self.next_callback.cancel()
 
