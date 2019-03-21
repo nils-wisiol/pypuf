@@ -1,6 +1,6 @@
 from os import getpid
 from uuid import UUID
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 from numpy.random.mtrand import RandomState
 from pypuf.experiments.experiment.base import Experiment
@@ -15,6 +15,7 @@ NUM_ACCURACY = 10000
 
 
 class Parameters(NamedTuple):
+    layers: List[int]
     N: int
     n: int
     k: int
@@ -37,6 +38,7 @@ class Result(NamedTuple):
     accuracy_val: float
     accuracy_train: float
     measured_time: float
+    layers: List[int]
 
 
 class ExperimentMLP(Experiment):
@@ -82,6 +84,7 @@ class ExperimentMLP(Experiment):
         self.validation_set = tools.TrainingSet(self.simulation, N_val, prng_challenges)
         self.learner = MultiLayerPerceptron(
             log_name=self.progress_log_name,
+            layers=self.parameters.layers,
             n=self.parameters.n,
             k=self.parameters.k,
             training_set=self.training_set,
@@ -118,4 +121,5 @@ class ExperimentMLP(Experiment):
             accuracy_val=self.learner.history.history['val_pypuf_accuracy'][-1],
             accuracy_train=self.learner.history.history['pypuf_accuracy'][-1],
             measured_time=self.measured_time,
+            layers=self.parameters.layers,
         )

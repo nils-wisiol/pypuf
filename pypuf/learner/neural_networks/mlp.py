@@ -27,9 +27,10 @@ set_verbosity(ERROR)
 
 class MultiLayerPerceptron(Learner):
 
-    def __init__(self, log_name, n, k, training_set, validation_set, transformation=None,
+    def __init__(self, log_name, layers, n, k, training_set, validation_set, transformation=None,
                  print_keras=False, iteration_limit=1000, batch_size=1000, seed_model=None):
         self.log_name = log_name
+        self.layers = layers
         self.n = n
         self.k = k
         self.transformation = transformation
@@ -65,12 +66,14 @@ class MultiLayerPerceptron(Learner):
             )
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
-
         l2_loss = l2(0.01)
         self.nn = Sequential()
-        self.nn.add(Dense(3 * 2 ** (self.k - 1), input_dim=in_shape, activation='relu', kernel_regularizer=l2_loss))
-        self.nn.add(Dense(3 * 2 ** (self.k - 1), activation='relu', kernel_regularizer=l2_loss))
-        self.nn.add(Dense(1, activation='tanh', activity_regularizer=l2_loss))
+        self.nn.add(Dense(units=self.layers[0], activation='relu', kernel_regularizer=l2_loss, input_dim=in_shape))
+        if len(self.layers) > 1:
+            for nodes in self.layers[1:]:
+                self.nn.add(Dense(units=nodes, activation='relu', kernel_regularizer=l2_loss))
+        self.nn.add(Dense(units=1, activation='tanh', activity_regularizer=l2_loss))
+
         """
         # Try LinearLayer
         self.nn = Sequential()

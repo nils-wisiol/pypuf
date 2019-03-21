@@ -12,17 +12,29 @@ class MLPInputTransformComparison(Study):
     CPU_LIMIT = 4
     SEED_RANGE = 2 ** 32
     SAMPLES_PER_POINT = 3
-    TRANSFORMATIONS = ['atf', 'lightweight_secure', 'random']     # 'id', 'aes_substitution'
+    TRANSFORMATIONS = ['atf', 'lightweight_secure', 'fixed_permutation']
     COMBINER = 'xor'
     BATCH_SIZE = 1000
     ITERATION_LIMIT = 10000
     PRINT_KERAS = False
-    LOG_NAME = 'keras_mlp'
+    LOG_NAME = 'test_mlp'
 
     DEFINITIONS = [
-        #[2, 64, (1000, 8000), True, 0x993742f6, 0x5cfed54, 0xb275a0c, 0x8917e5bb],
-        [4, 64, (50000, 200000), True, None, None, None, None],  # 0xa4286b0d, 0xe52ff1c7, 0xf7012eba, 0x1c227d87],
-        #[6, 64, (625000, 5000000), True, 0x2aa9c0be, 0x811ef1a, 0x13a8b53d, 0x8b45e5e],
+        [[5, 5], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[6, 6], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[7, 7], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[8, 8], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[9, 9], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[10, 10], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[10, 4], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[8, 4], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[6, 4], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[10, 6], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[8, 6], 2, 64, (1000, 8000), True, None, None, None, None],
+        [[10, 8], 2, 64, (1000, 8000), True, None, None, None, None],
+        #[[6, 6], 2, 64, (1000, 8000), True, 0x993742f6, 0x5cfed54, 0xb275a0c, 0x8917e5bb],
+        #[[24, 24], 4, 64, (50000, 200000), True, None, None, None, None],  # 0xa4286b0d, 0xe52ff1c7, 0xf7012eba, 0x1c227d87],
+        #[[96, 96], 6, 64, (2500000, 10000000), True, 0x2aa9c0be, 0x811ef1a, 0x13a8b53d, 0x8b45e5e],
         #[2, 64, (1000, 8000), False, 0x49b18fe9, 0x2cfc7ba7, 0xc0071fa6, 0xd7f9f178],
         #[4, 64, (25000, 200000), False, 0x49b18fe9, 0x2cfc7ba7, 0xc0071fa6, 0xd7f9f178],
         #[6, 64, (625000, 5000000), False, 0x32ca7e39, 0xac3e3392, 0xd4bb6c20, 0xa3eed0a8],
@@ -38,7 +50,7 @@ class MLPInputTransformComparison(Study):
     def experiments(self):
         experiments = []
 
-        for k, n, (min_CRPs, max_CRPs), preprocess, seed_s, seed_c, seed_m, seed_a in self.DEFINITIONS:
+        for layers, k, n, (min_CRPs, max_CRPs), preprocess, seed_s, seed_c, seed_m, seed_a in self.DEFINITIONS:
             self.result_plots[(k, n, 'mean')] = AccuracyPlotter(
                 min_tick=min_CRPs,
                 max_tick=max_CRPs,
@@ -46,16 +58,16 @@ class MLPInputTransformComparison(Study):
                 estimator='mean',
                 grid=True,
             )
-            p = 0.67
-            self.result_plots[(k, n, 'quantile{}'.format(p))] = AccuracyPlotter(
+            q = 0.9
+            self.result_plots[(k, n, 'quantile={}'.format(q))] = AccuracyPlotter(
                 min_tick=min_CRPs,
                 max_tick=max_CRPs,
                 group_by='transformation',
-                estimator=('quantile', p),
+                estimator=('quantile', q),
                 grid=True,
             )
-            p = 0.9
-            self.result_plots[(k, n, 'success{}'.format(p))] = AccuracyPlotter(
+            p = 0.7
+            self.result_plots[(k, n, 'success={}'.format(p))] = AccuracyPlotter(
                 min_tick=min_CRPs,
                 max_tick=max_CRPs,
                 group_by='transformation',
@@ -72,6 +84,7 @@ class MLPInputTransformComparison(Study):
                 for i, N in enumerate(range(min_CRPs, max_CRPs + min_CRPs, min_CRPs)):
                     for transformation in self.TRANSFORMATIONS:
                         parameters_experiment = Parameters(
+                            layers=layers,
                             N=N,
                             n=n,
                             k=k,
@@ -101,5 +114,5 @@ class MLPInputTransformComparison(Study):
                 continue
             self.result_plots[(k, n, plotter)].get_data_frame(results)
             self.result_plots[(k, n, plotter)].create_plot(
-                save_path='figures/{0}/{0}_k={1}_n={2}_{3}.pdf'.format(self.name(), k, n, plotter))
+                save_path='figures/{}_k={}_n={}_{}.pdf'.format(self.name(), k, n, plotter))
         return
