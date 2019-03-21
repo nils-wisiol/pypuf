@@ -1,16 +1,20 @@
 from os import environ, remove
 from os.path import exists
+
 from numpy import reshape, sign
 from numpy.random import seed
 from numpy.random.mtrand import RandomState
-from keras.backend import maximum as max_keras, mean as mean_keras, sign as sign_keras, set_session
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import Dense
-from keras.models import Sequential
-from keras.optimizers import Adam
-from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session
+from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session, TensorShape
+from tensorflow.python.keras.regularizers import l2
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
+from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session
+from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.python.keras.engine import Layer
+from tensorflow.python.keras.initializers import RandomNormal
+from tensorflow.python.keras.layers import Dense, dot, Dropout
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.optimizers import Adam
 
 from pypuf.learner.base import Learner
 from pypuf.tools import ChallengeResponseSet
@@ -61,15 +65,22 @@ class MultiLayerPerceptron(Learner):
             )
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
+
+        l2_loss = l2(0.01)
         self.nn = Sequential()
-        self.nn.add(Dense(2 ** self.k, input_dim=in_shape, activation='relu'))
-        self.nn.add(Dense(2 ** self.k, activation='relu'))
-        self.nn.add(Dense(2 ** self.k, activation='relu'))
+        self.nn.add(Dense(3 * 2 ** (self.k - 1), input_dim=in_shape, activation='relu', kernel_regularizer=l2_loss))
+        self.nn.add(Dense(3 * 2 ** (self.k - 1), activation='relu', kernel_regularizer=l2_loss))
+        self.nn.add(Dense(1, activation='tanh', activity_regularizer=l2_loss))
+        """
+        # Try LinearLayer
+        self.nn = Sequential()
+        self.nn.add(LinearFunction(input_shape=TensorShape([in_shape, 1])))
         self.nn.add(Dense(1, activation='tanh'))
+        """
 
         def pypuf_accuracy(y_true, y_pred):
-            accuracy = (1 + mean_keras(sign_keras(y_true * y_pred))) / 2
-            return max_keras(accuracy, 1 - accuracy)
+            accuracy = (1 + tf_mean(tf_sign(y_true * y_pred))) / 2
+            return tf_max(accuracy, 1 - accuracy)
 
         self.nn.compile(
             optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True),
@@ -106,19 +117,21 @@ class MultiLayerPerceptron(Learner):
             filepath=self.checkpoint,
             verbose=self.print_keras,
             monitor='val_pypuf_accuracy',
-            save_best_only=True, mode='max'
+            save_best_only=True,
+            mode='max'
         )
         accurate = TerminateOnThreshold(
             threshold=1-(self.k*0.01),
             monitor='val_pypuf_accuracy',
             patience=self.iteration_limit,
             verbose=self.print_keras,
+            mode='max',
             restore_best_weights=True
         )
         converged = EarlyStopping(
             monitor='val_pypuf_accuracy',
-            min_delta=0.005,
-            patience=(100 // self.k),
+            min_delta=0.001,
+            patience=(200 // self.k),
             verbose=self.print_keras,
             mode='max',
             restore_best_weights=True
@@ -137,3 +150,29 @@ class MultiLayerPerceptron(Learner):
         if exists(self.checkpoint):
             remove(self.checkpoint)
         return self.model
+
+
+"""
+class LinearFunction(Layer):
+
+    def __init__(self, **kwargs):
+        self.output_dim = 1
+        self.ltf_weights = None
+        super(LinearFunction, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.ltf_weights = self.add_weight(
+            name='ltf_weights',
+            shape=(input_shape, self.output_dim),
+            initializer=RandomNormal(mean=0, stddev=1, seed=seed),
+            trainable=True
+        )
+        super(LinearFunction, self).build(input_shape)
+
+    def call(self, inputs, **kwargs):
+        assert isinstance(inputs, list)
+        return dot(inputs, self.ltf_weights)
+
+    def compute_output_shape(self, input_shape):
+        return self.output_dim
+"""

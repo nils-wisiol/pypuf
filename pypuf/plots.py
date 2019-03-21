@@ -179,8 +179,8 @@ class AccuracyPlotter:
             sort=True,
         )
         legend_alpha = 1
-        axis.set_ylim([-.005 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .495, 1.005])
-        axis.set_xlim([0, self.max_tick + (self.max_tick / 200)])
+        axis.set_ylim([-.01 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .49, 1.01])
+        axis.set_xlim([0, self.max_tick + (self.max_tick / 100)])
         axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
         axis.yaxis.set_minor_locator(plt.MultipleLocator(0.01))
         axis.tick_params(which='major', width=1.0, length=5)
@@ -191,7 +191,9 @@ class AccuracyPlotter:
             axis.xaxis.set_minor_locator(plt.MultipleLocator(self.min_tick))
             axis.grid(b=True, which='major', color='lightgrey', linewidth=1)
             axis.grid(b=True, which='minor', color='lightgrey', linewidth=0.5)
-        legend = axis.legend(loc='best', framealpha=legend_alpha)
+        handles, labels = axis.get_legend_handles_labels()
+        labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+        legend = axis.legend(handles, labels, loc='best', framealpha=legend_alpha)
         for l in legend.get_lines():
             l.set_alpha(0.7)
         axis.set_title(self.get_title())

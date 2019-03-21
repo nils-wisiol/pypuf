@@ -9,10 +9,10 @@ from numpy.random.mtrand import RandomState
 
 class MLPInputTransformComparison(Study):
 
-    CPU_LIMIT = 1
+    CPU_LIMIT = 4
     SEED_RANGE = 2 ** 32
-    SAMPLES_PER_POINT = 10
-    TRANSFORMATIONS = ['id', 'atf', 'lightweight_secure', 'random']     # , 'aes_substitution'
+    SAMPLES_PER_POINT = 3
+    TRANSFORMATIONS = ['atf', 'lightweight_secure', 'random']     # 'id', 'aes_substitution'
     COMBINER = 'xor'
     BATCH_SIZE = 1000
     ITERATION_LIMIT = 10000
@@ -20,9 +20,9 @@ class MLPInputTransformComparison(Study):
     LOG_NAME = 'keras_mlp'
 
     DEFINITIONS = [
-        [2, 64, (1000, 8000), True, 0x993742f6, 0x5cfed54, 0xb275a0c, 0x8917e5bb],
-        [4, 64, (25000, 200000), True, 0xa4286b0d, 0xe52ff1c7, 0xf7012eba, 0x1c227d87],
-        [6, 64, (625000, 5000000), True, 0x2aa9c0be, 0x811ef1a, 0x13a8b53d, 0x8b45e5e],
+        #[2, 64, (1000, 8000), True, 0x993742f6, 0x5cfed54, 0xb275a0c, 0x8917e5bb],
+        [4, 64, (50000, 200000), True, None, None, None, None],  # 0xa4286b0d, 0xe52ff1c7, 0xf7012eba, 0x1c227d87],
+        #[6, 64, (625000, 5000000), True, 0x2aa9c0be, 0x811ef1a, 0x13a8b53d, 0x8b45e5e],
         #[2, 64, (1000, 8000), False, 0x49b18fe9, 0x2cfc7ba7, 0xc0071fa6, 0xd7f9f178],
         #[4, 64, (25000, 200000), False, 0x49b18fe9, 0x2cfc7ba7, 0xc0071fa6, 0xd7f9f178],
         #[6, 64, (625000, 5000000), False, 0x32ca7e39, 0xac3e3392, 0xd4bb6c20, 0xa3eed0a8],
@@ -46,18 +46,20 @@ class MLPInputTransformComparison(Study):
                 estimator='mean',
                 grid=True,
             )
-            self.result_plots[(k, n, 'quantile')] = AccuracyPlotter(
+            p = 0.67
+            self.result_plots[(k, n, 'quantile{}'.format(p))] = AccuracyPlotter(
                 min_tick=min_CRPs,
                 max_tick=max_CRPs,
                 group_by='transformation',
-                estimator=('quantile', 0.67),
+                estimator=('quantile', p),
                 grid=True,
             )
-            self.result_plots[(k, n, 'success')] = AccuracyPlotter(
+            p = 0.9
+            self.result_plots[(k, n, 'success{}'.format(p))] = AccuracyPlotter(
                 min_tick=min_CRPs,
                 max_tick=max_CRPs,
                 group_by='transformation',
-                estimator=('success', 0.9),
+                estimator=('success', p),
                 grid=False,
             )
 
@@ -99,5 +101,5 @@ class MLPInputTransformComparison(Study):
                 continue
             self.result_plots[(k, n, plotter)].get_data_frame(results)
             self.result_plots[(k, n, plotter)].create_plot(
-                save_path='figures/{0}/{0}_k={1}_n={2}_{3}.pdf'.format(self.name(), plotter, k, n))
+                save_path='figures/{0}/{0}_k={1}_n={2}_{3}.pdf'.format(self.name(), k, n, plotter))
         return
