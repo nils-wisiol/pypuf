@@ -4,11 +4,16 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
+from importlib import import_module
+from inspect import getmembers, isclass
+
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from random import sample
+
+from pypuf.studies.base import Study
 
 BIT_TYPE = int8
 
@@ -332,3 +337,41 @@ class TrainingSet(ChallengeResponseSet):
             challenges=challenges,
             responses=instance.eval(challenges)
         )
+
+
+def find_study_class(name):
+    """
+    Returns the study class object for a given module name. The name can include the 'pypuf.studies'
+    prefix, but does not have to. The returned class is guaranteed to be a descendant to pypuf.studies.base.Study.
+    If the given module does not contain exactly one Study class, an error will be PRINTED and python will EXIT.
+    :param name: Module name with our without prefix, containting exactly one descendant to Study.
+    :return: Study class
+    """
+    if not name.startswith('pypuf.studies'):
+        name = 'pypuf.studies.' + name
+
+    try:
+        study_module = import_module(name)
+    except ModuleNotFoundError:
+        print('Module {} cannot be found.'.format(name))
+        exit(1)
+
+    studies = [
+        c[1] for c in getmembers(study_module, isclass)
+        if isinstance(c, tuple) and
+        len(c) > 1 and
+        str(c[1].__module__).startswith(name) and
+        issubclass(c[1], Study)
+    ]
+
+    if not studies:
+        print('Module {} does not contain any study.'.format(name))
+        exit(1)
+
+    if len(studies) > 1:
+        print('Module {} contains more than one study:'.format(name))
+        for s in studies:
+            print(' - {}'.format(s))
+        exit(1)
+
+    return studies[0]
