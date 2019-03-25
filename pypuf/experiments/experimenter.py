@@ -315,11 +315,12 @@ class Experimenter(object):
         """
         Try to read results from `results_file`. Does nothing if that file does not exist.
         """
+        from pandas.errors import EmptyDataError
         try:
             if self.results_file:
                 from pandas import read_csv
                 self.results = read_csv('results/' + self.results_file)
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             pass
 
 
