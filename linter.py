@@ -9,6 +9,7 @@ from subprocess import call
 from fnmatch import filter as fn_filter
 from os import walk, path
 from functools import reduce
+import platform
 
 
 def main(arguments):
@@ -73,5 +74,7 @@ def main(arguments):
     exit(returncode)
 
 
-if __name__ == '__main__':
+# astroid/pylint is incompatible with Python 3.7
+# Since travis runs the linter for Python 3.6, we don't need to run it again.
+if __name__ == '__main__' and platform.python_version_tuple()[0:2] != ('3', '7'):
     main(argv[1:])
