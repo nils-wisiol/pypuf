@@ -152,6 +152,18 @@ the study will be saved to `./figures/lr-minibatch*.pdf`.
 
 To implement a study, please refer to the package documentation of `studies.base`.
 
+## Performance
+
+Some of pypufs algorithms can run a quite long time. To make run times more comparable across platforms,
+pypuf includes a benchmark study that ships some results from different CPUs and Python versions on some basic pypuf operations.
+It can be run locally to compare against those numbers. To run the benchmark, use
+
+    python3 -m study benchmark
+
+Results currently included in pypuf are shown below.
+
+![](figures/benchmark.png?raw=true "pypuf benchmark results")
+
 ## Usage
 
 pypuf is primarily designed as an API. However, it provides a subset of its features as a command line interface.
