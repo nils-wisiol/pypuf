@@ -14,7 +14,7 @@ from numpy.random.mtrand import RandomState
 
 class MLPInputTransformComparison(Study):
 
-    CPU_LIMIT = 4
+    CPU_LIMIT = 50
     SEED_RANGE = 2 ** 32
     SAMPLES_PER_POINT = 3
     TRANSFORMATIONS = ['atf', 'lightweight_secure', 'fixed_permutation']
