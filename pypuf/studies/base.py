@@ -25,7 +25,7 @@ class Study:
     Creates a number of experiments, runs them and produces a human-readable result.
     """
 
-    EXPERIMENTER_CALLBACK_MIN_PAUSE = 5  # 5 * 60
+    EXPERIMENTER_CALLBACK_MIN_PAUSE = 5 * 60
     SHUFFLE = False
     COMPRESSION = False
     STUDY_MODULE_PREFIX = 'pypuf.studies.'

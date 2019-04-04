@@ -27,22 +27,25 @@ set_verbosity(ERROR)
 
 class MultiLayerPerceptron(Learner):
 
-    def __init__(self, log_name, layers, n, k, training_set, validation_set, transformation=None,
-                 print_keras=False, iteration_limit=1000, batch_size=1000, seed_model=None):
-        self.log_name = log_name
+    def __init__(self, layers, n, k, training_set, validation_set, transformation=None,
+                 learning_rate=0.001, beta_1=0.9, beta_2=0.999, checkpoint_name=None,
+                 print_keras=False, termination_threshold=1.0, iteration_limit=1000, batch_size=1000, seed_model=None):
         self.layers = layers
         self.n = n
         self.k = k
         self.transformation = transformation
         self.training_set = training_set
         self.validation_set = validation_set
+        self.learning_rate = learning_rate
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
         self.print_keras = 0 if not print_keras else 1
+        self.termination_threshold = termination_threshold
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(SEED_RANGE)
-        self.checkpoint = 'checkpoint.{}_{}_{}_{}_{}'.format(
-            training_set.N, n, k, 'no_preprocess' if transformation is None else transformation.__name__,
-            hex(self.seed_model)
+        self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(
+            n, k, 'no_preprocess' if transformation is None else transformation.__name__, checkpoint_name,
         ) + '.hdf5'
         self.nn = None
         self.history = None
@@ -86,7 +89,7 @@ class MultiLayerPerceptron(Learner):
             return tf_max(accuracy, 1 - accuracy)
 
         self.nn.compile(
-            optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True),
+            optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, amsgrad=True),
             loss='squared_hinge',
             metrics=[pypuf_accuracy]
         )
@@ -124,7 +127,7 @@ class MultiLayerPerceptron(Learner):
             mode='max'
         )
         accurate = TerminateOnThreshold(
-            threshold=1-(self.k*0.01),
+            threshold=self.termination_threshold,
             monitor='val_pypuf_accuracy',
             patience=self.iteration_limit,
             verbose=self.print_keras,
@@ -139,7 +142,7 @@ class MultiLayerPerceptron(Learner):
             mode='max',
             restore_best_weights=True
         )
-        callbacks = [checkpoint, accurate, converged]
+        callbacks = [checkpoint, converged] if self.termination_threshold == 1.0 else [checkpoint, converged, accurate]
         self.history = self.nn.fit(
             x=self.training_set.challenges,
             y=self.training_set.responses,

@@ -6,6 +6,7 @@ from itertools import cycle
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, MultipleLocator
+from numpy import max as max_np, min as min_np
 from numpy import mean as mean_np, quantile as quantile_np, sum as sum_np
 from numpy import zeros
 from pandas import read_csv, DataFrame
@@ -129,27 +130,14 @@ class SuccessRatePlot:
 
 class AccuracyPlotter:
 
-    def __init__(self, min_tick, max_tick, estimator='mean', group_by='transformation', grid=False):
+    def __init__(self, min_tick, max_tick, estimator='mean', group_by='transformation', group_by_ex=None, grid=False):
         self.estimator = estimator
         self.group_by = group_by
+        self.group_by_ex = group_by_ex
         self.min_tick = min_tick
         self.max_tick = max_tick
         self.grid = grid
         self.df = None
-
-    @staticmethod
-    def get_estimator(estimator):
-        if estimator == 'mean':
-            return mean_np
-        elif estimator[0] == 'quantile':
-            def quantile(p):
-                return quantile_np(p, estimator[1], interpolation='linear')
-            return quantile
-        elif estimator[0] == 'success':
-            def success(p):
-                return sum_np(p >= estimator[1]) / len(p)
-            return success
-        return
 
     def get_data_frame(self, source, names=None):
         self.df = read_csv(source, names=names, sep='\t', header=None) if isinstance(source, str) else source
@@ -167,11 +155,12 @@ class AccuracyPlotter:
         axis = figure.add_subplot()
         assert isinstance(self.df, DataFrame)
         set_style('white')
-        estimator = self.get_estimator(self.estimator)
-        axis = lineplot(
+        estimator = get_estimator(self.estimator)
+        figure = lineplot(
             x='N',
             y='accuracy',
             hue=self.group_by,
+            style=self.group_by_ex,
             estimator=estimator,
             ci=None,
             data=self.df,
@@ -179,6 +168,10 @@ class AccuracyPlotter:
             sort=True,
         )
         legend_alpha = 1
+        axis.set_xlabel(
+            '{} with p={}'.format(self.estimator[0], self.estimator[1])
+            if isinstance(self.estimator, tuple) else 'mean'
+        )
         axis.set_ylim([-.01 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .49, 1.01])
         axis.set_xlim([0, self.max_tick + (self.max_tick / 100)])
         axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
@@ -201,6 +194,35 @@ class AccuracyPlotter:
             figure.savefig(fname=save_path, dpi=500, quality=95, format='pdf')
         plt.close()
         return
+
+
+def get_estimator(estimator):
+    if estimator == 'mean':
+        return mean_np
+
+    elif estimator == 'max' or estimator == 'best':
+        return max_np
+
+    elif estimator == 'min' or estimator == 'worst':
+        return min_np
+
+    elif estimator.startswith('quantile'):
+        q = float(estimator[estimator.find('=')+1:]) if '=' in estimator else 0.9
+
+        def quantile(values):
+            return quantile_np(values, q, interpolation='linear')
+
+        return quantile
+
+    elif estimator.startswith('success'):
+        p = float(estimator[estimator.find('=')+1:]) if '=' in estimator else 0.7
+
+        def success(values):
+            return sum_np(values >= p) / len(values)
+
+        return success
+
+    return
 
 
 class PermutationIndexPlot:
