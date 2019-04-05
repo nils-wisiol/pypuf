@@ -19,15 +19,17 @@ class CompoundTransformation:
     The purpose of this class is mainly to define generated input transformations in a way they can be pickled.
     """
 
-    def __init__(self, generator, args):
+    def __init__(self, generator, args, name=None):
         """
         Defines a compound input transformation
         :param generator: Generator function to be used.
         :param args: Arguments for the generator function.
+        :param name: Should be None or same as generator(*args).__name__ to avoid calling the generator just to obtain
+        the name. (If not given, generator(*args) will be called, but the result will be dismissed and recreated later.)
         """
         self.generator = generator
         self.args = args
-        self.__name__ = generator(*args).__name__
+        self.__name__ = name or generator(*args).__name__
         self._transform = None
 
     def build(self):
@@ -47,7 +49,7 @@ class CompoundTransformation:
         return self._transform(*args, **kwargs)
 
     def __repr__(self):
-        return self.build().__name__
+        return self.__name__
 
 
 class LTFArray(Simulation):
