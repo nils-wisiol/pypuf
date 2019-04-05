@@ -8,7 +8,7 @@ from matplotlib.pyplot import subplots
 
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
 from pypuf.studies.base import Study
 from pypuf.tools import sample_inputs, TrainingSet
 from numpy.distutils import cpuinfo
@@ -119,6 +119,10 @@ class Benchmark(Study):
         'lightweight_secure',
         'fixed_permutation',
         'random',
+        CompoundTransformation(
+            generator=LTFArray.generate_ipmod2_transform,
+            args=(64, 8, 31415),
+        )
     ]
     SAMPLE_SIZE = 100
     SHUFFLE = True
