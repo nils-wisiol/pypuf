@@ -2,12 +2,15 @@
 This module provides several different implementations of arbiter PUF simulations. The linear threshold function array
 model is the core of each simulation class.
 """
+from itertools import combinations
+
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy.random import RandomState
 
 from pypuf import tools
 from pypuf.simulation.base import Simulation
+from pypuf.tools import BIT_TYPE
 
 
 class CompoundTransformation:
@@ -527,6 +530,24 @@ class LTFArray(Simulation):
             seed += 1
 
         return permutation_seeds
+
+    @classmethod
+    def generate_ipmod2_transform(cls, n, kk, seed):
+        all_pair_indices = array(list(combinations(range(n), 2)))
+        pairs = zeros((kk, n, n // 2), dtype=int8)
+        prng = RandomState(seed)
+        for l in range(kk):
+            for i in range(n):
+                pairs[l, i] = prng.choice(range(len(all_pair_indices)), n // 2, replace=False)
+
+        def transform(challenges, k):
+            assert challenges.shape[1] == n
+            assert k == kk
+            pair_values = amax(challenges[:, all_pair_indices], axis=2)
+            return prod(pair_values[:, pairs], axis=3, dtype=BIT_TYPE)
+
+        transform.__name__ = 'transform_ipmod2_%i' % seed
+        return transform
 
     @classmethod
     def generate_stacked_transform(cls, transform_1, puf_count, transform_2):
