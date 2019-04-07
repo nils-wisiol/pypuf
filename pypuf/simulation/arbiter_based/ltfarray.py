@@ -7,6 +7,7 @@ from itertools import combinations
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy.random import RandomState
+from scipy.misc import comb
 
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -534,21 +535,53 @@ class LTFArray(Simulation):
         return permutation_seeds
 
     @classmethod
-    def generate_ipmod2_transform(cls, n, kk, seed):
+    def generate_ipmod2_transform(cls, n, kk, weak_puf):
+        assert weak_puf.eval().shape == (kk, n, n)
         all_pair_indices = array(list(combinations(range(n), 2)))
-        pairs = zeros((kk, n, n // 2), dtype=int8)
-        prng = RandomState(seed)
+        pairs = zeros((kk, n, n), dtype=int8)
+        prng = RandomState(271828)
         for l in range(kk):
             for i in range(n):
-                pairs[l, i] = prng.choice(range(len(all_pair_indices)), n // 2, replace=False)
+                pairs[l, i] = prng.choice(range(comb(n, 2, exact=True)), n, replace=False)
+        assert pairs.shape == (kk, n, n)
 
         def transform(challenges, k):
+            (N, _) = challenges.shape
             assert challenges.shape[1] == n
             assert k == kk
-            pair_values = amax(challenges[:, all_pair_indices], axis=2)
-            return prod(pair_values[:, pairs], axis=3, dtype=BIT_TYPE)
 
-        transform.__name__ = 'transform_ipmod2_%i' % seed
+            # evaluate all pair values
+            pair_values = amax(challenges[:, all_pair_indices], axis=2)
+            assert pair_values.shape == (N, comb(n, 2, exact=True))
+
+            # we append a 'fake pair' to the list of pair values with value
+            # FALSE (+1). This makes usage of numpy easier below (*)
+            pair_values = append(pair_values, ones((N, 1)), axis=1)
+            assert pair_values.shape == (N, 1 + comb(n, 2, exact=True))
+
+            # get the weak puf response as an array of truth values
+            weak_puf_values = (-.5 * weak_puf.eval() - .5).astype(bool)
+            assert weak_puf_values.shape == (kk, n, n)
+
+            # determine which pairs we will use for the evaluation based on the
+            # weak PUF response
+            pairs_in_use = pairs.copy()
+            for l in range(kk):
+                for i in range(n):
+                    # (*) since the weak PUF may choose a different number of pairs each time
+                    # and we need length of 64bits, we fill up the rest with the fake pair
+                    # that is always FALSE
+                    selected_pairs = pairs[l, i, weak_puf_values[l, i]]
+                    number_of_selected_pairs = len(selected_pairs)
+                    pairs_in_use[l, i, :number_of_selected_pairs] = selected_pairs
+                    pairs_in_use[l, i, number_of_selected_pairs:] = -ones((n - number_of_selected_pairs))
+
+            assert pairs_in_use.shape == (kk, n, n)
+
+            # evaluate the parity of the selected pairs
+            return prod(pair_values[:, pairs_in_use], axis=3, dtype=BIT_TYPE)
+
+        transform.__name__ = 'transform_ipmod2_%s' % str(weak_puf)
         return transform
 
     @classmethod
