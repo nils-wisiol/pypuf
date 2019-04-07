@@ -6,6 +6,7 @@ from itertools import combinations
 
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
+from numpy import unique, uint64, where
 from numpy.random import RandomState
 from scipy.misc import comb
 
@@ -538,12 +539,21 @@ class LTFArray(Simulation):
     def generate_ipmod2_transform(cls, n, kk, weak_puf):
         assert weak_puf.eval().shape == (kk, n, n)
         all_pair_indices = array(list(combinations(range(n), 2)))
-        pairs = zeros((kk, n, n), dtype=int8)
+        pairs = zeros((kk, n, n), dtype=uint64)
         prng = RandomState(271828)
         for l in range(kk):
             for i in range(n):
                 pairs[l, i] = prng.choice(range(comb(n, 2, exact=True)), n, replace=False)
         assert pairs.shape == (kk, n, n)
+
+        unique_pairs = unique(pairs.flatten())
+        used_pair_indices = all_pair_indices[unique_pairs]
+        used_pairs = zeros((kk, n, n), dtype=uint64)
+        for l in range(kk):
+            for i in range(n):
+                for j in range(n):
+                    # find the index of value pairs[l, i] in unique_pairs
+                    used_pairs[l, i, j] = where(unique_pairs == pairs[l, i, j])[0]
 
         def transform(challenges, k):
             (N, _) = challenges.shape
@@ -551,13 +561,13 @@ class LTFArray(Simulation):
             assert k == kk
 
             # evaluate all pair values
-            pair_values = amax(challenges[:, all_pair_indices], axis=2)
-            assert pair_values.shape == (N, comb(n, 2, exact=True))
+            pair_values = amax(challenges[:, used_pair_indices], axis=2)
+            assert pair_values.shape == (N, len(used_pair_indices))
 
             # we append a 'fake pair' to the list of pair values with value
             # FALSE (+1). This makes usage of numpy easier below (*)
             pair_values = append(pair_values, ones((N, 1)), axis=1)
-            assert pair_values.shape == (N, 1 + comb(n, 2, exact=True))
+            assert pair_values.shape == (N, len(used_pair_indices) + 1)
 
             # get the weak puf response as an array of truth values
             weak_puf_values = (-.5 * weak_puf.eval() - .5).astype(bool)
@@ -565,13 +575,13 @@ class LTFArray(Simulation):
 
             # determine which pairs we will use for the evaluation based on the
             # weak PUF response
-            pairs_in_use = pairs.copy()
+            pairs_in_use = used_pairs.copy()
             for l in range(kk):
                 for i in range(n):
                     # (*) since the weak PUF may choose a different number of pairs each time
                     # and we need length of 64bits, we fill up the rest with the fake pair
                     # that is always FALSE
-                    selected_pairs = pairs[l, i, weak_puf_values[l, i]]
+                    selected_pairs = used_pairs[l, i, weak_puf_values[l, i]]
                     number_of_selected_pairs = len(selected_pairs)
                     pairs_in_use[l, i, :number_of_selected_pairs] = selected_pairs
                     pairs_in_use[l, i, number_of_selected_pairs:] = -ones((n - number_of_selected_pairs))
