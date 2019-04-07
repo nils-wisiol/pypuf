@@ -1,5 +1,8 @@
 import re
 
+from matplotlib.pyplot import subplots
+from seaborn import barplot
+
 from pypuf.experiments.experiment.property_test import ExperimentPropertyTest, Parameters
 from pypuf.simulation.arbiter_based.ltfarray import CompoundTransformation, LTFArray
 from pypuf.simulation.weak import NoisySRAM
@@ -48,8 +51,22 @@ class ReliabilityStudy(Study):
             row['param_ins_gen']
         ), axis=1)
         data['arbiter_noise'] = data.apply(lambda row: re.sub(
-            r'.*\'sigma_noise\': ([^\,]+).*',
+            r'.*\'sigma_noise\': ([^\,\}]+).*',
             r'\1',
             row['param_ins_gen']
         ), axis=1)
-        self.experimenter.save_results()
+
+        fig, ax = subplots(1, 1)
+
+        barplot(
+            x='sram_noise',
+            y='mean',
+            hue='arbiter_noise',
+            data=data,
+            ax=ax,
+        )
+
+        ax.set_xlabel('SRAM Noise Level')
+        ax.set_ylabel('Mean Reliability')
+        fig.suptitle('IP Mod 2 Transform Reliabilty')
+        fig.savefig('figures/%s.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
