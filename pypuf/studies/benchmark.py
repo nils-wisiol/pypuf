@@ -9,6 +9,7 @@ from matplotlib.pyplot import subplots
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, CompoundTransformation
+from pypuf.simulation.weak import NoisySRAM
 from pypuf.studies.base import Study
 from pypuf.tools import sample_inputs, TrainingSet
 from numpy.distutils import cpuinfo
@@ -121,7 +122,8 @@ class Benchmark(Study):
         'random',
         CompoundTransformation(
             generator=LTFArray.generate_ipmod2_transform,
-            args=(64, 8, 31415),
+            args=(64, 8, NoisySRAM((8, 64, 64), .2, 31415)),
+            name='transform_ipmod2_NoisySRAM_31415_.2',
         )
     ]
     SAMPLE_SIZE = 100
