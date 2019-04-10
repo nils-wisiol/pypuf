@@ -105,3 +105,6 @@ ENV/
 # Conda
 /pypuf/bin/*
 
+# HPC-Curta output files
+*.out
+

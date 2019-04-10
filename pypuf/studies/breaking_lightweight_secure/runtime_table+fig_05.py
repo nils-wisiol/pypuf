@@ -74,10 +74,13 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
     SAMPLES_PER_ENTRY = 1000
 
     PARAMETERS = [
-        TableEntryParameters(64, 4, 12000, (4, 2, 1)),
-        TableEntryParameters(64, 4, 30000, (4, 2, 2)),
-        TableEntryParameters(64, 5, 300000, (4, 1, 2)),
-        TableEntryParameters(64, 6, 1000000, (4, 1, 3)),
+        TableEntryParameters(64, 4, 12000, (6, 2, 1)),
+        TableEntryParameters(64, 4, 30000, (6, 2, 2)),
+        TableEntryParameters(64, 5, 300000, (6, 1, 2)),
+        TableEntryParameters(64, 6, 1000000, (6, 1, 3)),
+        TableEntryParameters(64, 7, 2000000, (6, 1, 4)),
+        TableEntryParameters(128, 4, 1000000, (6, 1, 5)),
+        TableEntryParameters(128, 5, 1000000, (6, 1, 6)),
     ]
     TRANSFORMATIONS = [LTFArray.transform_atf, LTFArray.transform_lightweight_secure,
                        LTFArray.transform_fixed_permutation]

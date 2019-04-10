@@ -1,6 +1,5 @@
 numpy~=1.16.0
 pycodestyle~=2.4.0
-polymath==0.1.18
 pylint~=2.2.0
 scipy~=1.2.0
 astroid~=2.1.0
