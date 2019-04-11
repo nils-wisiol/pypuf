@@ -4,7 +4,7 @@ from uuid import UUID
 
 from numpy import broadcast_to, sign, sum, mean, zeros, absolute
 from numpy.random.mtrand import RandomState
-from seaborn import catplot
+from seaborn import catplot, axes_style
 
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, CompoundTransformation
@@ -65,7 +65,7 @@ class ReliabilityExperiment(Experiment):
     def __init__(self, progress_log_name, parameters):
         super().__init__(progress_log_name, parameters)
         self.parameters = parameters
-        self.reliabilities = None
+        self.instance_bit_error_rates = None
         self.instances = None
 
     def run(self):
@@ -73,7 +73,7 @@ class ReliabilityExperiment(Experiment):
         instances = self.instances
         I = len(instances)
         (n, m) = (instances[0].challenge_length(), instances[0].response_length())
-        self.reliabilities = zeros((I, m))
+        self.instance_bit_error_rates = zeros((I, m))
         for i, instance in enumerate(instances):
             assert instance.response_length() == m
             challenges = sample_inputs(instance.challenge_length(), N,
@@ -93,16 +93,16 @@ class ReliabilityExperiment(Experiment):
                 # compute the average deviation from the correct response
                 all_correct_responses = broadcast_to(correct_response, (R, m))  # shape (R, m)
                 assert all_correct_responses.shape == (R, m)
-                mean_deviation = mean(absolute(all_correct_responses - responses), axis=0) / 2  # shape (m, )
-                assert mean_deviation.shape == (m, )
-                self.reliabilities[i] += mean_deviation
+                mean_bit_error_rate = mean(absolute(all_correct_responses - responses), axis=0) / 2  # shape (m, )
+                assert mean_bit_error_rate.shape == (m, )
+                self.instance_bit_error_rates[i] += mean_bit_error_rate
 
     def analyze(self):
         return ReliabilityExperimentResult(
             experiment_id=self.id,
             pid=getpid(),
             measured_time=self.measured_time,
-            mean_bit_error_rate=mean(self.reliabilities) / self.parameters.N,
+            mean_bit_error_rate=mean(self.instance_bit_error_rates) / self.parameters.N,
         )
 
 
@@ -155,7 +155,7 @@ class NoisyIPMod2TransformLTFArrayReliabilityExperiment(ReliabilityExperiment):
                     weak_puf=NoisySRAM(
                         size=self.parameters.noisy_ltfarray_k * self.parameters.noisy_ltfarray_n**2,
                         noise=self.parameters.noisy_sram_noise,
-                        seed_skew=self.parameters.noisy_sram_seed_skew,
+                        seed_skew=self.parameters.noisy_sram_seed_skew + i,
                         seed_noise=self.parameters.noisy_sram_seed_noise + i,
                     )
                 ),
@@ -173,27 +173,24 @@ class NoisyIPMod2TransformLTFArrayReliabilityExperiment(ReliabilityExperiment):
 class ReliabilityStudy(Study):
 
     def experiments(self) -> List[Experiment]:
-        # return \
-        # [
-        #     NoisySRAMReliabilityExperiment(
-        #         progress_log_name=None,
-        #         parameters=NoisySRAMReliabilityExperimentParameters(
-        #             N=1,
-        #             R=551,
-        #             I=1000,
-        #             seed_challenges=31415,
-        #             noisy_sram_size=size,
-        #             noisy_sram_noise=noise,
-        #             noisy_sram_seed_skew=31415,
-        #             noisy_sram_seed_noise=0xdeadbeef,
-        #         )
-        #     )
-        #     for noise in [0, .001, .01, .02, .03, .04, .05, .1, .2, .5, 1, 2, 5, 100]
-        #     for size in [1024, 2048]
-        # ] \
-        # + \
         return \
             [
+                NoisySRAMReliabilityExperiment(
+                    progress_log_name=None,
+                    parameters=NoisySRAMReliabilityExperimentParameters(
+                        N=1,
+                        R=551,
+                        I=1000,
+                        seed_challenges=31415,
+                        noisy_sram_size=size,
+                        noisy_sram_noise=noise,
+                        noisy_sram_seed_skew=31415,
+                        noisy_sram_seed_noise=0xdeadbeef,
+                    )
+                )
+                for noise in [0, .001, .01, .02, .03, .04, .05, .1, .2, .5, 1, 2, 5, 100]
+                for size in [1024, 2048]
+            ] + [
                 NoisyLTFArrayReliabilityExperiment(
                     progress_log_name=None,
                     parameters=NoisyLTFArrayReliabilityExperimentParameters(
@@ -231,57 +228,59 @@ class ReliabilityStudy(Study):
                     )
                 )
                 for ltfarray_nosiness in [.01, .02, .05, .1, .2]
-                for sram_noise in [.05, .1, .2, .3, .4]
+                for sram_noise in [.05, .1, .2, .3, .4, 1, 10, 100]
                 for k in [1, 2, 4, 8, 12]
             ]
 
     def plot(self):
         data = self.experimenter.results
 
-        plot_data = data[data['experiment'] == 'NoisySRAMReliabilityExperiment']
-        if not plot_data.empty:
-            facet = catplot(
-                x='noisy_sram_noise',
-                y='mean_bit_error_rate',
-                data=plot_data,
-                kind='bar',
-            )
+        with axes_style("whitegrid"):
 
-            facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
-            facet.fig.set_size_inches(12, 4)
-            facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
-            facet.fig.suptitle('Noisy PUF Mean Bit Error Rate')
-            facet.fig.savefig('figures/%s.sram.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
+            plot_data = data[data['experiment'] == 'NoisySRAMReliabilityExperiment']
+            if not plot_data.empty:
+                facet = catplot(
+                    x='noisy_sram_noise',
+                    y='mean_bit_error_rate',
+                    data=plot_data,
+                    kind='bar',
+                )
 
-        plot_data = data[data['experiment'] == 'NoisyLTFArrayReliabilityExperiment']
-        if not plot_data.empty:
-            facet = catplot(
-                x='noisy_ltfarray_noisiness',
-                y='mean_bit_error_rate',
-                hue='noisy_ltfarray_k',
-                data=plot_data,
-                kind='bar',
-            )
+                facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
+                facet.fig.set_size_inches(12, 4)
+                facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
+                facet.fig.suptitle('Noisy PUF Mean Bit Error Rate')
+                facet.fig.savefig('figures/%s.sram.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
 
-            facet.set_axis_labels('LTFArray Noisiness Level', 'Mean Bit Error Rate')
-            facet.fig.set_size_inches(12, 4)
-            facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
-            facet.fig.suptitle('Noisy PUF Mean Bit Error Rate')
-            facet.fig.savefig('figures/%s.ltfarray.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
+            plot_data = data[data['experiment'] == 'NoisyLTFArrayReliabilityExperiment']
+            if not plot_data.empty:
+                facet = catplot(
+                    x='noisy_ltfarray_noisiness',
+                    y='mean_bit_error_rate',
+                    hue='noisy_ltfarray_k',
+                    data=plot_data,
+                    kind='bar',
+                )
 
-        plot_data = data[data['experiment'] == 'NoisyIPMod2TransformLTFArrayReliabilityExperiment']
-        if not plot_data.empty:
-            facet = catplot(
-                x='noisy_sram_noise',
-                y='mean',
-                col='k',
-                hue='noisy_ltfarray_noisiness',
-                kind='bar',
-                data=plot_data,
-            )
+                facet.set_axis_labels('LTFArray Noisiness Level', 'Mean Bit Error Rate')
+                facet.fig.set_size_inches(12, 4)
+                facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
+                facet.fig.suptitle('Noisy PUF Mean Bit Error Rate')
+                facet.fig.savefig('figures/%s.ltfarray.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
 
-            facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
-            facet.fig.set_size_inches(12, 4)
-            facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
-            facet.fig.suptitle('IPMod2 Input Transform XOR Arbiter PUF')
-            facet.fig.savefig('figures/%s.ipmod2.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
+            plot_data = data[data['experiment'] == 'NoisyIPMod2TransformLTFArrayReliabilityExperiment']
+            if not plot_data.empty:
+                facet = catplot(
+                    x='noisy_ltfarray_noisiness',
+                    y='mean_bit_error_rate',
+                    col='noisy_ltfarray_k',
+                    hue='noisy_sram_noise',
+                    kind='bar',
+                    data=plot_data,
+                )
+
+                #facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
+                facet.fig.set_size_inches(12, 4)
+                facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
+                facet.fig.suptitle('IPMod2 Input Transform XOR Arbiter PUF')
+                facet.fig.savefig('figures/%s.ipmod2.pdf' % self.name(), bbox_inches='tight', pad_inches=.5)
