@@ -4,6 +4,7 @@ model is the core of each simulation class.
 """
 from itertools import combinations
 
+from numpy import empty
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy import unique, uint64, where
@@ -537,7 +538,8 @@ class LTFArray(Simulation):
 
     @classmethod
     def generate_ipmod2_transform(cls, n, kk, weak_puf):
-        assert weak_puf.eval().shape == (kk, n, n)
+        assert weak_puf.response_length() == kk * n * n
+        assert weak_puf.challenge_length() == 0
         all_pair_indices = array(list(combinations(range(n), 2)))
         pairs = zeros((kk, n, n), dtype=uint64)
         prng = RandomState(271828)
@@ -570,7 +572,7 @@ class LTFArray(Simulation):
             assert pair_values.shape == (N, len(used_pair_indices) + 1)
 
             # get the weak puf response as an array of truth values
-            weak_puf_values = (-.5 * weak_puf.eval() - .5).astype(bool)
+            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(1, 0))).reshape(kk, n, n) - .5).astype(bool)
             assert weak_puf_values.shape == (kk, n, n)
 
             # determine which pairs we will use for the evaluation based on the

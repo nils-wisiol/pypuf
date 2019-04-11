@@ -1,6 +1,6 @@
 """This module can be used to characterize the properties of a puf class."""
 from collections import OrderedDict
-from typing import NamedTuple
+from typing import NamedTuple, Union, Callable, Any
 from uuid import UUID
 
 from numpy import array
@@ -32,7 +32,7 @@ class Parameters(NamedTuple):
 
     # A Function: *kwargs -> list of pypuf.simulation.base.Simulation
     # This function is used to generate a list of simulation instances which are inspected.
-    ins_gen_function: str
+    ins_gen_function: Union[str, Callable]
 
     # A collections.OrderedDict with keyword arguments
     # This keyword arguments are passed to ins_gen_function to generate
@@ -66,20 +66,25 @@ class ExperimentPropertyTest(Experiment):
 
     def run(self):
         """Runs a property test."""
-        ins_gen_function = getattr(self, self.parameters.ins_gen_function)
+        ins_gen_function = getattr(self, self.parameters.ins_gen_function) \
+            if isinstance(self.parameters.ins_gen_function, str) else self.parameters.ins_gen_function
         instances = ins_gen_function(**self.parameters.param_ins_gen)
-        n = self.parameters.param_ins_gen['n']
-        challenge_prng = RandomState(self.parameters.challenge_seed)
-        challenges = array(list(sample_inputs(n, self.parameters.challenge_count, random_instance=challenge_prng)))
+        if 'n' in self.parameters.param_ins_gen.keys():
+            n = self.parameters.param_ins_gen['n']
+            challenge_prng = RandomState(self.parameters.challenge_seed)
+            challenges = array(list(sample_inputs(n, self.parameters.challenge_count, random_instance=challenge_prng)))
+        else:
+            challenges = None
         property_test = PropertyTest(instances, logger=self.progress_logger)
-        test_function = getattr(PropertyTest, self.parameters.test_function)
+        test_function = getattr(PropertyTest, self.parameters.test_function) \
+            if isinstance(self.parameters.test_function, str) else self.parameters.test_function
         self.result = test_function(property_test, challenges, measurements=self.parameters.measurements)
 
     def analyze(self):
         """Summarize the results of the search process."""
         assert self.result is not None
 
-        return Result(
+        res = Result(
             experiment_id=self.id,
             mean=self.result.get('mean', float("inf")),
             median=self.result.get('median', float("inf")),
@@ -89,6 +94,11 @@ class ExperimentPropertyTest(Experiment):
             measured_time=self.measured_time,
             samples_string=','.join(list(map(str, self.result.get('samples', []))))
         )
+
+        # set extra parameters on the result to make them available
+        res.update({'param_ins_gen__%s' % key: val for (key, val) in self.parameters.param_ins_gen.items()})
+
+        return res
 
     @classmethod
     def create_ltf_arrays(cls, n=8, k=1, instance_count=10, transformation=LTFArray.transform_id,

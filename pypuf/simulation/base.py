@@ -2,6 +2,7 @@
 Simulations of a Physically Unclonable Functions (PUFs).
 """
 import abc
+from numpy import ndarray
 
 from numpy import ndarray
 
@@ -32,6 +33,7 @@ class Simulation(object, metaclass=abc.ABCMeta):
     def eval(self, challenges: ndarray) -> ndarray:
         """
         Evaluate the PUF on a list of given challenges.
+
         :param challenges: List of challenges to evaluate on. Challenges must be given as ndarray of shape (N, n), where
         N is the number of challenges to be evaluated, and n must match Simulation.challenge_length(). Evaluating many
         challenges at once may have performance benefits, to evaluate a single challenge, provide an ndarray with shape
