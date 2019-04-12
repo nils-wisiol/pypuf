@@ -566,32 +566,33 @@ class LTFArray(Simulation):
             pair_values = amax(challenges[:, used_pair_indices], axis=2)
             assert pair_values.shape == (N, len(used_pair_indices))
 
-            # we append a 'fake pair' to the list of pair values with value
+            # we prepend a 'fake pair' to the list of pair values with value
             # FALSE (+1). This makes usage of numpy easier below (*)
-            pair_values = append(pair_values, ones((N, 1)), axis=1)
+            # Pair indices increase by one, index 0 is the fake (no-op) pair.
+            pair_values = append(ones((N, 1)), pair_values, axis=1)
             assert pair_values.shape == (N, len(used_pair_indices) + 1)
 
             # get the weak puf response as an array of truth values
-            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(1, 0))).reshape(kk, n, n) - .5).astype(bool)
-            assert weak_puf_values.shape == (kk, n, n)
+            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(N, 0))).reshape(N, k, n, n) - .5).astype(uint64)
+            assert weak_puf_values.shape == (N, k, n, n)
 
             # determine which pairs we will use for the evaluation based on the
             # weak PUF response
-            pairs_in_use = used_pairs.copy()
-            for l in range(kk):
-                for i in range(n):
-                    # (*) since the weak PUF may choose a different number of pairs each time
-                    # and we need length of 64bits, we fill up the rest with the fake pair
-                    # that is always FALSE
-                    selected_pairs = used_pairs[l, i, weak_puf_values[l, i]]
-                    number_of_selected_pairs = len(selected_pairs)
-                    pairs_in_use[l, i, :number_of_selected_pairs] = selected_pairs
-                    pairs_in_use[l, i, number_of_selected_pairs:] = -ones((n - number_of_selected_pairs))
+            selected_pairs = broadcast_to(used_pairs.copy() + 1, (N, ) + used_pairs.shape)  # indices increased by one
+            selected_pairs = selected_pairs * weak_puf_values  # mask with weak puf
+            assert selected_pairs.shape == (N, k, n, n)
 
-            assert pairs_in_use.shape == (kk, n, n)
+            result = zeros(shape=(N, k, n, n))
+            for x in range(N):  # TODO replace this loop with numpy magic
+                # evaluate the selected pairs
+                result[x] = pair_values[x, selected_pairs[x]]
+            assert result.shape == (N, k, n, n)
 
-            # evaluate the parity of the selected pairs
-            return prod(pair_values[:, pairs_in_use], axis=3, dtype=BIT_TYPE)
+            # evaluate the parity of the pairs
+            result = prod(result, axis=3, dtype=BIT_TYPE)
+            assert result.shape == (N, k, n)
+
+            return result
 
         transform.__name__ = 'transform_ipmod2_%s' % str(weak_puf)
         return transform
