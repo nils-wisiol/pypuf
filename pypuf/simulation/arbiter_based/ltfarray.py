@@ -537,23 +537,25 @@ class LTFArray(Simulation):
         return permutation_seeds
 
     @classmethod
-    def generate_ipmod2_transform(cls, n, kk, weak_puf):
-        assert weak_puf.response_length() == kk * n * n
+    def generate_ipmod2_transform(cls, n, kk, weak_puf, ipmod2_length=None):
+        if not ipmod2_length:
+            ipmod2_length = n
+        assert weak_puf.response_length() == kk * n * ipmod2_length
         assert weak_puf.challenge_length() == 0
         all_pair_indices = array(list(combinations(range(n), 2)))
-        pairs = zeros((kk, n, n), dtype=uint64)
+        pairs = zeros((kk, n, ipmod2_length), dtype=uint64)
         prng = RandomState(271828)
         for l in range(kk):
             for i in range(n):
-                pairs[l, i] = prng.choice(range(comb(n, 2, exact=True)), n, replace=False)
-        assert pairs.shape == (kk, n, n)
+                pairs[l, i] = prng.choice(range(comb(n, 2, exact=True)), ipmod2_length, replace=False)
+        assert pairs.shape == (kk, n, ipmod2_length)
 
         unique_pairs = unique(pairs.flatten())
         used_pair_indices = all_pair_indices[unique_pairs]
-        used_pairs = zeros((kk, n, n), dtype=uint64)
+        used_pairs = zeros((kk, n, ipmod2_length), dtype=uint64)
         for l in range(kk):
             for i in range(n):
-                for j in range(n):
+                for j in range(ipmod2_length):
                     # find the index of value pairs[l, i] in unique_pairs
                     used_pairs[l, i, j] = where(unique_pairs == pairs[l, i, j])[0]
 
@@ -573,20 +575,21 @@ class LTFArray(Simulation):
             assert pair_values.shape == (N, len(used_pair_indices) + 1)
 
             # get the weak puf response as an array of truth values
-            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(N, 0))).reshape(N, k, n, n) - .5).astype(uint64)
-            assert weak_puf_values.shape == (N, k, n, n)
+            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(N, 0))).reshape(N, k, n, ipmod2_length) - .5).astype(
+                uint64)
+            assert weak_puf_values.shape == (N, k, n, ipmod2_length)
 
             # determine which pairs we will use for the evaluation based on the
             # weak PUF response
             selected_pairs = broadcast_to(used_pairs.copy() + 1, (N, ) + used_pairs.shape)  # indices increased by one
             selected_pairs = selected_pairs * weak_puf_values  # mask with weak puf
-            assert selected_pairs.shape == (N, k, n, n)
+            assert selected_pairs.shape == (N, k, n, ipmod2_length)
 
-            result = zeros(shape=(N, k, n, n))
+            result = zeros(shape=(N, k, n, ipmod2_length))
             for x in range(N):  # TODO replace this loop with numpy magic
                 # evaluate the selected pairs
                 result[x] = pair_values[x, selected_pairs[x]]
-            assert result.shape == (N, k, n, n)
+            assert result.shape == (N, k, n, ipmod2_length)
 
             # evaluate the parity of the pairs
             result = prod(result, axis=3, dtype=BIT_TYPE)

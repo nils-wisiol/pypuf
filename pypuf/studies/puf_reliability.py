@@ -49,6 +49,7 @@ class NoisyIPMod2TransformLTFArrayReliabilityExperimentParameters(NamedTuple):
     N: int  # number of different challenges to use
     R: int  # number of repeated measurements of a each challenge
     I: int  # number of instances
+    ipmod2_length: int
     seed_challenges: int
     noisy_ltfarray_n: int
     noisy_ltfarray_k: int
@@ -153,11 +154,13 @@ class NoisyIPMod2TransformLTFArrayReliabilityExperiment(ReliabilityExperiment):
                     n=self.parameters.noisy_ltfarray_n,
                     kk=self.parameters.noisy_ltfarray_k,
                     weak_puf=NoisySRAM(
-                        size=self.parameters.noisy_ltfarray_k * self.parameters.noisy_ltfarray_n**2,
+                        size=self.parameters.noisy_ltfarray_k * self.parameters.noisy_ltfarray_n *
+                             self.parameters.ipmod2_length,
                         noise=self.parameters.noisy_sram_noise,
                         seed_skew=self.parameters.noisy_sram_seed_skew + i,
                         seed_noise=self.parameters.noisy_sram_seed_noise + i,
-                    )
+                    ),
+                    ipmod2_length=self.parameters.ipmod2_length,
                 ),
                 combiner='xor',
                 sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
@@ -216,6 +219,7 @@ class ReliabilityStudy(Study):
                         N=500,
                         R=151,
                         I=100,
+                        ipmod2_length=ipmod2_length,
                         seed_challenges=31415,
                         noisy_ltfarray_n=64,
                         noisy_ltfarray_k=k,
@@ -227,9 +231,10 @@ class ReliabilityStudy(Study):
                         noisy_sram_seed_noise=314159,
                     )
                 )
-                for ltfarray_nosiness in [.01, .02, .05, .1, .2]
-                for sram_noise in [.05, .1, .2, .3, .4, 1, 10, 100]
-                for k in [1, 2, 4, 8, 12]
+                for ltfarray_nosiness in [.01, .02]  # , .05, .1, .2]
+                for sram_noise in [.05, .1]  # , .2, .3, .4, 1, 10, 100]
+                for k in [1]  # , 2, 4, 8, 12]
+                for ipmod2_length in [8, 16, 32, 64]
             ]
 
     def plot(self):
@@ -279,7 +284,7 @@ class ReliabilityStudy(Study):
                     data=plot_data,
                 )
 
-                #facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
+                facet.set_axis_labels('SRAM Noise Level', 'Mean Bit Error Rate')
                 facet.fig.set_size_inches(12, 4)
                 facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
                 facet.fig.suptitle('IPMod2 Input Transform XOR Arbiter PUF')
