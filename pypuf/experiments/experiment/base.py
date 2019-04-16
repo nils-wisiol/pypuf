@@ -75,7 +75,10 @@ class Experiment(object):
         """
         raise NotImplementedError('users must define run() to use this base class')
 
-    def assign_to_gpu(gpu_id):
+    def assign_to_gpu(self, gpu_id):
+        """
+            Set gpu_id. Called by Experimenter to load-balance GPUs
+        """
         self.gpu_id = gpu_id
 
     def execute(self, result_log_queue, result_log_name, cancel_experiment=None, interrupt_condition=None):

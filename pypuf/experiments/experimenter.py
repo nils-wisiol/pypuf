@@ -36,7 +36,8 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, result_log_name, cpu_limit=None, gpu_limit=None, auto_multiprocessing=False, update_callback=None,
+    def __init__(self, result_log_name, cpu_limit=None, gpu_limit=None,
+                 auto_multiprocessing=False, update_callback=None,
                  update_callback_min_pause=0, results_file=None):
         """
         :param result_log_name: A unique file path where to output should be logged.
