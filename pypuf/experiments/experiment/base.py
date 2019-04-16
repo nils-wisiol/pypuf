@@ -43,6 +43,9 @@ class Experiment(object):
         self.hash = sha256((self.__class__.__name__ + ': ' + str(parameters)).encode()).hexdigest()
         self.result = None
 
+        # GPU is unset. Experimenter uses assign_to_gpu() before executing experiment
+        self.gpu_id = None
+
         # This must be set at run, loggers can (under circumstances) not be pickled
         self.progress_logger = None
         self.result_logger = None
@@ -71,6 +74,12 @@ class Experiment(object):
         This method runs the actual experiment.
         """
         raise NotImplementedError('users must define run() to use this base class')
+
+    def assign_to_gpu(self, gpu_id):
+        """
+            Set gpu_id. Called by Experimenter to load-balance GPUs
+        """
+        self.gpu_id = gpu_id
 
     def execute(self, result_log_queue, result_log_name, cancel_experiment=None, interrupt_condition=None):
         """
