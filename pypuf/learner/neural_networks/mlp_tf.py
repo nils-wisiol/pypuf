@@ -4,15 +4,13 @@ from os.path import exists
 from numpy import reshape, sign
 from numpy.random import seed
 from numpy.random.mtrand import RandomState
-from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session, TensorShape
-from tensorflow.python.keras.regularizers import l2
+from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
+from tensorflow.python.keras.regularizers import l2
 from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session
-from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.python.keras.engine import Layer
-from tensorflow.python.keras.initializers import RandomNormal
-from tensorflow.python.keras.layers import Dense, dot, Dropout
+from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.optimizers import Adam
 
@@ -20,33 +18,39 @@ from pypuf.learner.base import Learner
 from pypuf.tools import ChallengeResponseSet
 
 
-SEED_RANGE = 2 ** 32
 environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 set_verbosity(ERROR)
 
 
-class MultiLayerPerceptron(Learner):
+class MultiLayerPerceptronTensorflow(Learner):
 
-    def __init__(self, layers, n, k, training_set, validation_set, transformation=None,
-                 learning_rate=0.001, beta_1=0.9, beta_2=0.999, checkpoint_name=None,
-                 print_keras=False, termination_threshold=1.0, iteration_limit=1000, batch_size=1000, seed_model=None):
-        self.layers = layers
+    SEED_RANGE = 2 ** 32
+
+    def __init__(self, n, k, training_set, validation_set, transformation=None, layers=(10, 10), activation='relu',
+                 learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=5,
+                 checkpoint_name=None, print_keras=False, termination_threshold=1.0, iteration_limit=100,
+                 batch_size=1000, seed_model=0xc0ffee):
         self.n = n
         self.k = k
-        self.transformation = transformation
         self.training_set = training_set
         self.validation_set = validation_set
+        self.transformation = transformation
+        self.layers = layers
+        self.activation = activation
         self.learning_rate = learning_rate
+        self.penalty = penalty
         self.beta_1 = beta_1
         self.beta_2 = beta_2
-        self.print_keras = 0 if not print_keras else 1
-        self.termination_threshold = termination_threshold
+        self.tolerance = tolerance
+        self.patience = patience
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
-        self.seed_model = RandomState(seed_model).randint(SEED_RANGE)
+        self.seed_model = RandomState(seed_model).randint(self.SEED_RANGE)
+        self.termination_threshold = termination_threshold
         self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(
             n, k, 'no_preprocess' if transformation is None else transformation.__name__, checkpoint_name,
         ) + '.hdf5'
+        self.print_keras = 0 if not print_keras else 1
         self.nn = None
         self.history = None
         self.model = None
@@ -69,20 +73,15 @@ class MultiLayerPerceptron(Learner):
             )
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
-        l2_loss = l2(0.01)
+        l2_loss = l2(self.penalty)
         self.nn = Sequential()
-        self.nn.add(Dense(units=self.layers[0], activation='relu', kernel_regularizer=l2_loss, input_dim=in_shape))
+        self.nn.add(
+            Dense(units=self.layers[0], activation=self.activation, kernel_regularizer=l2_loss, input_dim=in_shape)
+        )
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
-                self.nn.add(Dense(units=nodes, activation='relu', kernel_regularizer=l2_loss))
+                self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss))
         self.nn.add(Dense(units=1, activation='tanh', activity_regularizer=l2_loss))
-
-        """
-        # Try LinearLayer
-        self.nn = Sequential()
-        self.nn.add(LinearFunction(input_shape=TensorShape([in_shape, 1])))
-        self.nn.add(Dense(1, activation='tanh'))
-        """
 
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + tf_mean(tf_sign(y_true * y_pred))) / 2
@@ -119,30 +118,21 @@ class MultiLayerPerceptron(Learner):
                     self.model.stop_training = True
                 super().on_epoch_end(epoch, logs)
 
-        checkpoint = ModelCheckpoint(
-            filepath=self.checkpoint,
-            verbose=self.print_keras,
-            monitor='val_pypuf_accuracy',
-            save_best_only=True,
-            mode='max'
-        )
         accurate = TerminateOnThreshold(
             threshold=self.termination_threshold,
             monitor='val_pypuf_accuracy',
             patience=self.iteration_limit,
             verbose=self.print_keras,
             mode='max',
-            restore_best_weights=True
         )
         converged = EarlyStopping(
-            monitor='val_pypuf_accuracy',
-            min_delta=0.001,
-            patience=(200 // self.k),
+            monitor='val_loss',
+            min_delta=self.tolerance,
+            patience=self.patience,
             verbose=self.print_keras,
             mode='max',
-            restore_best_weights=True
         )
-        callbacks = [checkpoint, converged] if self.termination_threshold == 1.0 else [checkpoint, converged, accurate]
+        callbacks = [converged] if self.termination_threshold == 1.0 else [converged, accurate]
         self.history = self.nn.fit(
             x=self.training_set.challenges,
             y=self.training_set.responses,
@@ -151,34 +141,6 @@ class MultiLayerPerceptron(Learner):
             callbacks=callbacks,
             validation_data=(self.validation_set.challenges, self.validation_set.responses),
             shuffle=True,
-            verbose=self.print_keras
+            verbose=self.print_keras,
         )
-        if exists(self.checkpoint):
-            remove(self.checkpoint)
         return self.model
-
-
-"""
-class LinearFunction(Layer):
-
-    def __init__(self, **kwargs):
-        self.output_dim = 1
-        self.ltf_weights = None
-        super(LinearFunction, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        self.ltf_weights = self.add_weight(
-            name='ltf_weights',
-            shape=(input_shape, self.output_dim),
-            initializer=RandomNormal(mean=0, stddev=1, seed=seed),
-            trainable=True
-        )
-        super(LinearFunction, self).build(input_shape)
-
-    def call(self, inputs, **kwargs):
-        assert isinstance(inputs, list)
-        return dot(inputs, self.ltf_weights)
-
-    def compute_output_shape(self, input_shape):
-        return self.output_dim
-"""

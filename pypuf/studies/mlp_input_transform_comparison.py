@@ -6,7 +6,7 @@ from matplotlib.ticker import FuncFormatter, FixedLocator
 from numpy.ma import arange
 from seaborn import lineplot, scatterplot
 
-from pypuf.experiments.experiment.mlp_keras import ExperimentMLP, Parameters
+from pypuf.experiments.experiment.mlp_tf import ExperimentMLPTensorflow, Parameters
 from pypuf.plots import AccuracyPlotter, get_estimator
 from pypuf.studies.base import Study
 from numpy.random.mtrand import RandomState
@@ -116,6 +116,10 @@ class MLPInputTransformComparison(Study):
                     for lr in arange(min_lr, max_lr + min_lr, min_lr):
                         for transformation in self.TRANSFORMATIONS:
                             parameters_experiment = Parameters(
+                                seed_simulation=(seed_s + s * nums + i) % self.SEED_RANGE,
+                                seed_challenges=(seed_c + s * nums + i) % self.SEED_RANGE,
+                                seed_model=(seed_m + s * nums + i) % self.SEED_RANGE,
+                                seed_distance=(seed_a + s * nums + i) % self.SEED_RANGE,
                                 layers=layers,
                                 learning_rate=lr,
                                 beta_1=beta_1,
@@ -125,16 +129,11 @@ class MLPInputTransformComparison(Study):
                                 k=k,
                                 transformation=transformation,
                                 combiner=self.COMBINER,
-                                preprocess=preprocess,
                                 batch_size=self.BATCH_SIZE,
                                 iteration_limit=self.ITERATION_LIMIT,
                                 print_keras=self.PRINT_KERAS,
-                                seed_simulation=(seed_s + s*nums + i) % self.SEED_RANGE,
-                                seed_challenges=(seed_c + s*nums + i) % self.SEED_RANGE,
-                                seed_model=(seed_m + s*nums + i) % self.SEED_RANGE,
-                                seed_accuracy=(seed_a + s*nums + i) % self.SEED_RANGE,
                             )
-                            experiment = ExperimentMLP(
+                            experiment = ExperimentMLPTensorflow(
                                 progress_log_prefix=None,
                                 parameters=parameters_experiment,
                             )
@@ -158,7 +157,7 @@ class MLPInputTransformComparison(Study):
         ks = sorted(list(set(self.experimenter.results['k'])))
 
         fig, axes = subplots(ncols=len(ks), nrows=len(self.PLOT_ESTIMATORS) + 2)
-        fig.set_size_inches(4 * len(ks), 6 * len(self.PLOT_ESTIMATORS))
+        fig.set_size_inches(20 * len(ks), 30 * len(self.PLOT_ESTIMATORS))
 
         axes = axes.reshape((len(self.PLOT_ESTIMATORS) + 2, len(ks)))
 
@@ -223,6 +222,9 @@ class MLPInputTransformComparison(Study):
                 11.8 * 60,  # k = 7
                 23.3 * 60,  # k = 8
             ]))
+            axes[-1][j].set_xlabel('accuracy')
+            axes[-1][j].xaxis.set_major_formatter(FuncFormatter(lambda x, _: '%.3f' % (1 - x)))
+            axes[-1][j].xaxis.set_minor_formatter(FuncFormatter(lambda x, _: '%.3f' % (1 - x)))
             axes[-1][j].yaxis.set_major_formatter(FuncFormatter(
                 lambda x, _: '%3.1fs' % x if x < 60 else '%2.1fmin' % (x / 60)))
 
