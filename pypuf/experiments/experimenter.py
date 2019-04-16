@@ -42,7 +42,8 @@ class Experimenter(object):
         """
         :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
-        :param gpu_limit: Number of GPUs that are available on the system and can be used for experiments (1 GPU per experiment/process).
+        :param gpu_limit: Number of GPUs that are available on the system and can be used for experiments
+                (1 GPU per experiment/process).
         :param auto_multiprocessing: Whether to use numpy automatic multithreading/multiprocessing. Defaults to False.
         :param update_callback: If set, will be called every time an experiment finishes, see also
                 update_callback_min_pause.
