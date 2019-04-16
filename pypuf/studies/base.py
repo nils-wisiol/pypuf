@@ -30,7 +30,7 @@ class Study:
     COMPRESSION = False
     STUDY_MODULE_PREFIX = 'pypuf.studies.'
 
-    def __init__(self, cpu_limit=None):
+    def __init__(self, cpu_limit=None, gpu_limit=None):
         """
         Initialize the study.
         """
@@ -46,6 +46,7 @@ class Study:
             update_callback=callback,
             update_callback_min_pause=self.EXPERIMENTER_CALLBACK_MIN_PAUSE,
             cpu_limit=cpu_limit,
+            gpu_limit=gpu_limit,
             results_file=self.name() + ('.csv.gz' if self.COMPRESSION else '.csv'),
         )
 
