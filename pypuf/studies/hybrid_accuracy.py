@@ -4,6 +4,7 @@ from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from matplotlib.pyplot import figure
 import seaborn as sns
+import numpy as np
 from pypuf.experiments.experiment.base import Experiment
 from numpy.random import RandomState
 from os import getpid
@@ -45,41 +46,25 @@ class HybridAccuracyExperiment(Experiment):
         self.model = None
 
     def prepare(self):
-        # # change to not hardcoded
-        # k = self.parameters.k  # 2
-        # n = self.parameters.n  # 64
-        # N = self.parameters.N  # 1200
-        # transform = LTFArray.transform_id  # self.parameters.transform   #
-        # combiner = self.parameters.combiner  # LTFArray.combiner_xor
-        #
-        # self.instance = LTFArray(
-        #     weight_array=LTFArray.normal_weights(n=n, k=k),  # do not change, can be simulated by learner
-        #     transform=transform,  # has to match learner, otherwise learner cannot match
-        #     combiner=combiner,  # do not change
-        # )
-        #
-        # self.learner = LogisticRegression(
-        #     t_set=tools.TrainingSetHybrid(instance=self.instance, N=N),  # 6200
-        #     n=comb(n, 2, exact=True),  # n choose k_original/k_new = 2
-        #     k=k // 2,  # k divided by 2
-        #     transformation=transform,
-        #     combiner=combiner,
-        #     # convergence_decimals=4,
-        # )
-
         # change to not hardcoded
+        k = self.parameters.k  # 2
+        n = self.parameters.n  # 64
+        N = self.parameters.N  # 1200
+        transform = self.parameters.transform   # LTFArray.transform_id
+        combiner = self.parameters.combiner  # LTFArray.combiner_xor
+
         self.instance = LTFArray(
-            weight_array=LTFArray.normal_weights(n=64, k=2),  # do not change, can be simulated by learner
-            transform=LTFArray.transform_id,  # has to match learner, otherwise learner cannot match
-            combiner=LTFArray.combiner_xor,  # do not change
+            weight_array=LTFArray.normal_weights(n=n, k=k),  # do not change, can be simulated by learner
+            transform=transform,  # has to match learner, otherwise learner cannot match
+            combiner=combiner,  # do not change
         )
 
         self.learner = LogisticRegression(
-            t_set=tools.TrainingSetHybrid(instance=self.instance, N=1200),  # 6200
-            n=2016,  # n choose k_original/k_new = 2
-            k=1,  # k divided by 2
-            transformation=LTFArray.transform_id,
-            combiner=LTFArray.combiner_xor,
+            t_set=tools.TrainingSetHybrid(instance=self.instance, N=N),
+            n=comb(n, 2, exact=True),  # n choose k_original/k_new = 2
+            k=k//2,  # k divided by 2, what if k is odd?
+            transformation=self.instance.transform,
+            combiner=self.instance.combiner,
             # convergence_decimals=4,
         )
 
@@ -136,13 +121,15 @@ class HybridAccuracy(Study):
     def plot(self):
         # prepare data
         data = self.experimenter.results['accuracy']
+        print(len(data))
         print(data)
 
         # plot
         fig = figure()
         ax = fig.add_subplot(1, 1, 1)
         sns.set()
-        ax = sns.distplot(data)
+        bins = np.linspace(0,1,10)
+        ax = sns.distplot(data, bins=bins)
 
         ax.set_xlabel('Accuracy')
         ax.set_ylabel('Count')

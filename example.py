@@ -4,6 +4,7 @@ This module is only used to show some example usage of the framework.
 from pypuf import tools
 from pypuf.learner.regression.logistic_regression import LogisticRegression
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from scipy.special import comb
 
 
 def main():
@@ -19,7 +20,8 @@ def main():
 
     lr_learner = LogisticRegression(
         t_set=tools.TrainingSetHybrid(instance=instance, N=1200),  # 6200
-        n=2016,  # n choose k_original/k_new = 2
+        n=comb(64, 2, exact=True),
+        # n=2016,  # n choose k_original/k_new = 2
         k=1,  # k divided by 2
         transformation=LTFArray.transform_id,
         combiner=LTFArray.combiner_xor,
