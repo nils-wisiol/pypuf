@@ -7,8 +7,8 @@ from pypuf.learner.base import Learner          # Perceptron super class
 from pypuf.simulation.base import Simulation    # Perceptron return type
 
 # ML Utilities
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Activation
 import numpy as np
 
 from functools import reduce
