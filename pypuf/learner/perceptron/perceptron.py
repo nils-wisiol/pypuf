@@ -9,6 +9,7 @@ from pypuf.simulation.base import Simulation    # Perceptron return type
 # ML Utilities
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense, Activation
+from tensorflow.python.keras.backend import maximum, mean, sign
 import numpy as np
 
 from functools import reduce
@@ -102,9 +103,12 @@ class Perceptron(Learner):
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_len))
         model.add(Activation('tanh'))
-        model.compile(loss='binary_crossentropy',
+        def pypuf_accuracy(y_true, y_pred):
+            accuracy = (1 + mean(sign(y_true * y_pred))) / 2
+            return maximum(accuracy, 1 - accuracy)
+        model.compile(loss='squared_hinge',
                       optimizer='adam',
-                      metrics=['accuracy'])
+                      metrics=[pypuf_accuracy])
         self.model = model
 
     def fit(self):
@@ -122,13 +126,14 @@ class Perceptron(Learner):
                                       batch_size=self.batch_size,
                                       epochs=self.epochs,
                                       validation_data=(x_valid, y_valid),
-                                      verbose=True)
+                                      verbose=False)
 
     def learn(self):
         """
         Fit the Perceptron and return a Simulation class that offers
         a 'eval(challenges)' method.
         """
+        self.prepare()
         # Fit the Perceptron (self.model) normally or using GPU
         if self.gpu_id is None:
             self.fit()
@@ -144,6 +149,7 @@ class Perceptron(Learner):
             return np.sign(y)
 
         # Create Simulation object and return it
-        sim = type('PerceptronSimulation', (Simulation,))
+        sim = type('PerceptronSimulation', (Simulation,), {})
         sim.eval = evaluate
+        sim.n    = self.input_len
         return sim

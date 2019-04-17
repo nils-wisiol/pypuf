@@ -1,14 +1,22 @@
 from typing import NamedTuple, List
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.base import Experiment
-from pypuf.learner.perceptron import Perceptron
+from pypuf.learner.perceptron.perceptron import Perceptron
 from pypuf import tools
 
+from uuid import UUID
 
-class Parameters(NamesTuple):
+
+class Parameters(NamedTuple):
     n: int # Number of challenge bits
     k: int # Number of XOR arbiters
     N: int # Number of samples generated for training/testing
+    batch_size: int
+    epochs:     int
+
+class Result(NamedTuple):
+    experiment_id: UUID
+    accuracy: float
 
 
 class TestPerceptron(Experiment):
@@ -50,10 +58,12 @@ class TestPerceptron(Experiment):
         # H4rdcode monomials : todo - outsource and make dep. on n, k
         assert(self.parameters.k == 1)
         n = self.parameters.n
-        monomials = [range(i:n) for i in range(n)]
+        monomials = [range(i, n) for i in range(n)]
 
         self.learner = Perceptron(self.train_set, self.valid_set,
-                                  monomials=monomials)
+                                  monomials=monomials,
+                                  batch_size=self.parameters.batch_size,
+                                  epochs=self.parameters.epochs)
 
     def run(self):
         """
@@ -64,10 +74,15 @@ class TestPerceptron(Experiment):
 
     def analyze(self):
         assert self.model is not None
+        """
         accuracy = 1.0 - tools.approx_dist(
                 self.simulation,
                 self.model,
                 min(10000, 2 ** self.parameters.n)
         )
-        return accuracy
+        """
+        #print(str(self.learner.history.history))
+        accuracy = self.learner.history.history['val_pypuf_accuracy'][-1]
+        return Result(experiment_id=self.id,
+                      accuracy=accuracy)
 
