@@ -1,9 +1,18 @@
+"""
+This module implements a pypuf Perceptron Learner.
+The Learner is capable to be instatiated with 'monomials' which define
+how to convert challenges into a different feature space.
+"""
 from pypuf.learner.base import Learner          # Perceptron super class
 from pypuf.simulation.base import Simulation    # Perceptron return type
 
 # ML Utilities
-from tensorflow.python.keras.models import Sequential
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Activation
 import numpy as np
+
+from functools import reduce
+
 
 class LinearizationModel():
     """
@@ -21,26 +30,43 @@ class LinearizationModel():
         # Monomials, defining how to build Xs from a challenge
         self.monomials = monomials
         # Multiply all values in the iterable
-        self.multiply = lambda values: reduce(lambda x,y: x*y, values)
+        self.multiply = lambda values: reduce(lambda x, y: x*y, values)
 
     def chal_to_xs(self, chal):
         """
         Convert challenge to Xs according to self.monomials
         """
-        mono_to_chalbits = lambda mono, chal: map(lambda i: chal[i], mono)
-        Xs = [self.multiply(mono_to_chalbits(mono,chal))
+        def mono_to_chalbits(mono, chal):
+            """
+            Map indices in monomial to challenge-bits
+            """
+            return map(lambda i: chal[i], mono)
+
+        Xs = [self.multiply(mono_to_chalbits(mono, chal))
               for mono in self.monomials]
         return Xs
 
+
 class Perceptron(Learner):
+    """
+    Perceptron Learner - learn() method returns a pypuf.simulation.base.Simulation
+    object, containing a eval() method which can be used to predict challenges
+    """
 
     def __init__(self, train_set, valid_set, monomials=None,
-                 batch_size=64, epochsgpu_id=None):
+                 batch_size=64, epochs=1000, gpu_id=None):
         """
         :param train_set: tools.TrainingSet
          Collection of Challenge/Response pairs to train the Perceptron
         :param valid_set: tools.TrainingSet
          Collection of Challenge/Response pairs to test the Perceptron
+        :param monomials: list of int lists
+         Defines how to boost challenge-bits to feature space
+        :param batch_size: int
+         Batch learning size - forwarded to tensorflow model.fit()
+        :param epochs: int
+         Number of iterations to train perceptron - forwarded to
+         tensorflow model.fit()
         :param gpu_id: int
          Indicates on which GPU the Perceptron will be learned
         """
@@ -49,12 +75,16 @@ class Perceptron(Learner):
         self.valid_set = valid_set
         self.batch_size = batch_size
         self.epochs = epochs
+        self.gpu_id = gpu_id
 
         # If no monomials are provided, use identity
         if monomials is None:
-            monomials = [[i] for i range(train_set.instance.n)]
+            monomials = [[i] for i in range(train_set.instance.n)]
         self.monomials = monomials
+
+        # Model parameters
         self.input_len = len(self.monomials)
+        self.model = None
 
         # Build linearization model
         linearizer = LinearizationModel(self.monomials)
@@ -90,8 +120,8 @@ class Perceptron(Learner):
 
         self.history = self.model.fit(x=x, y=y,
                                       batch_size=self.batch_size,
-                                      epochs=self.epochs
-                                      validation_data=(x_valid,y_valid),
+                                      epochs=self.epochs,
+                                      validation_data=(x_valid, y_valid),
                                       verbose=True)
 
     def learn(self):
@@ -117,5 +147,3 @@ class Perceptron(Learner):
         sim = type('PerceptronSimulation', (Simulation,))
         sim.eval = evaluate
         return sim
-
-
