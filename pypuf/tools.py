@@ -3,6 +3,8 @@ This module provides a set of different functions which can be used e.g. for cha
 or polynomial division. The spectrum is rich and the functions are used in many different modules. Its a kind of a
 helper module.
 """
+from pypuf.studies.base import Study
+
 import itertools
 from importlib import import_module
 from inspect import getmembers, isclass
@@ -12,8 +14,6 @@ from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from random import sample
-
-from pypuf.studies.base import Study
 
 BIT_TYPE = int8
 
@@ -116,6 +116,37 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
     assert instance1.n == instance2.n
     inputs = random_inputs(instance1.n, num, random_instance=random_instance)
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
+
+
+def approx_dist_hybrid(instance1, instance2, num, random_instance=RandomState()):
+    """
+    Approximate the distance of two functions instance1, instance2 by evaluating instance1 random set of inputs.
+    instance1, instance2 needs to have eval() method and input_length member.
+    :param instance1: pypuf.simulation.arbiter_based.base.Simulation
+    :param instance2: pypuf.simulation.arbiter_based.base.Simulation
+    :param num: int
+                Number of n bit vector
+    :param random_instance: numpy.random.RandomState
+                            The PRNG which is used to generate the input arrays.
+    :return: float
+             Probability (randomly uniform x) for instance1.eval(x) != instance2.eval(x)
+    """
+    # assert instance1.n == instance2.n
+    # inputs = random_inputs(instance1.n, num, random_instance=random_instance)
+    inputs1 = random_inputs(instance1.n, num, random_instance=random_instance)
+    inputs2 = []
+
+    # k == 2 version
+    for challenge in inputs1:
+        new_challenge = []
+        for i in range(len(challenge)):
+            for j in range(len(challenge)):
+                if i < j:
+                    new_challenge.append((challenge[i] * challenge[j]))
+        inputs2.append(new_challenge)
+
+    inputs2 = array(inputs2)
+    return (num - count_nonzero(instance1.eval(inputs1) == instance2.eval(inputs2))) / num
 
 
 def approx_fourier_coefficient(s, training_set):
@@ -336,6 +367,50 @@ class TrainingSet(ChallengeResponseSet):
         super().__init__(
             challenges=challenges,
             responses=instance.eval(challenges)
+        )
+
+
+class TrainingSetHybrid(ChallengeResponseSet):
+    """
+    Basic data structure to hold a collection of challenge response pairs.
+    Note that this is, strictly speaking, not a set.
+    """
+
+    def __init__(self, instance, N, random_instance=RandomState()):
+        """
+        :param instance: pypuf.simulation.base.Simulation
+                         Instance which is used to generate responses for random challenges.
+        :param N: int
+                  Number of desired challenges
+        :param random_instance: numpy.random.RandomState
+                                PRNG which is used to draft challenges.
+        """
+        self.instance = instance
+        n = instance.n      # n = 64
+        original_challenges = array(list(sample_inputs(n, N, random_instance=random_instance)))
+
+        combinations_of_two_indices = array(list(itertools.combinations(range(n), 2)))
+
+        """
+        >>> x[:, [1, 2]]
+        array([[52, 53]])
+        >>> x[:, [[1, 2], [0, 1]]]
+        array([[[52, 53],
+                [51, 52]]])
+        """
+
+        new_challenge = array(original_challenges)
+        combinations_of_two = new_challenge[:, combinations_of_two_indices]
+        modified_challenges = prod(combinations_of_two, axis=2, dtype=dtype('int8'))      # x = [[1,2,3], [4,5,6]] --> array([  6, 120])
+        # print(len(modified_challenges))
+        # assert len(modified_challenges) == 1200
+        modified_challenges = array(modified_challenges)
+
+        self.original_challenges = original_challenges
+
+        super().__init__(
+            challenges=modified_challenges,
+            responses=instance.eval(original_challenges)
         )
 
 
