@@ -36,11 +36,14 @@ class Experimenter(object):
     Coordinated, parallel execution of Experiments with logging.
     """
 
-    def __init__(self, result_log_name, cpu_limit=None, auto_multiprocessing=False, update_callback=None,
+    def __init__(self, result_log_name, cpu_limit=None, gpu_limit=None,
+                 auto_multiprocessing=False, update_callback=None,
                  update_callback_min_pause=0, results_file=None):
         """
         :param result_log_name: A unique file path where to output should be logged.
         :param cpu_limit: Maximum number of parallel processes that run experiments.
+        :param gpu_limit: Number of GPUs that are available on the system and can be used for experiments
+                (1 GPU per experiment/process).
         :param auto_multiprocessing: Whether to use numpy automatic multithreading/multiprocessing. Defaults to False.
         :param update_callback: If set, will be called every time an experiment finishes, see also
                 update_callback_min_pause.
@@ -57,6 +60,12 @@ class Experimenter(object):
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count()) if cpu_limit else multiprocessing.cpu_count()
         self.semaphore = None
+
+        # Setup GPU usage
+        self.gpu_limit = gpu_limit
+        self.gpu_counter = 0
+        if self.gpu_limit is None:
+            self.gpu_limit = 0
 
         # experimental results
         from pandas import DataFrame
@@ -239,6 +248,12 @@ class Experimenter(object):
 
             # experiment execution
             for experiment in experiments:
+                # Assign experiment to GPU (if used) : might be replaced by more sophisticated load balancer
+                if self.gpu_limit > 0:
+                    gpu_num = self.gpu_counter % self.gpu_limit
+                    experiment.assign_to_gpu(gpu_num)
+                    self.gpu_counter += 1
+                # Add experiment to execution queue
                 pool.apply_async(
                     experiment.execute,
                     (result_log_queue, self.result_log_name, self.cancel_experiments, self.interrupt_condition),
