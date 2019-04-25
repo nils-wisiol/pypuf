@@ -1,4 +1,10 @@
-from typing import NamedTuple, List
+"""
+    This module provides a primer test for the Perceptron Learner.
+    It generates training and test sets from PUF simulation and
+    trains/tests a Perceptron learner using monomials to transform the
+    feature space.
+"""
+from typing import NamedTuple
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.perceptron.perceptron import Perceptron
@@ -8,25 +14,32 @@ from uuid import UUID
 
 
 class Parameters(NamedTuple):
-    n: int # Number of challenge bits
-    k: int # Number of XOR arbiters
-    N: int # Number of samples generated for training/testing
+    """
+        Paramters that are being passed to the Experiment constructor.
+    """
+    n: int  # Number of challenge bits
+    k: int  # Number of XOR arbiters
+    N: int  # Number of samples generated for training/testing
     batch_size: int
-    epochs:     int
+    epochs: int
+
 
 class Result(NamedTuple):
+    """
+        Results that are returned and printed after testing.
+    """
     experiment_id: UUID
     accuracy: float
 
 
 class TestPerceptron(Experiment):
     """
-    Testing the Perceptron Learner with k=1 Arbiter PUF
+        Testing the Perceptron Learner with k=1 Arbiter PUF
     """
 
     def __init__(self, progress_log_prefix, parameters):
 
-        progress_log_name = None if not progress_log_prefix else 'PERCEPTRON_k{}_n{}'.format(paramters.k, parameters.n)
+        progress_log_name = None if not progress_log_prefix else 'PERCEPTRON_k{}_n{}'.format(parameters.k, parameters.n)
 
         super().__init__(progress_log_name, parameters)
         self.train_set = None
@@ -34,7 +47,6 @@ class TestPerceptron(Experiment):
         self.simulation = None
         self.learner = None
         self.model = None
-
 
     def prepare(self):
         """
@@ -46,17 +58,17 @@ class TestPerceptron(Experiment):
                 self.parameters.n,
                 self.parameters.k
                 ),
-            transform='atf', # todo: make dynamic
+            transform='atf',  # todo: make dynamic
             combiner='xor'
         )
         # Generate training and test sets from PUF simulation
-        N_valid = max(min(self.parameters.N // 20, 10000), 200) # ???@chris
+        N_valid = max(min(self.parameters.N // 20, 10000), 200)  # ???@chris
         N_train = self.parameters.N - N_valid
         self.train_set = tools.TrainingSet(self.simulation, N_train)
         self.valid_set = tools.TrainingSet(self.simulation, N_valid)
 
         # H4rdcode monomials : todo - outsource and make dep. on n, k
-        assert(self.parameters.k == 1)
+        assert self.parameters.k == 1
         n = self.parameters.n
         monomials = [range(i, n) for i in range(n)]
 
@@ -74,15 +86,6 @@ class TestPerceptron(Experiment):
 
     def analyze(self):
         assert self.model is not None
-        """
-        accuracy = 1.0 - tools.approx_dist(
-                self.simulation,
-                self.model,
-                min(10000, 2 ** self.parameters.n)
-        )
-        """
-        #print(str(self.learner.history.history))
         accuracy = self.learner.history.history['val_pypuf_accuracy'][-1]
         return Result(experiment_id=self.id,
                       accuracy=accuracy)
-

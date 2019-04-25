@@ -100,12 +100,12 @@ class Perceptron(Learner):
         Construct and compile Perceptron.
         Called in self.learn().
         """
-        model = Sequential()
-        model.add(Dense(1, input_dim=self.input_len))
-        model.add(Activation('tanh'))
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + mean(sign(y_true * y_pred))) / 2
             return maximum(accuracy, 1 - accuracy)
+        model = Sequential()
+        model.add(Dense(1, input_dim=self.input_len))
+        model.add(Activation('tanh'))
         model.compile(loss='squared_hinge',
                       optimizer='adam',
                       metrics=[pypuf_accuracy])
@@ -151,5 +151,5 @@ class Perceptron(Learner):
         # Create Simulation object and return it
         sim = type('PerceptronSimulation', (Simulation,), {})
         sim.eval = evaluate
-        sim.n    = self.input_len
+        sim.n = self.input_len
         return sim

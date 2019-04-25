@@ -1,3 +1,6 @@
+"""
+    This study runs the Perceptron Testing Experiment.
+"""
 from pypuf.experiments.experiment.test_perceptron import TestPerceptron
 from pypuf.experiments.experiment.test_perceptron import Parameters
 
@@ -5,6 +8,9 @@ from pypuf.studies.base import Study
 
 
 class PerceptronTesting(Study):
+    """
+        Perceptron testing study - GPU usage is possible.
+    """
     def __init__(self):
         super().__init__(cpu_limit=1, gpu_limit=None)
 
