@@ -80,7 +80,7 @@ class BreakingLightweightSecureRuntimeTableFig05(Study):
         TableEntryParameters(64, 6, 1000000, (6, 1, 3)),
         TableEntryParameters(64, 7, 2000000, (6, 1, 4)),
         TableEntryParameters(128, 4, 1000000, (6, 1, 5)),
-        TableEntryParameters(128, 5, 1000000, (6, 1, 6)),
+        TableEntryParameters(128, 5, 2000000, (6, 1, 6)),
     ]
     TRANSFORMATIONS = [LTFArray.transform_atf, LTFArray.transform_lightweight_secure,
                        LTFArray.transform_fixed_permutation]
