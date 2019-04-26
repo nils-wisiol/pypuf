@@ -23,6 +23,7 @@ class HybridAccuracyParameters(NamedTuple):
     transform: str
     combiner: str
     seed_instance: int
+    iteration_limit: int
 
 
 class Result(NamedTuple):
@@ -52,6 +53,7 @@ class HybridAccuracyExperiment(Experiment):
         N = self.parameters.N  # 1200
         transform = self.parameters.transform   # LTFArray.transform_id
         combiner = self.parameters.combiner  # LTFArray.combiner_xor
+        iteration_limit = self.parameters.iteration_limit
 
         self.instance = LTFArray(
             weight_array=LTFArray.normal_weights(n=n, k=k),  # do not change, can be simulated by learner
@@ -65,6 +67,7 @@ class HybridAccuracyExperiment(Experiment):
             k=k//2,  # k divided by 2, what if k is odd?
             transformation=self.instance.transform,
             combiner=self.instance.combiner,
+            iteration_limit=iteration_limit,
             # convergence_decimals=4,
         )
 
@@ -105,12 +108,13 @@ class HybridAccuracy(Study):
                     progress_log_prefix=None,
                     parameters=HybridAccuracyParameters(
                         n=64,
-                        k=2,
-                        N=1200,
+                        k=4,
+                        N=120000,
                         # N=10000,
                         transform='id',
                         combiner='xor',
                         seed_instance=314159 + i,
+                        iteration_limit=5,
                     )
                 )
                 for i in range(self.SAMPLE_SIZE)
@@ -128,8 +132,8 @@ class HybridAccuracy(Study):
         fig = figure()
         ax = fig.add_subplot(1, 1, 1)
         sns.set()
-        bins = np.linspace(0,1,10)
-        ax = sns.distplot(data, bins=bins)
+        # bins = np.linspace(0,1,10)
+        ax = sns.distplot(data)         # , bins=bins)
 
         ax.set_xlabel('Accuracy')
         ax.set_ylabel('Count')

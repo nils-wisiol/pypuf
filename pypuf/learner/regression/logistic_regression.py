@@ -11,6 +11,7 @@ from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import compare_functions
 
+from pypuf import tools
 
 class LogisticRegression(Learner):
     """
@@ -313,6 +314,9 @@ class LogisticRegression(Learner):
 
                 if converged:
                     break
+
+                if self.iteration_count % 10 == 0:      # test line, remove
+                    print(1 - tools.approx_dist_hybrid(self.training_set.instance, model, 200))
 
         if not converged:
             self.converged = False

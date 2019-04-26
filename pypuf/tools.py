@@ -402,7 +402,7 @@ class TrainingSetHybrid(ChallengeResponseSet):
         new_challenge = array(original_challenges)
         combinations_of_two = new_challenge[:, combinations_of_two_indices]
         modified_challenges = prod(combinations_of_two, axis=2, dtype=dtype('int8'))      # x = [[1,2,3], [4,5,6]] --> array([  6, 120])
-        # print(len(modified_challenges))
+        print(len(modified_challenges))
         # assert len(modified_challenges) == 1200
         modified_challenges = array(modified_challenges)
 
