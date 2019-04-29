@@ -1,11 +1,13 @@
 """This module is used to test the functions which are implemented in pypuf.tools."""
 import unittest
-from numpy import zeros, dtype, array_equal, array
+from numpy import zeros, dtype, array_equal, array, column_stack
 from numpy.random import RandomState
 from numpy.testing import assert_array_equal
+from tempfile import NamedTemporaryFile
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import random_input, all_inputs, random_inputs, sample_inputs, chi_vectorized, append_last, \
-    TrainingSet, BIT_TYPE, transform_challenge_11_to_01, transform_challenge_01_to_11, poly_mult_div
+    TrainingSet, BIT_TYPE, transform_challenge_11_to_01, transform_challenge_01_to_11, poly_mult_div, \
+    parse_file
 
 
 class TestAppendLast(unittest.TestCase):
@@ -153,6 +155,22 @@ class TestInputFunctions(unittest.TestCase):
         irreducible_polynomial = array([1, 0, 1, 0, 0, 1, 1, 0, 1], dtype=BIT_TYPE)
         poly_mult_div(challenges_01, irreducible_polynomial, k)
         self.check_multi_dimensional_array(challenges_01, N, n, BIT_TYPE)
+
+    def test_parse_file(self):
+        """This method checks reading challenge-response pairs from a file."""
+        n, k, N = 128, 1, 10
+        instance = LTFArray(LTFArray.normal_weights(n, k), LTFArray.transform_atf, LTFArray.combiner_xor)
+        original = TrainingSet(instance, N)
+
+        f = NamedTemporaryFile('w')
+        for vals in column_stack((original.challenges, original.responses)):
+            f.write(' '.join(map(str, vals)) + '\n')
+        f.flush()
+
+        loaded = parse_file(f.name, n, in_11_notation=True)
+        assert_array_equal(original.challenges, loaded.challenges)
+        assert_array_equal(original.responses, loaded.responses)
+        f.close()
 
     def check_multi_dimensional_array(self, arr, arr_size, sub_arr_size, arr_type):
         """This method checks the shape and type of two dimensional arrays.

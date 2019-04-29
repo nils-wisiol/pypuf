@@ -118,6 +118,20 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
 
 
+def approx_dist_nonrandom(instance, test_set):
+    """
+    Approximate the distance of function instance to the hypothetical function
+    that generated the challenge-response pairs in test_set.
+    :param instance: pypuf.simulation.arbiter_based.base.Simulation
+                     Model to evaluate
+    :param test_set: pypuf.tools.TrainingSet
+                     Challenge-response pairs to test instance with
+    :return: float
+             Ratio of correctly to incorrectly predicted responses
+    """
+    return (test_set.N - count_nonzero(instance.eval(test_set.challenges) == test_set.responses)) / test_set.N
+
+
 def approx_fourier_coefficient(s, training_set):
     """
     Approximate the Fourier coefficient of a function on the subset `s`
@@ -259,10 +273,68 @@ def approx_stabilities(instance, num, reps, random_instance=RandomState()):
 
 def assert_result_type(arr):
     """
-    This function checks the type of the array to match the RESULT_TYPE
+    This function checks the type of the array to match the BIT_TYPE
     :param arr: array of arbitrary type
     """
     assert arr.dtype == dtype(BIT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(BIT_TYPE, arr.dtype)
+
+
+def parse_file(filename, n, start=1, num=0, in_11_notation=False):
+    """
+    Reads challenge-response pairs from a file.
+    The format is one pair per line, first all n inputs (challenge) separated
+    by spaces followed by a single output (response) value.
+    :param filename: string
+                     Path of the file to read the challenge-response pairs from
+    :param n: int
+              Challenge bits
+    :param start: int
+                  First line to read
+    :param num: int
+                Number of lines to read, 0 to read the whole file
+    :param in_11_notation: bool
+                           Format the file is in
+                           True for -1,1 notation, False for 0,1
+    :return: tools.TrainingSet
+             A TraningSet with the num challenges and responses that were read
+    """
+    if num == 0:
+        stop = float('inf')
+    else:
+        stop = start + num
+    if in_11_notation:
+        allowed_vals = ['-1', '1']
+    else:
+        allowed_vals = ['0', '1']
+
+    challenges, responses = [], []
+    with open(filename) as f:
+        for ln, line in enumerate(f):
+            if start <= ln + 1 < stop:
+                vals = line.split()
+                assert len(vals) == n + 1, \
+                    'Line {} contains {} values, expected {}' \
+                    .format(ln + 1, len(vals), n + 1)
+                assert set(vals).issubset(allowed_vals), \
+                    'Line {} contains an invalid value: {}' \
+                    .format(ln + 1, next(iter(set(vals).difference(allowed_vals))))
+                challenges.append(vals[:n])
+                responses.append(vals[n])
+
+    if num == 0:
+        num = len(challenges)
+    assert len(challenges) == num, \
+        'File contains insufficient lines ({} read, {} needed)' \
+        .format(len(challenges), num)
+
+    challenges = array(challenges).astype(BIT_TYPE)
+    responses = array(responses).astype(BIT_TYPE)
+
+    if not in_11_notation:
+        challenges = transform_challenge_01_to_11(challenges)
+        responses = transform_challenge_01_to_11(responses)
+
+    return ChallengeResponseSet(challenges, responses)
 
 
 class ChallengeResponseSet:
