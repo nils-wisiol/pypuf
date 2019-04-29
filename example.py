@@ -13,16 +13,18 @@ def main():
     Developers Notice: Changes here need to be mirrored to README!
     """
     instance = LTFArray(
-        weight_array=LTFArray.normal_weights(n=64, k=4),  # do not change, can be simulated by learner
+        weight_array=LTFArray.normal_weights(n=64, k=2),  # do not change, can be simulated by learner
         transform=LTFArray.transform_id,  # has to match learner, otherwise learner cannot match
         combiner=LTFArray.combiner_xor,  # do not change
     )
 
+    N = 1200
+
     lr_learner = LogisticRegression(
-        t_set=tools.TrainingSetHybrid(instance=instance, N=120000),  # 6200
+        t_set=tools.TrainingSetHybrid(instance=instance, N=N),
         n=comb(64, 2, exact=True),
         # n=2016,  # n choose k_original/k_new = 2
-        k=2,  # k divided by 2
+        k=1,  # k divided by 2
         transformation=LTFArray.transform_id,
         combiner=LTFArray.combiner_xor,
         #iteration_limit=20,
@@ -34,7 +36,7 @@ def main():
     accuracy = 1 - tools.approx_dist_hybrid(instance, model, 10000)
 
     # output the result
-    print('Learned a 64bit 2-xor XOR Arbiter PUF from 12000 CRPs with accuracy %f' % accuracy)
+    print('Learned a 64bit 2-xor XOR Arbiter PUF from %d CRPs with accuracy %f' % (N, accuracy))
 
 
 
