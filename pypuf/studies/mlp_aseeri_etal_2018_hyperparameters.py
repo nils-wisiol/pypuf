@@ -128,7 +128,6 @@ class AseeriEtAlHyperparameterStudy(Study):
                                                 patience=self.PATIENCE,
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
-                                                initial_model_sigma=1,
                                             )
                                         )
                                     )
@@ -156,7 +155,6 @@ class AseeriEtAlHyperparameterStudy(Study):
                                                 patience=self.PATIENCE,
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
-                                                initial_model_sigma=1,
                                                 termination_threshold=1.0,
                                                 print_keras=False,
                                             )
@@ -165,6 +163,16 @@ class AseeriEtAlHyperparameterStudy(Study):
         return experiments
 
     def plot(self):
+        self.plot_helper(
+            name='Scikit-Learn',
+            df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPScikitLearn'],
+        )
+        self.plot_helper(
+            name='Tensorflow',
+            df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow'],
+        )
+
+    def plot_helper(self, name, df):
         ks = sorted(list(set(self.experimenter.results['k'])))
 
         format_time = lambda x, _ = None: '%.1fs' % x if x < 60 else '%.1fmin' % (x / 60)
@@ -176,7 +184,7 @@ class AseeriEtAlHyperparameterStudy(Study):
 
         self.experimenter.results['distance'] = 1 - self.experimenter.results['accuracy']
         for j, k in enumerate(ks):
-            data = self.experimenter.results[self.experimenter.results['k'] == k]
+            data = df[df['k'] == k]
 
             for i, estimator in enumerate(self.PLOT_ESTIMATORS):
                 lineplot(
@@ -243,6 +251,6 @@ class AseeriEtAlHyperparameterStudy(Study):
             axes[-1][j].yaxis.set_minor_formatter(FuncFormatter(format_time))
 
         fig.subplots_adjust(hspace=.5, wspace=.5)
-        fig.suptitle('Accuracy of Scikit-Learn Results on XOR Arbiter PUF')
+        fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
 
-        fig.savefig('figures/%s.pdf' % (self.name()), bbox_inches='tight', pad_inches=.5)
+        fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', pad_inches=.5)

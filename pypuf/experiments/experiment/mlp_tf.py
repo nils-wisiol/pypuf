@@ -30,7 +30,6 @@ class Parameters(NamedTuple):
     patience: int
     iteration_limit: int
     batch_size: int
-    initial_model_sigma: float
     termination_threshold: float
     print_keras: bool
 

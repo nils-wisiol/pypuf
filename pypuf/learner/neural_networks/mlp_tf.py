@@ -1,5 +1,4 @@
-from os import environ, remove
-from os.path import exists
+from os import environ
 
 from numpy import reshape, sign
 from numpy.random import seed
@@ -81,7 +80,7 @@ class MultiLayerPerceptronTensorflow(Learner):
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss))
-        self.nn.add(Dense(units=1, activation='tanh', activity_regularizer=l2_loss))
+        self.nn.add(Dense(units=1, activation='sigmoid', activity_regularizer=l2_loss))
 
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + tf_mean(tf_sign(y_true * y_pred))) / 2
@@ -89,7 +88,7 @@ class MultiLayerPerceptronTensorflow(Learner):
 
         self.nn.compile(
             optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, amsgrad=True),
-            loss='squared_hinge',
+            loss='binary_crossentropy',   # 'squared_hinge',
             metrics=[pypuf_accuracy]
         )
 
@@ -103,7 +102,7 @@ class MultiLayerPerceptronTensorflow(Learner):
             def eval(self, cs):
                 if self.transformation is not None:
                     cs = reshape(self.transformation(cs, self.k), (len(cs), self.k * self.n))
-                return sign(self.nn.predict(cs)).flatten()
+                return sign((self.nn.predict(cs) * 2) - 1).flatten()
 
         self.model = Model(self.nn, self.n, self.k, self.transformation)
 
@@ -139,7 +138,7 @@ class MultiLayerPerceptronTensorflow(Learner):
             batch_size=self.batch_size,
             epochs=self.iteration_limit,
             callbacks=callbacks,
-            validation_data=(self.validation_set.challenges, self.validation_set.responses),
+            validation_data=(((self.validation_set.challenges + 1) / 2), ((self.validation_set.responses + 1) / 2)),
             shuffle=True,
             verbose=self.print_keras,
         )
