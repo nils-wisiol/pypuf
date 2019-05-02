@@ -27,7 +27,7 @@ class ReliabilityStudy(Study):
                         'instance_count': 100,
                         'transformation': CompoundTransformation(
                             generator=LTFArray.generate_ipmod2_transform,
-                            args=(n, k, NoisySRAM((k, n, n), seed_skew=31415, noise=sram_noise)),
+                            args=(n, k, NoisySRAM(n, noise=sram_noise, seed_skew=31415, seed_noise=314)),
                             name='transform_ipmod2_NoisySRAM_31415_%f' % sram_noise
                         ),
                         'combiner': 'xor',

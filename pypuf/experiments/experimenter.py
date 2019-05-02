@@ -193,14 +193,15 @@ class Experimenter(object):
                         return
 
                     row = {}
-                    experiment = self.experiments[result.experiment_id]
+                    id = result.experiment_id if isinstance(result, tuple) else result['experiment_id']
+                    experiment = self.experiments[id]
                     row.update({
-                        'experiment_id': result.experiment_id,
+                        'experiment_id': id,
                         'experiment_hash': experiment.hash,
                         'experiment': experiment.__class__.__name__,
                     })
-                    row.update(experiment.parameters._asdict())
-                    row.update(result._asdict())
+                    for info in [experiment.parameters, result]:
+                        row.update(info._asdict() if isinstance(info, tuple) else info)
                     self.results = self.results.append(DataFrame([row]), sort=True)
 
                 # If there is already a callback waiting, we will replace it and therefore cancel it
@@ -218,7 +219,7 @@ class Experimenter(object):
                 self.next_callback = Timer(
                     pause,
                     call_callback,
-                    args=[result.experiment_id, pause],
+                    args=[id, pause],
                 )
                 self.next_callback.start()
 

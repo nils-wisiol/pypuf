@@ -37,7 +37,7 @@ class Parameters(NamedTuple):
     # A collections.OrderedDict with keyword arguments
     # This keyword arguments are passed to ins_gen_function to generate
     # pypuf.simulation.base.Simulation instances and saved into the result log.
-    param_ins_gen: OrderedDict
+    param_ins_gen: dict
 
 
 class Result(NamedTuple):
@@ -96,6 +96,7 @@ class ExperimentPropertyTest(Experiment):
         )
 
         # set extra parameters on the result to make them available
+        res = res._asdict()
         res.update({'param_ins_gen__%s' % key: val for (key, val) in self.parameters.param_ins_gen.items()})
 
         return res
