@@ -3,12 +3,15 @@ This module is used to test the different simulation models.
 """
 
 import unittest
-from test.utility import get_functions_with_prefix
+
+from numpy import shape, dot, array, around, array_equal, reshape, zeros, ndarray, broadcast_to
+from numpy.random.mtrand import RandomState
 from numpy.testing import assert_array_equal
-from numpy import shape, dot, array, around, array_equal, reshape, zeros
-from numpy.random import RandomState
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+
 from pypuf import tools
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from pypuf.simulation.base import Simulation
+from test.utility import get_functions_with_prefix
 
 
 class TestCombiner(unittest.TestCase):
@@ -414,6 +417,47 @@ class TestInputTransformation(unittest.TestCase):
                     [-1, 1, -1, 1, 1, 1],
                     [-1, -1, -1, 1, -1, 1]
                 ]
+            ]
+        )
+
+    def test_ipmod2(self):
+        class MockWeakPUF(Simulation):
+            def __init__(self, n):
+                self.n = n
+
+            def challenge_length(self) -> int:
+                return 0
+
+            def response_length(self) -> int:
+                return self.n
+
+            def eval(self, challenges: ndarray) -> ndarray:
+                (N, n) = challenges.shape
+                assert n == self.challenge_length()
+                return broadcast_to(array([1, -1] * (self.response_length() // 2)), (N, self.response_length()))
+
+        transform = LTFArray.generate_ipmod2_transform(n=8, kk=4, weak_puf=MockWeakPUF(8), ipmod2_length=8)
+        assert_array_equal(
+            transform(
+                challenges=array([
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [-1, -1, -1, -1, -1, -1, -1, -1],
+                ]),
+                k=4,
+            ),
+            [
+                [
+                    [-1, -1, -1, -1, -1, -1, -1, -1],
+                    [-1,  1, -1,  1,  1,  1,  1, -1],
+                    [+1, -1, -1,  1, -1, -1, -1,  1],
+                    [-1, -1, -1,  1, -1,  1,  1, -1],
+                ],
+                [
+                    [-1, -1, -1, -1, -1, -1, -1, -1],
+                    [-1,  1, -1,  1,  1,  1,  1, -1],
+                    [+1, -1, -1,  1, -1, -1, -1,  1],
+                    [-1, -1, -1,  1, -1,  1,  1, -1],
+                ],
             ]
         )
 

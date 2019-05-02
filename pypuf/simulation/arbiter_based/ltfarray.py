@@ -2,14 +2,12 @@
 This module provides several different implementations of arbiter PUF simulations. The linear threshold function array
 model is the core of each simulation class.
 """
-from itertools import combinations
-
 from numpy import empty
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
-from numpy import unique, uint64, where
+from numpy import uint64
 from numpy.random import RandomState
-from scipy.misc import comb
+from numpy.random.mtrand import RandomState
 
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -540,57 +538,33 @@ class LTFArray(Simulation):
     def generate_ipmod2_transform(cls, n, kk, weak_puf, ipmod2_length=None):
         if not ipmod2_length:
             ipmod2_length = n
-        assert weak_puf.response_length() == kk * n * ipmod2_length
+        assert weak_puf.response_length() == n
         assert weak_puf.challenge_length() == 0
-        all_pair_indices = array(list(combinations(range(n), 2)))
-        pairs = zeros((kk, n, ipmod2_length), dtype=uint64)
+        assert ipmod2_length % 2 == 0
+        pairs = zeros((kk, n, ipmod2_length // 2, 2), dtype=uint64)
         prng = RandomState(271828)
         for l in range(kk):
             for i in range(n):
-                pairs[l, i] = prng.choice(range(comb(n, 2, exact=True)), ipmod2_length, replace=False)
-        assert pairs.shape == (kk, n, ipmod2_length)
-
-        unique_pairs = unique(pairs.flatten())
-        used_pair_indices = all_pair_indices[unique_pairs]
-        used_pairs = zeros((kk, n, ipmod2_length), dtype=uint64)
-        for l in range(kk):
-            for i in range(n):
-                for j in range(ipmod2_length):
-                    # find the index of value pairs[l, i] in unique_pairs
-                    used_pairs[l, i, j] = where(unique_pairs == pairs[l, i, j])[0]
+                pairs[l, i] = prng.choice(range(n), ipmod2_length, replace=False).reshape((ipmod2_length // 2, 2))
+        assert pairs.shape == (kk, n, ipmod2_length // 2, 2)
 
         def transform(challenges, k):
             (N, _) = challenges.shape
             assert challenges.shape[1] == n
             assert k == kk
 
-            # evaluate all pair values
-            pair_values = amax(challenges[:, used_pair_indices], axis=2)
-            assert pair_values.shape == (N, len(used_pair_indices))
+            # get the weak puf responses, one for each challenge
+            weak_puf_values = weak_puf.eval(empty(shape=(N, 0))).reshape(N, n)
+            assert weak_puf_values.shape == (N, n)
 
-            # we prepend a 'fake pair' to the list of pair values with value
-            # FALSE (+1). This makes usage of numpy easier below (*)
-            # Pair indices increase by one, index 0 is the fake (no-op) pair.
-            pair_values = append(ones((N, 1)), pair_values, axis=1)
-            assert pair_values.shape == (N, len(used_pair_indices) + 1)
+            # XOR challenge with weak puf values
+            challenges = challenges * weak_puf_values
 
-            # get the weak puf response as an array of truth values
-            weak_puf_values = (-.5 * weak_puf.eval(empty(shape=(N, 0))).reshape(N, k, n, ipmod2_length) - .5).astype(
-                uint64)
-            assert weak_puf_values.shape == (N, k, n, ipmod2_length)
+            # evaluate ipmod2 pairs (max == and)
+            result = amax(challenges[:, pairs], axis=4)
+            assert result.shape == (N, k, n, ipmod2_length // 2)
 
-            # determine which pairs we will use for the evaluation based on the
-            # weak PUF response
-            selected_pairs = broadcast_to(used_pairs.copy() + 1, (N, ) + used_pairs.shape)  # indices increased by one
-            selected_pairs = selected_pairs * weak_puf_values  # mask with weak puf
-            assert selected_pairs.shape == (N, k, n, ipmod2_length)
-
-            result = zeros(shape=(N, k, n, ipmod2_length))
-            for x in range(N):  # TODO replace this loop with numpy magic
-                # evaluate the selected pairs
-                result[x] = pair_values[x, selected_pairs[x]]
-            assert result.shape == (N, k, n, ipmod2_length)
-
+            # evaluate ipmod2 xor (prod == xor)
             # evaluate the parity of the pairs
             result = prod(result, axis=3, dtype=BIT_TYPE)
             assert result.shape == (N, k, n)
