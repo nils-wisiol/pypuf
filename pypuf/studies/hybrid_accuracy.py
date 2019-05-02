@@ -114,7 +114,7 @@ class HybridAccuracy(Study):
                         transform='id',
                         combiner='xor',
                         seed_instance=314159 + i,
-                        iteration_limit=5,
+                        iteration_limit=50,
                     )
                 )
                 for i in range(self.SAMPLE_SIZE)
