@@ -30,6 +30,7 @@ class Parameters(NamedTuple):
     patience: int
     iteration_limit: int
     batch_size: int
+    print_learning: bool
 
 
 class Result(NamedTuple):
@@ -107,6 +108,7 @@ class ExperimentMLPScikitLearn(Experiment):
             iteration_limit=self.parameters.iteration_limit,
             batch_size=self.parameters.batch_size,
             seed_model=self.parameters.seed_model,
+            print_learning=self.parameters.print_learning,
         )
         self.learner.prepare()
 

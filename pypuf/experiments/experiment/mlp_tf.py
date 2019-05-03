@@ -31,7 +31,7 @@ class Parameters(NamedTuple):
     iteration_limit: int
     batch_size: int
     termination_threshold: float
-    print_keras: bool
+    print_learning: bool
 
 
 class Result(NamedTuple):
@@ -101,7 +101,7 @@ class ExperimentMLPTensorflow(Experiment):
             k=self.parameters.k,
             training_set=self.training_set,
             validation_set=validation_set,
-            transformation=self.simulation.transform,
+            transformation=None,    # self.simulation.transform,    worse results for simple transformations
             layers=self.parameters.layers,
             activation=self.parameters.activation,
             learning_rate=self.parameters.learning_rate,
@@ -115,7 +115,7 @@ class ExperimentMLPTensorflow(Experiment):
             seed_model=self.parameters.seed_model,
             termination_threshold=self.parameters.termination_threshold,
             checkpoint_name=self.id,
-            print_keras=self.parameters.print_keras,
+            print_learning=self.parameters.print_learning,
         )
         self.learner.prepare()
 

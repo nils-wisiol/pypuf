@@ -1,16 +1,15 @@
 from matplotlib.pyplot import subplots
-from matplotlib.ticker import FixedLocator, MultipleLocator, FuncFormatter, FormatStrFormatter
+from matplotlib.ticker import FixedLocator, FuncFormatter
 from seaborn import lineplot, scatterplot
 
 from pypuf.studies.base import Study
-from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn , Parameters as Parameters_skl
-from pypuf.experiments.experiment.mlp_tf import ExperimentMLPTensorflow , Parameters as Parameters_tf
+from pypuf.experiments.experiment.mlp_tf import ExperimentMLPTensorflow, Parameters as Parameters_tf
+from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
 from pypuf.plots import get_estimator
 
 
-class AseeriEtAlHyperparameterStudy(Study):
+class MLPAseeriEtAlHyperparameterStudy(Study):
 
-    SAMPLES_PER_POINT = 1
     TRANSFORMATION = 'id'
     COMBINER = 'xor'
     ACTIVATION = 'relu'
@@ -18,6 +17,15 @@ class AseeriEtAlHyperparameterStudy(Study):
     ITERATION_LIMIT = 100
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
+    PRINT_LEARNING = False
+
+    SAMPLES_PER_POINT = {
+        4: 7,
+        5: 7,
+        6: 7,
+        7: 7,
+        8: 7,
+    }
 
     SIZES = [
         (64, 4, 0.4e6),
@@ -38,7 +46,7 @@ class AseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.010, 0.0105, 0.011],
+        4: [0.005, 0.010, 0.015],
         5: [0.003, 0.0035, 0.004],
         6: [0.007, 0.0075, 0.008],
         7: [0.004, 0.0045, 0.005],
@@ -95,10 +103,10 @@ class AseeriEtAlHyperparameterStudy(Study):
 
     def experiments(self):
         experiments = []
-        for i in range(self.SAMPLES_PER_POINT):
-            for (n, k, N) in self.SIZES:
-                validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
-                layers = [2**k, 2**k, 2**k]
+        for (n, k, N) in self.SIZES:
+            validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
+            layers = [2**k, 2**k, 2**k]
+            for i in range(self.SAMPLES_PER_POINT[k]):
                 for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
                     for penalty in self.PENALTIES[k]:
                         for beta_1 in self.BETAS_1[k]:
@@ -128,6 +136,7 @@ class AseeriEtAlHyperparameterStudy(Study):
                                                 patience=self.PATIENCE,
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
+                                                print_learning=self.PRINT_LEARNING,
                                             )
                                         )
                                     )
@@ -156,7 +165,7 @@ class AseeriEtAlHyperparameterStudy(Study):
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
                                                 termination_threshold=1.0,
-                                                print_keras=False,
+                                                print_learning=self.PRINT_LEARNING,
                                             )
                                         )
                                     )

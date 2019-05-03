@@ -9,7 +9,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
 
     def __init__(self, n, k, training_set, validation_frac, transformation=None, layers=(10, 10), activation='relu',
                  learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=5,
-                 iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
+                 print_learning=False, iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
         self.n = n
         self.k = k
         self.training_set = training_set
@@ -26,6 +26,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(self.SEED_RANGE)
+        self.print_learning = print_learning
         self.nn = None
         self.model = None
 
@@ -41,6 +42,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             activation=self.activation,
             max_iter=self.iteration_limit,
             tol=self.tolerance,
+            verbose=self.print_learning,
             early_stopping=True,
             validation_fraction=self.validation_frac,
             n_iter_no_change=self.patience,

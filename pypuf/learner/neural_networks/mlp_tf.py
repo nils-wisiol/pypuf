@@ -27,7 +27,7 @@ class MultiLayerPerceptronTensorflow(Learner):
 
     def __init__(self, n, k, training_set, validation_set, transformation=None, layers=(10, 10), activation='relu',
                  learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=5,
-                 checkpoint_name=None, print_keras=False, termination_threshold=1.0, iteration_limit=100,
+                 checkpoint_name=None, print_learning=False, termination_threshold=1.0, iteration_limit=100,
                  batch_size=1000, seed_model=0xc0ffee):
         self.n = n
         self.k = k
@@ -49,7 +49,7 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(
             n, k, 'no_preprocess' if transformation is None else transformation.__name__, checkpoint_name,
         ) + '.hdf5'
-        self.print_keras = 0 if not print_keras else 1
+        self.print_learning = 0 if not print_learning else 1
         self.nn = None
         self.history = None
         self.model = None
@@ -72,24 +72,27 @@ class MultiLayerPerceptronTensorflow(Learner):
             )
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
-        l2_loss = l2(self.penalty)
+        l2_loss = l2(self.penalty) if self.penalty != 0 else None
         self.nn = Sequential()
-        self.nn.add(
-            Dense(units=self.layers[0], activation=self.activation, kernel_regularizer=l2_loss, input_dim=in_shape)
-        )
+        self.nn.add(Dense(
+            units=self.layers[0],
+            activation=self.activation,
+            input_dim=in_shape,
+            use_bias=True,
+        ))
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
-                self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss))
-        self.nn.add(Dense(units=1, activation='sigmoid', activity_regularizer=l2_loss))
+                self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
+        self.nn.add(Dense(units=1, activation='sigmoid', use_bias=True))
 
         def pypuf_accuracy(y_true, y_pred):
-            accuracy = (1 + tf_mean(tf_sign(y_true * y_pred))) / 2
+            accuracy = tf_mean(tf_sign(y_true * y_pred))
             return tf_max(accuracy, 1 - accuracy)
 
         self.nn.compile(
-            optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, amsgrad=True),
-            loss='binary_crossentropy',   # 'squared_hinge',
-            metrics=[pypuf_accuracy]
+            optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=1e-8, amsgrad=True),
+            loss='binary_crossentropy',   # 'squared_hinge',    only for responses and predictions within [-1, 1]
+            metrics=[pypuf_accuracy],
         )
 
         class Model:
@@ -121,25 +124,25 @@ class MultiLayerPerceptronTensorflow(Learner):
             threshold=self.termination_threshold,
             monitor='val_pypuf_accuracy',
             patience=self.iteration_limit,
-            verbose=self.print_keras,
+            verbose=self.print_learning,
             mode='max',
         )
         converged = EarlyStopping(
             monitor='val_loss',
             min_delta=self.tolerance,
             patience=self.patience,
-            verbose=self.print_keras,
+            verbose=self.print_learning,
             mode='max',
         )
         callbacks = [converged] if self.termination_threshold == 1.0 else [converged, accurate]
         self.history = self.nn.fit(
             x=self.training_set.challenges,
-            y=self.training_set.responses,
+            y=((self.training_set.responses + 1) / 2),
             batch_size=self.batch_size,
             epochs=self.iteration_limit,
             callbacks=callbacks,
-            validation_data=(((self.validation_set.challenges + 1) / 2), ((self.validation_set.responses + 1) / 2)),
-            shuffle=True,
-            verbose=self.print_keras,
+            validation_data=(self.validation_set.challenges, ((self.validation_set.responses + 1) / 2)),
+            shuffle=False,
+            verbose=self.print_learning,
         )
         return self.model

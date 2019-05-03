@@ -26,7 +26,7 @@ class Study:
     """
 
     EXPERIMENTER_CALLBACK_MIN_PAUSE = 5 * 60
-    SHUFFLE = False
+    SHUFFLE = True
     COMPRESSION = False
     STUDY_MODULE_PREFIX = 'pypuf.studies.'
 
