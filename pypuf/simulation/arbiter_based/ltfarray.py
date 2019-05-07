@@ -9,7 +9,6 @@ from numpy.random.mtrand import RandomState
 
 from pypuf import tools
 from pypuf.simulation.base import Simulation
-from pypuf.tools import substitute_aes
 
 
 class CompoundTransformation:
@@ -447,7 +446,7 @@ class LTFArray(Simulation):
     def transform_aes_substitution(cls, challenges, k):
         shifted_subchallenges = cls.transform_shift(challenges, k)
         substituted_subchallenges = array([
-            [substitute_aes(sub_challenge) for sub_challenge in challenge] for challenge in shifted_subchallenges
+            [tools.substitute_aes(sub_challenge) for sub_challenge in challenge] for challenge in shifted_subchallenges
         ], dtype=tools.BIT_TYPE)
 
         return cls.att(substituted_subchallenges)
@@ -861,6 +860,21 @@ class LTFArray(Simulation):
             raise ValueError(f'Challenges given to LTFArray.core_eval must be of shape (N, k, n) for bias-unaware '
                              f'evaluation, and of shape (N, k, n+1) for bias-aware evaluation. This LTFArray has '
                              f'k={self.k} and n={self.n}, but challenges given had shape {efba_sub_challenges.shape}.')
+
+    @classmethod
+    def preprocess(cls, transformation, kind='no'):
+        if kind == 'no':
+            def id(challenges, k):
+                return cls.transform_id(challenges, 1)[:, 0, :]
+            return id
+        if kind == 'simple':
+            def simple_transformation(challenges, k):
+                return transformation(challenges, k)[:, 0, :]
+            return simple_transformation
+        if kind == 'full':
+            return transformation
+        else:
+            raise Exception('preprocess() only has the options: "no", "simple", and "full"')
 
 
 class NoisyLTFArray(LTFArray):

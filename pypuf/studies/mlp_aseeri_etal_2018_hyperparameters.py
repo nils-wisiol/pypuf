@@ -12,6 +12,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
 
     TRANSFORMATION = 'id'
     COMBINER = 'xor'
+    PREPROCESSING = 'no'
     ACTIVATION = 'relu'
     PATIENCE = 10
     ITERATION_LIMIT = 100
@@ -108,6 +109,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             layers = [2**k, 2**k, 2**k]
             for i in range(self.SAMPLES_PER_POINT[k]):
                 for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
+                    number = i * (len(self.LEARNING_RATES[k])) + j
                     for penalty in self.PENALTIES[k]:
                         for beta_1 in self.BETAS_1[k]:
                             for beta_2 in self.BETAS_2[k]:
@@ -116,16 +118,17 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                         ExperimentMLPScikitLearn(
                                             progress_log_prefix=None,
                                             parameters=Parameters_skl(
-                                                seed_simulation=0x3 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_challenges=0x1415 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_model=0x9265 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_distance=0x3589 + i * (len(self.LEARNING_RATES)) + j,
+                                                seed_simulation=0x3 + number,
+                                                seed_challenges=0x1415 + number,
+                                                seed_model=0x9265 + number,
+                                                seed_distance=0x3589 + number,
                                                 n=n,
                                                 k=k,
                                                 N=int(N),
                                                 validation_frac=validation_frac,
                                                 transformation=self.TRANSFORMATION,
                                                 combiner=self.COMBINER,
+                                                preprocessing=self.PREPROCESSING,
                                                 layers=layers,
                                                 activation=self.ACTIVATION,
                                                 learning_rate=learning_rate,
@@ -144,16 +147,17 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                         ExperimentMLPTensorflow(
                                             progress_log_prefix=None,
                                             parameters=Parameters_tf(
-                                                seed_simulation=0x3 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_challenges=0x1415 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_model=0x9265 + i * (len(self.LEARNING_RATES)) + j,
-                                                seed_distance=0x3589 + i * (len(self.LEARNING_RATES)) + j,
+                                                seed_simulation=0x3 + number,
+                                                seed_challenges=0x1415 + number,
+                                                seed_model=0x9265 + number,
+                                                seed_distance=0x3589 + number,
                                                 n=n,
                                                 k=k,
                                                 N=int(N),
                                                 validation_frac=validation_frac,
                                                 transformation='id',
                                                 combiner='xor',
+                                                preprocessing=self.PREPROCESSING,
                                                 layers=layers,
                                                 activation='relu',
                                                 learning_rate=learning_rate,

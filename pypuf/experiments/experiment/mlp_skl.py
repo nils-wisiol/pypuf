@@ -20,6 +20,7 @@ class Parameters(NamedTuple):
     validation_frac: float
     transformation: str
     combiner: str
+    preprocessing: str
     layers: Iterable[int]
     activation: str
     learning_rate: float
@@ -70,6 +71,7 @@ class ExperimentMLPScikitLearn(Experiment):
                 parameters.patience,
                 parameters.transformation,
                 parameters.combiner,
+                parameters.preprocessing,
             )
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.training_set = None
@@ -98,6 +100,7 @@ class ExperimentMLPScikitLearn(Experiment):
             training_set=self.training_set,
             validation_frac=self.parameters.validation_frac,
             transformation=self.simulation.transform,
+            preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             learning_rate=self.parameters.learning_rate,
             penalty=self.parameters.penalty,

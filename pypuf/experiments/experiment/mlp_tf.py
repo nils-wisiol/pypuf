@@ -20,6 +20,7 @@ class Parameters(NamedTuple):
     validation_frac: float
     transformation: str
     combiner: str
+    preprocessing: str
     layers: Iterable[int]
     activation: str
     learning_rate: float
@@ -54,7 +55,7 @@ class ExperimentMLPTensorflow(Experiment):
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
-            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
+            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
                 progress_log_prefix,
                 parameters.seed_model,
                 parameters.seed_simulation,
@@ -71,6 +72,7 @@ class ExperimentMLPTensorflow(Experiment):
                 parameters.patience,
                 parameters.transformation,
                 parameters.combiner,
+                parameters.preprocessing,
             )
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.training_set = None
@@ -101,7 +103,8 @@ class ExperimentMLPTensorflow(Experiment):
             k=self.parameters.k,
             training_set=self.training_set,
             validation_set=validation_set,
-            transformation=None,    # self.simulation.transform,    worse results for simple transformations
+            transformation=self.simulation.transform,
+            preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             activation=self.parameters.activation,
             learning_rate=self.parameters.learning_rate,
