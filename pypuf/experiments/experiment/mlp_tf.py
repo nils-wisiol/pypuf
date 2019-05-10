@@ -23,6 +23,7 @@ class Parameters(NamedTuple):
     preprocessing: str
     layers: Iterable[int]
     activation: str
+    zero_one: bool
     learning_rate: float
     penalty: float
     beta_1: float
@@ -55,7 +56,7 @@ class ExperimentMLPTensorflow(Experiment):
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
-            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
+            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
                 progress_log_prefix,
                 parameters.seed_model,
                 parameters.seed_simulation,
@@ -65,6 +66,7 @@ class ExperimentMLPTensorflow(Experiment):
                 parameters.validation_frac,
                 parameters.layers,
                 parameters.activation,
+                parameters.zero_one,
                 parameters.learning_rate,
                 parameters.beta_1,
                 parameters.beta_2,
@@ -107,6 +109,7 @@ class ExperimentMLPTensorflow(Experiment):
             preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             activation=self.parameters.activation,
+            zero_one=self.parameters.zero_one,
             learning_rate=self.parameters.learning_rate,
             penalty=self.parameters.penalty,
             beta_1=self.parameters.beta_1,

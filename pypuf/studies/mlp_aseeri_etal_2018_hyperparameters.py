@@ -15,26 +15,26 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     PREPROCESSING = 'no'
     ACTIVATION = 'relu'
     PATIENCE = 10
-    ITERATION_LIMIT = 100
+    ITERATION_LIMIT = 200
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
 
-    SAMPLES_PER_POINT = {
-        4: 7,
-        5: 7,
-        6: 7,
-        7: 7,
-        8: 7,
-    }
-
     SIZES = [
         (64, 4, 0.4e6),
-        (64, 5, 0.8e6),
+        #(64, 5, 0.8e6),
         (64, 6, 2e6),
-        (64, 7, 5e6),
+        #(64, 7, 5e6),
         (64, 8, 20e6),
     ]
+
+    SAMPLES_PER_POINT = {
+        4: 100,
+        5: 50,
+        6: 20,
+        7: 10,
+        8: 10,
+    }
 
     PLOT_ESTIMATORS = ['mean', 'best', 'success=0.9']
 
@@ -47,11 +47,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.005, 0.010, 0.015],
-        5: [0.003, 0.0035, 0.004],
-        6: [0.007, 0.0075, 0.008],
-        7: [0.004, 0.0045, 0.005],
-        8: [0.001, 0.0015, 0.002],
+        4: [0.002, 0.005, 0.008],
+        5: [0.002, 0.005, 0.008],
+        6: [0.002, 0.005, 0.008],
+        7: [0.002, 0.005, 0.008],
+        8: [0.002, 0.005, 0.008],
     }
 
     PENALTIES = {
@@ -63,19 +63,19 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     BETAS_1 = {
-        4: [0.85, 0.9, 0.95],
-        5: [0.85, 0.9, 0.95],
-        6: [0.85, 0.9, 0.95],
-        7: [0.85, 0.9, 0.95],
-        8: [0.85, 0.9, 0.95],
+        4: [0.9],
+        5: [0.9],
+        6: [0.9],
+        7: [0.9],
+        8: [0.9],
     }
 
     BETAS_2 = {
-        4: [0.9985, 0.999, 0.9995],
-        5: [0.9985, 0.999, 0.9995],
-        6: [0.9985, 0.999, 0.9995],
-        7: [0.9985, 0.999, 0.9995],
-        8: [0.9985, 0.999, 0.9995],
+        4: [0.999],
+        5: [0.999],
+        6: [0.999],
+        7: [0.999],
+        8: [0.999],
     }
 
     REFERENCE_TIMES = {
@@ -160,6 +160,38 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                 preprocessing=self.PREPROCESSING,
                                                 layers=layers,
                                                 activation='relu',
+                                                zero_one=True,
+                                                learning_rate=learning_rate,
+                                                penalty=penalty,
+                                                beta_1=beta_1,
+                                                beta_2=beta_2,
+                                                tolerance=tolerance,
+                                                patience=self.PATIENCE,
+                                                iteration_limit=self.ITERATION_LIMIT,
+                                                batch_size=1000 if k < 6 else 10000,
+                                                termination_threshold=1.0,
+                                                print_learning=self.PRINT_LEARNING,
+                                            )
+                                        )
+                                    )
+                                    experiments.append(
+                                        ExperimentMLPTensorflow(
+                                            progress_log_prefix=None,
+                                            parameters=Parameters_tf(
+                                                seed_simulation=0x3 + number,
+                                                seed_challenges=0x1415 + number,
+                                                seed_model=0x9265 + number,
+                                                seed_distance=0x3589 + number,
+                                                n=n,
+                                                k=k,
+                                                N=int(N),
+                                                validation_frac=validation_frac,
+                                                transformation='id',
+                                                combiner='xor',
+                                                preprocessing=self.PREPROCESSING,
+                                                layers=layers,
+                                                activation='relu',
+                                                zero_one=False,
                                                 learning_rate=learning_rate,
                                                 penalty=penalty,
                                                 beta_1=beta_1,

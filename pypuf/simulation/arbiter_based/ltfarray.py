@@ -867,14 +867,14 @@ class LTFArray(Simulation):
             def id(challenges, k):
                 return cls.transform_id(challenges, 1)[:, 0, :]
             return id
-        if kind == 'simple':
+        if kind == 'short':
             def simple_transformation(challenges, k):
                 return transformation(challenges, k)[:, 0, :]
             return simple_transformation
         if kind == 'full':
             return transformation
         else:
-            raise Exception('preprocess() only has the options: "no", "simple", and "full"')
+            raise Exception('preprocess() only has the options: "no", "short", and "full"')
 
 
 class NoisyLTFArray(LTFArray):
