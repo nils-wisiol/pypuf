@@ -29,8 +29,8 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     ]
 
     SAMPLES_PER_POINT = {
-        4: 100,
-        5: 50,
+        4: 20,
+        5: 20,
         6: 20,
         7: 10,
         8: 10,
@@ -47,19 +47,19 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.002, 0.005, 0.008],
-        5: [0.002, 0.005, 0.008],
-        6: [0.002, 0.005, 0.008],
-        7: [0.002, 0.005, 0.008],
-        8: [0.002, 0.005, 0.008],
+        4: [0.0005, 0.001, 0.0015],
+        5: [0.0005, 0.001, 0.0015],
+        6: [0.0005, 0.001, 0.0015, 0.006, 0.008],
+        7: [0.0005, 0.001, 0.0015],
+        8: [0.0005, 0.001, 0.0015],
     }
 
     PENALTIES = {
-        4: [0.00005, 0.0001, 0.00015],
-        5: [0.00005, 0.0001, 0.00015],
-        6: [0.00005, 0.0001, 0.00015],
-        7: [0.00005, 0.0001, 0.00015],
-        8: [0.00005, 0.0001, 0.00015],
+        4: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
+        5: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
+        6: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
+        7: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
+        8: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
     }
 
     BETAS_1 = {
@@ -109,7 +109,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             layers = [2**k, 2**k, 2**k]
             for i in range(self.SAMPLES_PER_POINT[k]):
                 for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
-                    number = i * (len(self.LEARNING_RATES[k])) + j
+                    cycle = i * (len(self.LEARNING_RATES[k])) + j
                     for penalty in self.PENALTIES[k]:
                         for beta_1 in self.BETAS_1[k]:
                             for beta_2 in self.BETAS_2[k]:
@@ -118,10 +118,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                         ExperimentMLPScikitLearn(
                                             progress_log_prefix=None,
                                             parameters=Parameters_skl(
-                                                seed_simulation=0x3 + number,
-                                                seed_challenges=0x1415 + number,
-                                                seed_model=0x9265 + number,
-                                                seed_distance=0x3589 + number,
+                                                seed_simulation=0x3 + cycle,
+                                                seed_challenges=0x1415 + cycle,
+                                                seed_model=0x9265 + cycle,
+                                                seed_distance=0x3589 + cycle,
                                                 n=n,
                                                 k=k,
                                                 N=int(N),
@@ -147,10 +147,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                         ExperimentMLPTensorflow(
                                             progress_log_prefix=None,
                                             parameters=Parameters_tf(
-                                                seed_simulation=0x3 + number,
-                                                seed_challenges=0x1415 + number,
-                                                seed_model=0x9265 + number,
-                                                seed_distance=0x3589 + number,
+                                                seed_simulation=0x3 + cycle,
+                                                seed_challenges=0x1415 + cycle,
+                                                seed_model=0x9265 + cycle,
+                                                seed_distance=0x3589 + cycle,
                                                 n=n,
                                                 k=k,
                                                 N=int(N),
@@ -169,7 +169,6 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                 patience=self.PATIENCE,
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
-                                                termination_threshold=1.0,
                                                 print_learning=self.PRINT_LEARNING,
                                             )
                                         )
@@ -178,10 +177,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                         ExperimentMLPTensorflow(
                                             progress_log_prefix=None,
                                             parameters=Parameters_tf(
-                                                seed_simulation=0x3 + number,
-                                                seed_challenges=0x1415 + number,
-                                                seed_model=0x9265 + number,
-                                                seed_distance=0x3589 + number,
+                                                seed_simulation=0x3 + cycle,
+                                                seed_challenges=0x1415 + cycle,
+                                                seed_model=0x9265 + cycle,
+                                                seed_distance=0x3589 + cycle,
                                                 n=n,
                                                 k=k,
                                                 N=int(N),
@@ -200,7 +199,6 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                 patience=self.PATIENCE,
                                                 iteration_limit=self.ITERATION_LIMIT,
                                                 batch_size=1000 if k < 6 else 10000,
-                                                termination_threshold=1.0,
                                                 print_learning=self.PRINT_LEARNING,
                                             )
                                         )
@@ -213,8 +211,14 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPScikitLearn'],
         )
         self.plot_helper(
-            name='Tensorflow',
-            df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow'],
+            name='Tensorflow {0, 1}',
+            df=self.experimenter.results[(self.experimenter.results['zero_one'] == True)
+                                         & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
+        )
+        self.plot_helper(
+            name='Tensorflow {-1, 1}',
+            df=self.experimenter.results[(self.experimenter.results['zero_one'] == False)
+                                         & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
         )
 
     def plot_helper(self, name, df):
@@ -235,51 +239,47 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 lineplot(
                     x='learning_rate',
                     y='accuracy',
-                    hue='beta_1',
-                    style='beta_2',
+                    hue='penalty',
                     data=data,
                     ax=axes[i][j],
-                    legend='full',
+                    legend=False,
                     estimator=get_estimator(estimator),
                     ci=None,
                 )
                 scatterplot(
                     x='learning_rate',
                     y='accuracy',
-                    hue='beta_1',
-                    style='beta_2',
+                    hue='penalty',
                     data=data,
                     ax=axes[i][j],
                     legend='full',
                 )
                 axes[i][j].set_ylabel('k=%i\naccuracy %s' % (k, estimator))
-                axes[i][j].set_ylim((.45, 1.05))
+                axes[i][j].set_ylim((-0.05 if estimator.startswith('success') else 0.45, 1.05))
+                axes[i][j].legend(loc='upper left', bbox_to_anchor=(1, 1))
 
             scatterplot(
                 x='learning_rate',
                 y='accuracy',
-                hue='beta_1',
-                style='beta_2',
+                hue='penalty',
                 data=data,
                 ax=axes[-2][j],
                 legend='full',
             )
+            axes[-2][j].legend(loc='upper left', bbox_to_anchor=(1, 1))
 
             lineplot(
                 x='distance',
                 y='measured_time',
-                # style='tol',
-                hue='beta_1',
                 data=data,
                 ax=axes[-1][j],
-                legend='full',
                 estimator='mean',
             )
 
             axes[-1][j].set_xscale('log')
             axes[-1][j].set_yscale('log')
             axes[-1][j].set_xlabel('accuracy')
-            axes[-1][j].set_ylabel('measured_time\nreference: %s' % format_time(self.REFERENCE_TIMES[(64, k)]))   # TODO fix for n = 128
+            axes[-1][j].set_ylabel('measured_time\nreference: %s' % format_time(self.REFERENCE_TIMES[(64, k)]))
             axes[-1][j].xaxis.set_major_locator(FixedLocator([
                 .5,
                 .3,
@@ -291,7 +291,6 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 .005,
             ]))
             axes[-1][j].xaxis.set_major_formatter(FuncFormatter(lambda x, _: '%.3f' % (1 - x)))
-            #axes[-1][j].yaxis.set_major_locator(FixedLocator(self.REFERENCE_TIMES.values()))
             axes[-1][j].yaxis.set_major_formatter(FuncFormatter(format_time))
             axes[-1][j].yaxis.set_minor_formatter(FuncFormatter(format_time))
 

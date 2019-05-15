@@ -32,7 +32,6 @@ class Parameters(NamedTuple):
     patience: int
     iteration_limit: int
     batch_size: int
-    termination_threshold: float
     print_learning: bool
 
 
@@ -119,7 +118,6 @@ class ExperimentMLPTensorflow(Experiment):
             iteration_limit=self.parameters.iteration_limit,
             batch_size=self.parameters.batch_size,
             seed_model=self.parameters.seed_model,
-            termination_threshold=self.parameters.termination_threshold,
             checkpoint_name=self.id,
             print_learning=self.parameters.print_learning,
         )

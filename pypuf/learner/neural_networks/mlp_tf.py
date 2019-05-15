@@ -29,8 +29,8 @@ class MultiLayerPerceptronTensorflow(Learner):
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
                  activation='relu', zero_one=False, learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999,
-                 tolerance=0.001, patience=5, checkpoint_name=None, print_learning=False, termination_threshold=1.0,
-                 iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
+                 tolerance=0.001, patience=5, checkpoint_name=None, print_learning=False, iteration_limit=100,
+                 batch_size=1000, seed_model=0xc0ffee):
         self.n = n
         self.k = k
         self.training_set = training_set
@@ -49,7 +49,6 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(self.SEED_RANGE)
-        self.termination_threshold = termination_threshold
         self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(n, k, preprocessing, checkpoint_name) + '.hdf5'
         self.print_learning = 0 if not print_learning else 1
         self.nn = None

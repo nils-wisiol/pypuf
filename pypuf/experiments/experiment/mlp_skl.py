@@ -38,6 +38,7 @@ class Result(NamedTuple):
     name: str
     experiment_id: UUID
     pid: int
+    zero_one: bool
     measured_time: float
     iterations: int
     accuracy: float
@@ -129,6 +130,7 @@ class ExperimentMLPScikitLearn(Experiment):
             name=self.NAME,
             experiment_id=self.id,
             pid=getpid(),
+            zero_one=True,
             measured_time=self.measured_time,
             iterations=self.learner.nn.n_iter_,
             accuracy=1.0 - tools.approx_dist(
