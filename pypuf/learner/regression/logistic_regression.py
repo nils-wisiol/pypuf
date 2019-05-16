@@ -315,8 +315,8 @@ class LogisticRegression(Learner):
                 if converged:
                     break
 
-                if self.iteration_count % 10 == 0:      # test line, remove
-                    print(1 - tools.approx_dist_hybrid(self.training_set.instance, model, 200))
+                # if self.iteration_count % 10 == 0:      # test line, remove
+                #     print(1 - tools.approx_dist_hybrid(self.training_set.instance, model, 200))
 
         if not converged:
             self.converged = False

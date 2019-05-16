@@ -33,6 +33,7 @@ class Result(NamedTuple):
     experiment_id: UUID
     pid: int
     accuracy: float
+    measured_time: float
 
 
 class HybridAccuracyExperiment(Experiment):
@@ -47,10 +48,10 @@ class HybridAccuracyExperiment(Experiment):
         self.model = None
 
     def prepare(self):
-        # change to not hardcoded
-        k = self.parameters.k  # 2
-        n = self.parameters.n  # 64
-        N = self.parameters.N  # 1200
+        k = self.parameters.k
+        n = self.parameters.n
+        N = self.parameters.N
+
         transform = self.parameters.transform   # LTFArray.transform_id
         combiner = self.parameters.combiner  # LTFArray.combiner_xor
         iteration_limit = self.parameters.iteration_limit
@@ -64,7 +65,7 @@ class HybridAccuracyExperiment(Experiment):
         self.learner = LogisticRegression(
             t_set=tools.TrainingSetHybrid(instance=self.instance, N=N),
             n=comb(n, 2, exact=True),  # n choose k_original/k_new = 2
-            k=k//2,  # k divided by 2, what if k is odd?
+            k=k//2,
             transformation=self.instance.transform,
             combiner=self.instance.combiner,
             iteration_limit=iteration_limit,
@@ -90,15 +91,16 @@ class HybridAccuracyExperiment(Experiment):
             experiment_id=self.id,
             pid=getpid(),
             accuracy=accuracy,
+            measured_time=self.measured_time,
         )
 
 
 class HybridAccuracy(Study):
-    SAMPLE_SIZE = 100
+    SAMPLE_SIZE = 200
     TRANSFORMS = ["id"]
 
     def __init__(self):
-        super().__init__()
+        super().__init__(cpu_limit=1)
 
     def experiments(self):
         experiments = []
@@ -107,35 +109,49 @@ class HybridAccuracy(Study):
                 HybridAccuracyExperiment(
                     progress_log_prefix=None,
                     parameters=HybridAccuracyParameters(
-                        n=64,
-                        k=4,
-                        N=120000,
-                        # N=10000,
+                        n=32,
+                        k=2,
+                        N=1200,
                         transform='id',
                         combiner='xor',
                         seed_instance=314159 + i,
-                        iteration_limit=50,
+                        iteration_limit=200,
                     )
                 )
                 for i in range(self.SAMPLE_SIZE)
             ])
 
+        # print("k = " + str(2))
+        # print("n = " + str(32))
+        # print("N = " + str(1200))
+
         return experiments
 
     def plot(self):
         # prepare data
-        data = self.experimenter.results['accuracy']
-        print(len(data))
-        print(data)
+        data = self.experimenter.results
+        accuracy = data['accuracy']
+        time = data['measured_time']
 
         # plot
         fig = figure()
-        ax = fig.add_subplot(1, 1, 1)
+        # ax = fig.add_subplot(1, 1, 1)
         sns.set()
         # bins = np.linspace(0,1,10)
-        ax = sns.distplot(data)         # , bins=bins)
+        ax = sns.distplot(accuracy)         # , bins=bins)
 
         ax.set_xlabel('Accuracy')
-        ax.set_ylabel('Count')
-        fig.suptitle('pypuf Hybrid Attack Accuracy Results')
+        # ax.set_ylabel('Count')
+        fig.suptitle('pypuf Hybrid Attack Accuracy Distribution')
         fig.savefig('figures/hybrid_attack_accuracy', bbox_inches='tight', pad_inches=.5)
+
+        fig = figure()
+        ax = sns.distplot(time)
+
+        ax.set_xlabel('Time')
+        # ax.set_ylabel('Count')
+        fig.suptitle('pypuf Hybrid Attack Duration Distribution')
+        fig.savefig('figures/hybrid_attack_duration', bbox_inches='tight', pad_inches=.5)
+
+        print("mean = " + str(np.mean(accuracy)))
+        print("mean time = " + str(np.mean(time)))
