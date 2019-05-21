@@ -7,7 +7,8 @@ from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session,
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log
+from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log, \
+    square
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Sequential
@@ -86,25 +87,19 @@ class MultiLayerPerceptronTensorflow(Learner):
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
-        self.nn.add(Dense(units=1, activation='sigmoid' if self.zero_one else 'tanh', use_bias=True))
+        self.nn.add(Dense(units=1, activation='sigmoid' if self.zero_one else 'tanh', kernel_regularizer=l2_loss,
+                          use_bias=True))
 
         def pypuf_accuracy(y_true, y_pred):
             accuracy = tf_mean(tf_sign(y_true * y_pred))
             return tf_max(accuracy, 1 - accuracy)
 
-        def pypuf_log_loss_1_1(y_true, y_pred):
-            y_true = (y_true + 1) / 2
-            y_pred = (y_pred + 1) / 2
-            return - multiply(y_true, log(y_pred + self.EPSILON)) \
-                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
-
-        def pypuf_log_loss_0_1(y_true, y_pred):
-            return - multiply(y_true, log(y_pred + self.EPSILON)) \
-                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+        def pypuf_squared_hinge_loss_0_1(y_true, y_pred):
+            return tf_max(0, square(1 - multiply(y_true*2 - 1, y_pred*2 - 1)))
 
         self.nn.compile(
             optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=self.EPSILON),
-            loss=pypuf_log_loss_0_1 if self.zero_one else pypuf_log_loss_1_1,
+            loss=pypuf_squared_hinge_loss_0_1 if self.zero_one else 'squared_hinge',
             metrics=[pypuf_accuracy],
         )
 

@@ -22,18 +22,18 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
 
     SIZES = [
         (64, 4, 0.4e6),
-        #(64, 5, 0.8e6),
+        (64, 5, 0.8e6),
         (64, 6, 2e6),
-        #(64, 7, 5e6),
-        (64, 8, 20e6),
+        (64, 7, 5e6),
+        (64, 8, 30e6),
     ]
 
     SAMPLES_PER_POINT = {
         4: 20,
         5: 20,
         6: 20,
-        7: 10,
-        8: 10,
+        7: 5,
+        8: 5,
     }
 
     PLOT_ESTIMATORS = ['mean', 'best', 'success=0.9']
@@ -47,19 +47,19 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.0005, 0.001, 0.0015],
-        5: [0.0005, 0.001, 0.0015],
-        6: [0.0005, 0.001, 0.0015, 0.006, 0.008],
-        7: [0.0005, 0.001, 0.0015],
-        8: [0.0005, 0.001, 0.0015],
+        4: [0.0015, 0.0025, 0.0035, 0.0045],
+        5: [0.001, 0.003, 0.005, 0.007, 0.009, 0.011],
+        6: [0.001, 0.003, 0.005, 0.007, 0.009, 0.011],
+        7: [0.0006, 0.001, 0.0014, 0.0018],
+        8: [0.0006, 0.001, 0.0014, 0.0018],
     }
 
     PENALTIES = {
-        4: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
-        5: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
-        6: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
-        7: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
-        8: [0.00015, 0.00025, 0.00035, 0.0002, 0.0003],
+        4: [0.000125, 0.0002, 0.000275],
+        5: [0.000125, 0.0002, 0.000275],
+        6: [0.000125, 0.0002, 0.000275],
+        7: [0.000125, 0.0002, 0.000275],
+        8: [0.000125, 0.0002, 0.000275],
     }
 
     BETAS_1 = {
@@ -105,6 +105,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     def experiments(self):
         experiments = []
         for (n, k, N) in self.SIZES:
+            N = N / 2
             validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
             layers = [2**k, 2**k, 2**k]
             for i in range(self.SAMPLES_PER_POINT[k]):
@@ -114,6 +115,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                         for beta_1 in self.BETAS_1[k]:
                             for beta_2 in self.BETAS_2[k]:
                                 for tolerance in self.TOLERANCES[k]:
+                                    # """
                                     experiments.append(
                                         ExperimentMLPScikitLearn(
                                             progress_log_prefix=None,
@@ -173,6 +175,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                             )
                                         )
                                     )
+                                    # """
                                     experiments.append(
                                         ExperimentMLPTensorflow(
                                             progress_log_prefix=None,
@@ -211,12 +214,12 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPScikitLearn'],
         )
         self.plot_helper(
-            name='Tensorflow {0, 1}',
+            name='Tensorflow_{0,1}',
             df=self.experimenter.results[(self.experimenter.results['zero_one'] == True)
                                          & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
         )
         self.plot_helper(
-            name='Tensorflow {-1, 1}',
+            name='Tensorflow_{-1,1}',
             df=self.experimenter.results[(self.experimenter.results['zero_one'] == False)
                                          & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
         )
