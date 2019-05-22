@@ -3,7 +3,7 @@ This module provides several different implementations of arbiter PUF simulation
 model is the core of each simulation class.
 """
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
-from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append, int8
+from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append, int8, arange
 from numpy.random import RandomState
 from pypuf import tools
 from pypuf.simulation.base import Simulation
@@ -81,6 +81,29 @@ class LTFArray(Simulation):
                 ]),
             1
         )
+
+    def combiner_lookuptable(self, responses):
+        """
+        Combines output responses by looking up a bit in a lookup table.
+        Let Z be the number represented by the binary development of
+        k responses, then the combiner returns the bit at position Z of
+        the lookup table.
+        :param responses: a array with a number of vectors of single LTF results
+        :return: array of float or int shape(N)
+                 Array of responses for the N different challenges.
+        """
+        assert(not self.lut is None)
+        lut = self.lut
+        k = len(responses[0])
+        assert(len(self.lut) >= 2**k)
+        # Convert responses to binary (0,1)-vectors
+        responses = int8(sign(responses))
+        if -1 in responses:
+            responses = transform_challenge_11_to_01(responses)
+        # Bases = [2**k-1, 2**k-2, ... , 2**0]
+        bases = 2**arange(k)[::-1]
+        pos = responses.dot(bases)
+        return lut[pos]
 
     @classmethod
     def transform_id(cls, challenges, k):
@@ -589,7 +612,7 @@ class LTFArray(Simulation):
         """
         return random_instance.normal(loc=mu, scale=sigma, size=(k, n))
 
-    def __init__(self, weight_array, transform, combiner, bias=None):
+    def __init__(self, weight_array, transform, combiner, bias=None, lut=None):
         """
         Initializes an LTFArray based on given weight_array and
         combiner function with appropriate transformation of challenges.
@@ -602,6 +625,8 @@ class LTFArray(Simulation):
         """
         (self.k, self.n) = shape(weight_array)
         self.weight_array = weight_array
+
+        self.lut = lut
 
         if isinstance(transform, CompoundTransformation):
             self.transform = transform.build()
