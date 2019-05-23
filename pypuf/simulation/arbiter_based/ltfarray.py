@@ -99,7 +99,7 @@ class LTFArray(Simulation):
         # Convert responses to binary (0,1)-vectors
         responses = int8(sign(responses))
         if -1 in responses:
-            responses = transform_challenge_11_to_01(responses)
+            responses = tools.transform_challenge_11_to_01(responses)
         # Bases = [2**k-1, 2**k-2, ... , 2**0]
         bases = 2**arange(k)[::-1]
         pos = responses.dot(bases)
