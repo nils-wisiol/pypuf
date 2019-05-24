@@ -8,6 +8,7 @@ from pypuf.simulation.base import Simulation    # Neural Net return type
 
 # ML Utilities
 from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.layers import Dense, Activation
 from tensorflow.python.keras.backend import maximum, mean, sign
 import numpy as np
@@ -55,7 +56,7 @@ class DeepNeuralNetwork(Learner):
     """
 
     def __init__(self, train_set, valid_set, monomials=None,
-                 batch_size=64, epochs=1000, gpu_id=None):
+                 batch_size=64, epochs=1000, gpu_id=None, parameters=None):
         """
         :param train_set: tools.TrainingSet
          Collection of Challenge/Response pairs to train the Perceptron
@@ -77,6 +78,7 @@ class DeepNeuralNetwork(Learner):
         self.batch_size = batch_size
         self.epochs = epochs
         self.gpu_id = gpu_id
+        self.parameters = parameters
 
         # If no monomials are provided, use identity
         if monomials is None:
@@ -103,15 +105,14 @@ class DeepNeuralNetwork(Learner):
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + mean(sign(y_true * y_pred))) / 2
             return maximum(accuracy, 1 - accuracy)
+        n, k = self.parameters.n, self.parameters.k
         model = Sequential()
-        model.add(Dense(self.input_len, input_dim=self.input_len, activation='tanh'))
-        model.add(Dense(self.input_len, activation='tanh'))
-        model.add(Dense(self.input_len, activation='tanh'))
-        model.add(Dense(self.input_len, activation='tanh'))
-        model.add(Dense(self.input_len, activation='tanh'))
+        model.add(Dense(2**k, input_dim=self.input_len, activation='relu'))
+        model.add(Dense(2**k, activation='relu'))
+        model.add(Dense(2**k, activation='relu'))
         model.add(Dense(1, activation='tanh'))
-        model.compile(loss='squared_hinge',
-                      optimizer='adam',
+        model.compile(loss='binary_crossentropy',
+                      optimizer=Adam(lr=0.001),
                       metrics=[pypuf_accuracy])
         self.model = model
 

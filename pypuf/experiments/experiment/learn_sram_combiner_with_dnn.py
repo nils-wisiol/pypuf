@@ -64,8 +64,8 @@ class SRAMDNN(Experiment):
                 self.parameters.k
                 ),
             transform='atf',
-            combiner='lookuptable',
-            lut=sram
+            combiner='xor'
+            #lut=sram
         )
         # Generate training and test sets from PUF simulation
         N_valid = max(min(self.parameters.N // 20, 10000), 200)  # ???@chris
@@ -76,7 +76,8 @@ class SRAMDNN(Experiment):
         self.learner = DeepNeuralNetwork(self.train_set, self.valid_set,
                                   monomials=None,
                                   batch_size=self.parameters.batch_size,
-                                  epochs=self.parameters.epochs)
+                                  epochs=self.parameters.epochs,
+                                  parameters=self.parameters)
 
     def run(self):
         """
