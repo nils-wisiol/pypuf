@@ -19,6 +19,7 @@ def main():
     timer = clock if sys.platform == 'win32' else time
     start_time = timer()
 
+
     instance = LTFArray(
         weight_array=LTFArray.normal_weights(n=32, k=2),  # do not change, can be simulated by learner
         transform=LTFArray.transform_id,  # has to match learner, otherwise learner cannot match
