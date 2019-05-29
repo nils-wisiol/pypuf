@@ -23,7 +23,9 @@ class Parameters(NamedTuple):
     preprocessing: str
     layers: Iterable[int]
     activation: str
-    zero_one: bool
+    loss: str
+    metric_in: int
+    metric_out: int
     learning_rate: float
     penalty: float
     beta_1: float
@@ -65,7 +67,9 @@ class ExperimentMLPTensorflow(Experiment):
                 parameters.validation_frac,
                 parameters.layers,
                 parameters.activation,
-                parameters.zero_one,
+                parameters.loss,
+                parameters.metric_in,
+                parameters.metric_out,
                 parameters.learning_rate,
                 parameters.beta_1,
                 parameters.beta_2,
@@ -108,7 +112,9 @@ class ExperimentMLPTensorflow(Experiment):
             preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             activation=self.parameters.activation,
-            zero_one=self.parameters.zero_one,
+            loss=self.parameters.loss,
+            metric_in=self.parameters.metric_in,
+            metric_out=self.parameters.metric_out,
             learning_rate=self.parameters.learning_rate,
             penalty=self.parameters.penalty,
             beta_1=self.parameters.beta_1,

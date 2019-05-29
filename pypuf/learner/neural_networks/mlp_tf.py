@@ -29,9 +29,33 @@ class MultiLayerPerceptronTensorflow(Learner):
     EPSILON = 1e-7  # should not be smaller, else NaN in log
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
-                 activation='relu', zero_one=False, learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999,
-                 tolerance=0.001, patience=5, checkpoint_name=None, print_learning=False, iteration_limit=100,
-                 batch_size=1000, seed_model=0xc0ffee):
+                 activation='relu', loss='squared_hinge', metric_in=-1, metric_out=-1, learning_rate=0.001,
+                 penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=5, checkpoint_name=None,
+                 print_learning=False, iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
+        """
+        :param n:               int; positive, length of PUF (typically power of 2)
+        :param k:               int; positive, width of PUF (typically between 1 and 8)
+        :param training_set:    object holding two arrays (challenges, responses); elements are -1 and 1
+        :param validation_set:  same as training_set, but only used for validation (not for training)
+        :param transformation:  function; changes the challenges (while expanding them to the size of k * n)
+        :param preprocessing:   string: 'no', 'short', 'full'; determines how the learner changes the challenges
+        :param layers:          list of ints; number of nodes within hidden layers
+        :param activation:      function or string;
+        :param loss:            string: 'squared_hinge', 'log_loss'; loss function used in learning
+        :param metric_in:       int: -1, 0; determines if the challenges are in {-1, 1} or {0, 1} metric
+        :param metric_out:      int: -1, 0; determines if the responses are in {-1, 1} or {0, 1} metric
+        :param learning_rate:   float; between 0 and 1, parameter of Adam optimizer
+        :param penalty:         float; between 0 and 1, parameter of l2 regularization term used in learning
+        :param beta_1:          float; between 0 and 1, parameter of Adam optimizer
+        :param beta_2:          float; between 0 and 1, parameter of Adam optimizer
+        :param tolerance:       float; between 0 and 1, stopping criterium: minimum change of loss
+        :param patience:        int; positive, stopping criterium: maximum number of epochs with low change of loss
+        :param checkpoint_name: string; prefix of checkpoint's file name
+        :param print_learning:  bool; whether to print learning progress of tensorflow
+        :param iteration_limit: int; positive, maximum number of epochs
+        :param batch_size:      int; between 1 and N, number of training samples used until updating the model's weights
+        :param seed_model:      int; between 1 and 2**32, seed for PRNG
+        """
         self.n = n
         self.k = k
         self.training_set = training_set
@@ -40,7 +64,9 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.preprocessing = preprocessing
         self.layers = layers
         self.activation = activation
-        self.zero_one = zero_one
+        self.loss = loss
+        self.metric_in = metric_in
+        self.metric_out = metric_out
         self.learning_rate = learning_rate
         self.penalty = penalty
         self.beta_1 = beta_1
@@ -66,16 +92,23 @@ class MultiLayerPerceptronTensorflow(Learner):
         if self.preprocessing != 'no':
             self.training_set = ChallengeResponseSet(
                 challenges=preprocess(self.training_set.challenges, self.k),
-                responses=((self.training_set.responses + 1) / 2) if self.zero_one else self.training_set.responses
+                responses=self.training_set.responses,
             )
             self.validation_set = ChallengeResponseSet(
                 challenges=preprocess(self.validation_set.challenges, self.k),
-                responses=((self.validation_set.responses + 1) / 2) if self.zero_one else self.validation_set.responses
+                responses=self.validation_set.responses
             )
             if self.preprocessing == 'full':
                 in_shape = self.k * self.n
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
+            if self.metric_in == 0:
+                self.training_set.challenges = (self.training_set.challenges + 1) / 2
+                self.validation_set.challenges = (self.validation_set.challenges + 1) / 2
+            if self.metric_out == 0:
+                self.validation_set.responses = (self.validation_set.responses + 1) / 2
+                self.training_set.responses = (self.training_set.responses + 1) / 2
+
         l2_loss = l2(self.penalty) if self.penalty != 0 else None
         self.nn = Sequential()
         self.nn.add(Dense(
@@ -87,19 +120,33 @@ class MultiLayerPerceptronTensorflow(Learner):
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
-        self.nn.add(Dense(units=1, activation='sigmoid' if self.zero_one else 'tanh', kernel_regularizer=l2_loss,
+        self.nn.add(Dense(units=1, activation='sigmoid' if self.metric_out else 'tanh', kernel_regularizer=l2_loss,
                           use_bias=True))
 
         def pypuf_accuracy(y_true, y_pred):
             accuracy = tf_mean(tf_sign(y_true * y_pred))
             return tf_max(accuracy, 1 - accuracy)
 
-        def pypuf_squared_hinge_loss_0_1(y_true, y_pred):
-            return tf_max(0, square(1 - multiply(y_true*2 - 1, y_pred*2 - 1)))
+        def log_loss_1_1(y_true, y_pred):
+            y_true = (y_true + 1) / 2
+            y_pred = (y_pred + 1) / 2
+            return - multiply(y_true, log(y_pred + self.EPSILON)) \
+                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+
+        def log_loss_0_1(y_true, y_pred):
+            return - multiply(y_true, log(y_pred + self.EPSILON)) \
+                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+
+        def squared_hinge_loss_0_1(y_true, y_pred):
+            return tf_max(0*y_true, (1 - ((y_true*2 - 1) * (y_pred*2 - 1))) ** 2)
 
         self.nn.compile(
             optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=self.EPSILON),
-            loss=pypuf_squared_hinge_loss_0_1 if self.zero_one else 'squared_hinge',
+            loss=log_loss_0_1 if self.loss == 'log_loss' and self.metric_out == 0
+            else log_loss_1_1 if self.loss == 'log_loss' and self.metric_out == -1
+            else squared_hinge_loss_0_1 if self.loss == 'squared_hinge' and self.metric_out == 0
+            else 'squared_hinge' if self.loss == 'squared_hinge' and self.metric_out == -1
+            else 'binary_crossentropy',
             metrics=[pypuf_accuracy],
         )
 
@@ -116,7 +163,7 @@ class MultiLayerPerceptronTensorflow(Learner):
                 predictions = (predictions * 2) - 1 if self.zero_one else predictions
                 return sign(predictions).flatten()
 
-        self.model = Model(nn=self.nn, n=self.n, k=self.k, preprocess=preprocess, zero_one=self.zero_one)
+        self.model = Model(nn=self.nn, n=self.n, k=self.k, preprocess=preprocess, zero_one=self.metric_out)
 
     def learn(self):
         converged = EarlyStopping(
