@@ -3,11 +3,12 @@ from os import environ
 from numpy import reshape, sign
 from numpy.random import seed
 from numpy.random.mtrand import RandomState
-from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session
+from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session, multiply
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session
+from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log, \
+    square
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Sequential
@@ -25,10 +26,11 @@ set_verbosity(ERROR)
 class MultiLayerPerceptronTensorflow(Learner):
 
     SEED_RANGE = 2 ** 32
+    EPSILON = 1e-7  # should not be smaller, else NaN in log
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
-                 activation='relu', learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001,
-                 patience=5, checkpoint_name=None, print_learning=False, termination_threshold=1.0, iteration_limit=100,
+                 activation='relu', zero_one=False, learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999,
+                 tolerance=0.001, patience=5, checkpoint_name=None, print_learning=False, iteration_limit=100,
                  batch_size=1000, seed_model=0xc0ffee):
         self.n = n
         self.k = k
@@ -38,6 +40,7 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.preprocessing = preprocessing
         self.layers = layers
         self.activation = activation
+        self.zero_one = zero_one
         self.learning_rate = learning_rate
         self.penalty = penalty
         self.beta_1 = beta_1
@@ -47,7 +50,6 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(self.SEED_RANGE)
-        self.termination_threshold = termination_threshold
         self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(n, k, preprocessing, checkpoint_name) + '.hdf5'
         self.print_learning = 0 if not print_learning else 1
         self.nn = None
@@ -64,11 +66,11 @@ class MultiLayerPerceptronTensorflow(Learner):
         if self.preprocessing != 'no':
             self.training_set = ChallengeResponseSet(
                 challenges=preprocess(self.training_set.challenges, self.k),
-                responses=self.training_set.responses
+                responses=((self.training_set.responses + 1) / 2) if self.zero_one else self.training_set.responses
             )
             self.validation_set = ChallengeResponseSet(
                 challenges=preprocess(self.validation_set.challenges, self.k),
-                responses=self.validation_set.responses
+                responses=((self.validation_set.responses + 1) / 2) if self.zero_one else self.validation_set.responses
             )
             if self.preprocessing == 'full':
                 in_shape = self.k * self.n
@@ -85,48 +87,38 @@ class MultiLayerPerceptronTensorflow(Learner):
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
-        self.nn.add(Dense(units=1, activation='sigmoid', use_bias=True))
+        self.nn.add(Dense(units=1, activation='sigmoid' if self.zero_one else 'tanh', kernel_regularizer=l2_loss,
+                          use_bias=True))
 
         def pypuf_accuracy(y_true, y_pred):
             accuracy = tf_mean(tf_sign(y_true * y_pred))
             return tf_max(accuracy, 1 - accuracy)
 
+        def pypuf_squared_hinge_loss_0_1(y_true, y_pred):
+            return tf_max(0, square(1 - multiply(y_true*2 - 1, y_pred*2 - 1)))
+
         self.nn.compile(
-            optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=1e-8, amsgrad=True),
-            loss='binary_crossentropy',   # 'squared_hinge',    only for responses and predictions within [-1, 1]
+            optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=self.EPSILON),
+            loss=pypuf_squared_hinge_loss_0_1 if self.zero_one else 'squared_hinge',
             metrics=[pypuf_accuracy],
         )
 
         class Model:
-            def __init__(self, nn, n, k, preprocess):
+            def __init__(self, nn, n, k, preprocess, zero_one):
                 self.nn = nn
                 self.n = n
                 self.k = k
                 self.preprocess = preprocess
+                self.zero_one = zero_one
 
             def eval(self, cs):
-                return sign((self.nn.predict(x=self.preprocess(challenges=cs, k=self.k)) * 2) - 1).flatten()
+                predictions = self.nn.predict(x=self.preprocess(challenges=cs, k=self.k))
+                predictions = (predictions * 2) - 1 if self.zero_one else predictions
+                return sign(predictions).flatten()
 
-        self.model = Model(nn=self.nn, n=self.n, k=self.k, preprocess=preprocess)
+        self.model = Model(nn=self.nn, n=self.n, k=self.k, preprocess=preprocess, zero_one=self.zero_one)
 
     def learn(self):
-        class TerminateOnThreshold(EarlyStopping):
-            def __init__(self, threshold, **kwargs):
-                self.threshold = threshold
-                super().__init__(**kwargs)
-
-            def on_epoch_end(self, epoch, logs=None):
-                if logs.get(self.monitor) >= self.threshold:
-                    self.model.stop_training = True
-                super().on_epoch_end(epoch, logs)
-
-        accurate = TerminateOnThreshold(
-            threshold=self.termination_threshold,
-            monitor='val_pypuf_accuracy',
-            patience=self.iteration_limit,
-            verbose=self.print_learning,
-            mode='max',
-        )
         converged = EarlyStopping(
             monitor='val_loss',
             min_delta=self.tolerance,
@@ -134,15 +126,15 @@ class MultiLayerPerceptronTensorflow(Learner):
             verbose=self.print_learning,
             mode='min',
         )
-        callbacks = [converged] if self.termination_threshold == 1.0 else [converged, accurate]
+        callbacks = [converged]
         self.history = self.nn.fit(
             x=self.training_set.challenges,
-            y=((self.training_set.responses + 1) / 2),
+            y=self.training_set.responses,
             batch_size=self.batch_size,
             epochs=self.iteration_limit,
             callbacks=callbacks,
-            validation_data=(self.validation_set.challenges, ((self.validation_set.responses + 1) / 2)),
-            shuffle=False,
+            validation_data=(self.validation_set.challenges, self.validation_set.responses),
+            shuffle=True,
             verbose=self.print_learning,
         )
         return self.model

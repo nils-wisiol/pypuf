@@ -22,16 +22,15 @@ class SRAMCombinerLearning(Study):
 
     def experiments(self):
         experiments = []
-        for k in [4,8,16]:
-            for n in [32,64]:
-                params = Parameters(n=n, k=k, N=1000,
-                                    batch_size=100,
-                                    epochs=100)
-                e = SRAMDNN(
-                    progress_log_prefix=None,
-                    parameters=params
-                )
-                experiments.append(e)
+        for k, N in [(9,4e5)]:#,(5,8e5), (6,2e6)]:#,(7,7e6)]:
+            params = Parameters(n=128, k=k, N=int(N),
+                                batch_size=1000,
+                                epochs=100)
+            e = SRAMDNN(
+                progress_log_prefix=None,
+                parameters=params
+            )
+            experiments.append(e)
         return experiments
 
     def plot(self):
@@ -42,11 +41,10 @@ class SRAMCombinerLearning(Study):
                 facet = catplot(
                     x='k',
                     y='accuracy',
-                    col='n',
-                    kind='bar',
+                    kind='point',
                     data=data
                 )
-                facet.set_axis_labels('Number of arbiter PUFs k', 'DNN Accuracy')
+                facet.set_axis_labels('Number of arbiter PUFs k', 'Neural Net Accuracy')
                 facet.fig.set_size_inches(12, 4)
                 facet.fig.subplots_adjust(top=.8, wspace=.02, hspace=.02)
                 facet.fig.suptitle('Arbiter PUF with SRAM Combiner')

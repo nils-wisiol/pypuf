@@ -103,7 +103,18 @@ class LTFArray(Simulation):
         # Bases = [2**k-1, 2**k-2, ... , 2**0]
         bases = 2**arange(k)[::-1]
         pos = responses.dot(bases)
+
+        print("Using SRAM Lookup-Table:")
+        print("Bits", responses)
+        print("Positions", pos)
+        print("Table Entries", lut[pos])
+
         return lut[pos]
+
+
+    def combiner_random(self, responses):
+        l = len(responses)
+        return RandomState().choice([-1,1], size=l)
 
     @classmethod
     def transform_id(cls, challenges, k):

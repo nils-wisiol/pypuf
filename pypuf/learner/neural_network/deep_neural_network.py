@@ -7,6 +7,9 @@ from pypuf.learner.base import Learner          # Neural Net super class
 from pypuf.simulation.base import Simulation    # Neural Net return type
 
 # ML Utilities
+from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.regularizers import l2
+from tensorflow.python.keras.metrics import binary_accuracy
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.layers import Dense, Activation
@@ -104,14 +107,17 @@ class DeepNeuralNetwork(Learner):
         """
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + mean(sign(y_true * y_pred))) / 2
-            return maximum(accuracy, 1 - accuracy)
+            return accuracy
+
+        l2_loss = l2(0.0002)
+
         n, k = self.parameters.n, self.parameters.k
         model = Sequential()
-        model.add(Dense(2**k, input_dim=self.input_len, activation='relu'))
-        model.add(Dense(2**k, activation='relu'))
-        model.add(Dense(2**k, activation='relu'))
-        model.add(Dense(1, activation='tanh'))
-        model.compile(loss='binary_crossentropy',
+        model.add(Dense(2**k, input_dim=self.input_len, activation='relu', kernel_regularizer=l2_loss))
+        model.add(Dense(2**k, activation='relu', kernel_regularizer=l2_loss))
+        model.add(Dense(2**k, activation='relu', kernel_regularizer=l2_loss))
+        model.add(Dense(1, activation='tanh', kernel_regularizer=l2_loss))
+        model.compile(loss='squared_hinge',
                       optimizer=Adam(lr=0.001),
                       metrics=[pypuf_accuracy])
         self.model = model
@@ -127,9 +133,21 @@ class DeepNeuralNetwork(Learner):
         x_valid = self.linearize(self.valid_set.challenges)
         y_valid = self.valid_set.responses
 
+
+        # Define criterium to stop learning if error as converged
+        converged = EarlyStopping(
+            monitor='val_loss',
+            min_delta=0.1,
+            patience=10,
+            verbose=0,
+            mode='min',
+        )
+        callbacks = [converged]
+
         self.history = self.model.fit(x=x, y=y,
                                       batch_size=self.batch_size,
                                       epochs=self.epochs,
+                                      callbacks=callbacks,
                                       validation_data=(x_valid, y_valid),
                                       verbose=False)
 
@@ -139,7 +157,6 @@ class DeepNeuralNetwork(Learner):
         a 'eval(challenges)' method.
         """
         self.prepare()
-        # Fit the Perceptron (self.model) normally or using GPU
         if self.gpu_id is None:
             self.fit()
         else:

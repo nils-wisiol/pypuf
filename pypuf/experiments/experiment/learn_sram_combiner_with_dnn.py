@@ -56,16 +56,16 @@ class SRAMDNN(Experiment):
         """
         # Create simulation that generates PUF challenge-response pairs
         k = self.parameters.k
-        sram = RandomState(seed=0xdeadbeef).normal(size=2**k)
-        sram = sign(sram)
+        sram = RandomState().choice([-1,1], size=2**k)
+        print("Generated SRAM Table:", sram)
         self.simulation = LTFArray(
             weight_array=LTFArray.normal_weights(
                 self.parameters.n,
                 self.parameters.k
                 ),
-            transform='atf',
-            combiner='xor'
-            #lut=sram
+            transform='id',
+            combiner='lookuptable',
+            lut=sram
         )
         # Generate training and test sets from PUF simulation
         N_valid = max(min(self.parameters.N // 20, 10000), 200)  # ???@chris
@@ -83,7 +83,6 @@ class SRAMDNN(Experiment):
         """
         Start the training of the Perceptron
         """
-        self.prepare()
         self.model = self.learner.learn()
 
     def analyze(self):
