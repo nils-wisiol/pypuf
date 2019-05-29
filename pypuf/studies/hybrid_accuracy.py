@@ -11,6 +11,7 @@ from os import getpid
 from typing import NamedTuple
 from uuid import UUID
 from scipy.special import comb
+from typing import NamedTuple, Tuple
 
 
 class HybridAccuracyParameters(NamedTuple):
@@ -95,7 +96,24 @@ class HybridAccuracyExperiment(Experiment):
         )
 
 
+class TableEntryParameters(NamedTuple):
+    """
+    Parameters for the experiments for the individual entries of the resulting run-time table.
+    """
+    n: int
+    k: int
+    N: int
+
+
 class HybridAccuracy(Study):
+    PARAMETERS = PARAMETERS = [
+        # TableEntryParameters(64, 2, 1200),
+        # TableEntryParameters(64, 2, 5000),
+        # TableEntryParameters(64, 2, 80000),
+        TableEntryParameters(32, 2, 1200),
+        TableEntryParameters(32, 2, 80000),
+        # TableEntryParameters(32, 4, 120000),
+    ]
     SAMPLE_SIZE = 200
     TRANSFORMS = ["id"]
 
@@ -104,22 +122,22 @@ class HybridAccuracy(Study):
 
     def experiments(self):
         experiments = []
-
-        experiments.extend([
-                HybridAccuracyExperiment(
-                    progress_log_prefix=None,
-                    parameters=HybridAccuracyParameters(
-                        n=32,
-                        k=2,
-                        N=1200,
-                        transform='id',
-                        combiner='xor',
-                        seed_instance=314159 + i,
-                        iteration_limit=200,
+        for p in self.PARAMETERS:
+            experiments.extend([
+                    HybridAccuracyExperiment(
+                        progress_log_prefix=None,
+                        parameters=HybridAccuracyParameters(
+                            n=p.n,
+                            k=p.k,
+                            N=p.N,
+                            transform='id',
+                            combiner='xor',
+                            seed_instance=314159 + i,
+                            iteration_limit=200,
+                        )
                     )
-                )
-                for i in range(self.SAMPLE_SIZE)
-            ])
+                    for i in range(self.SAMPLE_SIZE)
+                ])
 
         # print("k = " + str(2))
         # print("n = " + str(32))
