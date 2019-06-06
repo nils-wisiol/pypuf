@@ -23,6 +23,7 @@ class Parameters(NamedTuple):
     preprocessing: str
     layers: Iterable[int]
     activation: str
+    metric_in: int
     learning_rate: float
     penalty: float
     beta_1: float
@@ -38,7 +39,8 @@ class Result(NamedTuple):
     name: str
     experiment_id: UUID
     pid: int
-    zero_one: bool
+    metric_out: int
+    loss: str
     measured_time: float
     iterations: int
     accuracy: float
@@ -65,6 +67,7 @@ class ExperimentMLPScikitLearn(Experiment):
                 parameters.validation_frac,
                 parameters.layers,
                 parameters.activation,
+                parameters.metric_in,
                 parameters.learning_rate,
                 parameters.beta_1,
                 parameters.beta_2,
@@ -130,7 +133,8 @@ class ExperimentMLPScikitLearn(Experiment):
             name=self.NAME,
             experiment_id=self.id,
             pid=getpid(),
-            zero_one=True,
+            metric_out=0,
+            loss='log_loss',
             measured_time=self.measured_time,
             iterations=self.learner.nn.n_iter_,
             accuracy=1.0 - tools.approx_dist(

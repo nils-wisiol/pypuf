@@ -11,8 +11,9 @@ class MultiLayerPerceptronScikitLearn(Learner):
     SEED_RANGE = 2 ** 32
 
     def __init__(self, n, k, training_set, validation_frac, transformation, preprocessing, layers=(10, 10),
-                 activation='relu', learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001,
-                 patience=5, print_learning=False, iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
+                 activation='relu', metric_in=-1, learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999,
+                 tolerance=0.001, patience=5, print_learning=False, iteration_limit=100, batch_size=1000,
+                 seed_model=0xc0ffee):
         self.n = n
         self.k = k
         self.training_set = training_set
@@ -21,6 +22,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         self.preprocessing = preprocessing
         self.layers = layers
         self.activation = activation
+        self.metric_in = metric_in
         self.learning_rate = learning_rate
         self.penalty = penalty
         self.beta_1 = beta_1
@@ -45,6 +47,8 @@ class MultiLayerPerceptronScikitLearn(Learner):
             if self.preprocessing == 'full':
                 in_shape = self.k * self.n
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
+        if self.metric_in == 0:
+            self.training_set.challenges = (self.training_set.challenges + 1) / 2
         self.nn = MLPClassifier(
             solver='adam',
             alpha=self.penalty,

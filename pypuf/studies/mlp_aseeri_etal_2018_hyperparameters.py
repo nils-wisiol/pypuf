@@ -1,5 +1,5 @@
 from matplotlib.pyplot import subplots
-from matplotlib.ticker import FixedLocator, FuncFormatter
+from matplotlib.ticker import FixedLocator
 from seaborn import lineplot, scatterplot
 
 from pypuf.studies.base import Study
@@ -44,7 +44,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         8: [[2**8, 2**8, 2**8]],
     }
 
-    PLOT_ESTIMATORS = ['mean', 'best', 'success=0.9']
+    PLOT_ESTIMATORS = ['mean']
 
     LOSSES = {
         4: ['squared_hinge', 'log_loss'],
@@ -71,19 +71,19 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.0015, 0.0025, 0.0035, 0.0045],
-        5: [0.001, 0.003, 0.005, 0.007, 0.009, 0.011],
-        6: [0.001, 0.003, 0.005, 0.007, 0.009, 0.011],
-        7: [0.0006, 0.001, 0.0014, 0.0018],
-        8: [0.0006, 0.001, 0.0014, 0.0018],
+        4: [0.003, 0.005, 0.007],
+        5: [0.003, 0.005, 0.007],
+        6: [0.003, 0.005, 0.007],
+        7: [0.005, 0.007, 0.009],
+        8: [0.0005, 0.001, 0.002, 0.004],
     }
 
     PENALTIES = {
-        4: [0.0002, 0.000125, 0.0002, 0.000275],
-        5: [0.0002, 0.000125, 0.0002, 0.000275],
-        6: [0.0002, 0.000125, 0.0002, 0.000275],
-        7: [0.000125, 0.0002, 0.000275],
-        8: [0.000125, 0.0002, 0.000275],
+        4: [0.0002],
+        5: [0.0002],
+        6: [0.0002],
+        7: [0.0002],
+        8: [0.0002],
     }
 
     BETAS_1 = {
@@ -129,47 +129,47 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     def experiments(self):
         experiments = []
         for (n, k, N) in self.SIZES:
-            #N = N / 2
-            validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
-            for layers in self.LAYERS[k]:
-                for i in range(self.SAMPLES_PER_POINT[k]):
-                    for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
-                        cycle = i * (len(self.LEARNING_RATES[k])) + j
-                        for penalty in self.PENALTIES[k]:
-                            for beta_1 in self.BETAS_1[k]:
-                                for beta_2 in self.BETAS_2[k]:
-                                    for tolerance in self.TOLERANCES[k]:
-                                        experiments.append(
-                                            ExperimentMLPScikitLearn(
-                                                progress_log_prefix=None,
-                                                parameters=Parameters_skl(
-                                                    seed_simulation=0x3 + cycle,
-                                                    seed_challenges=0x1415 + cycle,
-                                                    seed_model=0x9265 + cycle,
-                                                    seed_distance=0x3589 + cycle,
-                                                    n=n,
-                                                    k=k,
-                                                    N=int(N),
-                                                    validation_frac=validation_frac,
-                                                    transformation=self.TRANSFORMATION,
-                                                    combiner=self.COMBINER,
-                                                    preprocessing=self.PREPROCESSING,
-                                                    layers=layers,
-                                                    activation=self.ACTIVATION,
-                                                    learning_rate=learning_rate,
-                                                    penalty=penalty,
-                                                    beta_1=beta_1,
-                                                    beta_2=beta_2,
-                                                    tolerance=tolerance,
-                                                    patience=self.PATIENCE,
-                                                    iteration_limit=self.ITERATION_LIMIT,
-                                                    batch_size=1000 if k < 6 else 10000,
-                                                    print_learning=self.PRINT_LEARNING,
+            for metric_in, metric_out in self.METRICS[k]:
+                validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
+                for layers in self.LAYERS[k]:
+                    for i in range(self.SAMPLES_PER_POINT[k]):
+                        for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
+                            cycle = i * (len(self.LEARNING_RATES[k])) + j
+                            for penalty in self.PENALTIES[k]:
+                                for beta_1 in self.BETAS_1[k]:
+                                    for beta_2 in self.BETAS_2[k]:
+                                        for tolerance in self.TOLERANCES[k]:
+                                            experiments.append(
+                                                ExperimentMLPScikitLearn(
+                                                    progress_log_prefix=None,
+                                                    parameters=Parameters_skl(
+                                                        seed_simulation=0x3 + cycle,
+                                                        seed_challenges=0x1415 + cycle,
+                                                        seed_model=0x9265 + cycle,
+                                                        seed_distance=0x3589 + cycle,
+                                                        n=n,
+                                                        k=k,
+                                                        N=int(N),
+                                                        validation_frac=validation_frac,
+                                                        transformation=self.TRANSFORMATION,
+                                                        combiner=self.COMBINER,
+                                                        preprocessing=self.PREPROCESSING,
+                                                        layers=layers,
+                                                        activation=self.ACTIVATION,
+                                                        metric_in=metric_in,
+                                                        learning_rate=learning_rate,
+                                                        penalty=penalty,
+                                                        beta_1=beta_1,
+                                                        beta_2=beta_2,
+                                                        tolerance=tolerance,
+                                                        patience=self.PATIENCE,
+                                                        iteration_limit=self.ITERATION_LIMIT,
+                                                        batch_size=1000 if k < 6 else 10000,
+                                                        print_learning=self.PRINT_LEARNING,
+                                                    )
                                                 )
                                             )
-                                        )
-                                        """for loss in self.LOSSES[k]:
-                                            for metric_in, metric_out in self.METRICS[k]:
+                                            for loss in self.LOSSES[k]:
                                                 experiments.append(
                                                     ExperimentMLPTensorflow(
                                                         progress_log_prefix=None,
@@ -201,7 +201,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                             print_learning=self.PRINT_LEARNING,
                                                         )
                                                     )
-                                                )"""
+                                                )
         return experiments
 
     def plot(self):
@@ -210,27 +210,19 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPScikitLearn'],
         )
         self.plot_helper(
-            name='Tensorflow_{0,1}',
-            df=self.experimenter.results[(self.experimenter.results['zero_one'] == True)
-                                         & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
-        )
-        self.plot_helper(
-            name='Tensorflow_{-1,1}',
-            df=self.experimenter.results[(self.experimenter.results['zero_one'] == False)
-                                         & (self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
+            name='Tensorflow',
+            df=self.experimenter.results[(self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
         )
 
     def plot_helper(self, name, df):
         ks = sorted(list(set(self.experimenter.results['k'])))
-
-        format_time = lambda x, _ = None: '%.1fs' % x if x < 60 else '%.1fmin' % (x / 60)
 
         fig, axes = subplots(ncols=len(ks), nrows=len(self.PLOT_ESTIMATORS) + 2)
         fig.set_size_inches(8*len(ks), 6 * len(self.PLOT_ESTIMATORS))
 
         axes = axes.reshape((len(self.PLOT_ESTIMATORS) + 2, len(ks)))
 
-        self.experimenter.results['distance'] = 1 - self.experimenter.results['accuracy']
+        #self.experimenter.results['distance'] = 1 - self.experimenter.results['accuracy']
         for j, k in enumerate(ks):
             data = df[df['k'] == k]
 
@@ -238,7 +230,8 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 lineplot(
                     x='learning_rate',
                     y='accuracy',
-                    hue='penalty',
+                    hue='metric_in',
+                    style='metric_out',
                     data=data,
                     ax=axes[i][j],
                     legend=False,
@@ -248,52 +241,55 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 scatterplot(
                     x='learning_rate',
                     y='accuracy',
-                    hue='penalty',
+                    hue='metric_in',
+                    style='metric_out',
                     data=data,
                     ax=axes[i][j],
-                    legend='full',
+                    legend='full' if i == 0 else False,
                 )
-                axes[i][j].set_ylabel('k=%i\naccuracy %s' % (k, estimator))
+                axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.28, 1.1))
+                axes[i][j].set_title('k={},   {} samples per combination\n'.format(k, self.SAMPLES_PER_POINT[k]))
+                axes[i][j].set_ylabel('accuracy {}'.format(estimator))
                 axes[i][j].set_ylim((-0.05 if estimator.startswith('success') else 0.45, 1.05))
-                axes[i][j].legend(loc='upper left', bbox_to_anchor=(1, 1))
+                axes[i][j].xaxis.set_major_locator(FixedLocator(list(set(
+                    self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
+                axes[i][j].xaxis.set_tick_params(rotation=45 if len(axes[i][j].get_xticks()) > 7 else 0)
 
             scatterplot(
                 x='learning_rate',
                 y='accuracy',
-                hue='penalty',
+                hue='metric_in',
+                style='metric_out',
                 data=data,
                 ax=axes[-2][j],
-                legend='full',
+                legend=False,
             )
-            axes[-2][j].legend(loc='upper left', bbox_to_anchor=(1, 1))
+            axes[-2][j].xaxis.set_major_locator(FixedLocator(list(set(
+                self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
+            axes[-2][j].xaxis.set_tick_params(rotation=45 if len(axes[-2][j].get_xticks()) > 7 else 0)
+            axes[-2][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
+            axes[-2][j].grid(b=True, which='minor', color='gray', linestyle='--')
 
             lineplot(
-                x='distance',
+                x='accuracy',
                 y='measured_time',
                 data=data,
                 ax=axes[-1][j],
                 estimator='mean',
+                ci=None,
             )
-
-            axes[-1][j].set_xscale('log')
-            axes[-1][j].set_yscale('log')
+            y = self.REFERENCE_TIMES[(64, k)]
+            axes[-1][j].plot((0.5, 1), (y, y), label='reference time')
+            axes[-1][j].set_xscale('linear')
+            axes[-1][j].set_yscale('linear')
             axes[-1][j].set_xlabel('accuracy')
-            axes[-1][j].set_ylabel('measured_time\nreference: %s' % format_time(self.REFERENCE_TIMES[(64, k)]))
-            axes[-1][j].xaxis.set_major_locator(FixedLocator([
-                .5,
-                .3,
-                .2,
-                .1,
-                .05,
-                .02,
-                .01,
-                .005,
-            ]))
-            axes[-1][j].xaxis.set_major_formatter(FuncFormatter(lambda x, _: '%.3f' % (1 - x)))
-            axes[-1][j].yaxis.set_major_formatter(FuncFormatter(format_time))
-            axes[-1][j].yaxis.set_minor_formatter(FuncFormatter(format_time))
-
+            axes[-1][j].set_ylabel('runtime in s')
+            axes[-1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
+            axes[-1][j].grid(b=True, which='minor', color='gray', linestyle='--')
+            axes[-1][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
+            axes[-1][j].legend(loc='best')
         fig.subplots_adjust(hspace=.5, wspace=.5)
-        fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
+        title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
+        title.set_position([.5, 1.05])
 
         fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', pad_inches=.5)

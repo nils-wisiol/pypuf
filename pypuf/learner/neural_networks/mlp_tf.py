@@ -7,8 +7,7 @@ from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session,
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log, \
-    square
+from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Sequential
@@ -102,12 +101,12 @@ class MultiLayerPerceptronTensorflow(Learner):
                 in_shape = self.k * self.n
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
             self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
-            if self.metric_in == 0:
-                self.training_set.challenges = (self.training_set.challenges + 1) / 2
-                self.validation_set.challenges = (self.validation_set.challenges + 1) / 2
-            if self.metric_out == 0:
-                self.validation_set.responses = (self.validation_set.responses + 1) / 2
-                self.training_set.responses = (self.training_set.responses + 1) / 2
+        if self.metric_in == 0:
+            self.training_set.challenges = (self.training_set.challenges + 1) / 2
+            self.validation_set.challenges = (self.validation_set.challenges + 1) / 2
+        if self.metric_out == 0:
+            self.validation_set.responses = (self.validation_set.responses + 1) / 2
+            self.training_set.responses = (self.training_set.responses + 1) / 2
 
         l2_loss = l2(self.penalty) if self.penalty != 0 else None
         self.nn = Sequential()
@@ -120,7 +119,7 @@ class MultiLayerPerceptronTensorflow(Learner):
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
-        self.nn.add(Dense(units=1, activation='sigmoid' if self.metric_out else 'tanh', kernel_regularizer=l2_loss,
+        self.nn.add(Dense(units=1, activation='sigmoid' if self.metric_out == 0 else 'tanh', kernel_regularizer=l2_loss,
                           use_bias=True))
 
         def pypuf_accuracy(y_true, y_pred):
