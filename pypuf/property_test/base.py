@@ -67,8 +67,11 @@ class PropertyTest(object):
         challenges = broadcast_to(challenge, (measurements,) + challenge.shape)
         responses = instance.eval(challenges)
 
-        # Approximate the real response by majority vote over the measurements
-        real_response = sign(np_sum(responses, axis=0))
+        if hasattr(instance, 'eval_noise_free'):
+            real_response = instance.eval_noise_free(array([challenge]))[0]
+        else:
+            # Approximate the real response by majority vote over the measurements
+            real_response = sign(np_sum(responses, axis=0))
 
         # If we get simulations with response length > 1 then change the calculation to use the hamming distance.
         # This matrix contains the distances of responses of a challenge for r evaluations compared with real_response
