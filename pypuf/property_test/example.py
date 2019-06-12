@@ -25,7 +25,7 @@ def example_reliability():
         sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(n, 0.5)
     )
     challenge = array([-1, 1, 1, 1, -1, 1, 1, 1])
-    reliability = PropertyTest.reliability(instance, reshape(challenge, (1, n)))
+    reliability = PropertyTest.reliability(instance, challenge)
     print('The reliability is {}.'.format(reliability))
 
 

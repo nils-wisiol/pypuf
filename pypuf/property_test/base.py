@@ -1,7 +1,7 @@
 """
 This module provides a class for several property tests which can be used to check the attributes of an PUF.
 """
-from numpy import array, mean, median, sqrt, sign, reshape
+from numpy import array, mean, median, sqrt, sign, reshape, broadcast_to
 from numpy import min as np_min
 from numpy import max as np_max
 from numpy import sum as np_sum
@@ -64,9 +64,9 @@ class PropertyTest(object):
                  The reliability for Reliability in percent.
         """
         # Calculate the responses
-        responses = array([
-            instance.eval(challenge) for _ in range(measurements)
-        ])
+        challenges = broadcast_to(challenge, (measurements,) + challenge.shape)
+        responses = instance.eval(challenges)
+
         # Approximate the real response by majority vote over the measurements
         real_response = sign(np_sum(responses, axis=0))
 
@@ -87,11 +87,9 @@ class PropertyTest(object):
                  Array of reliabilities for the puf instances, challenges and measurements.
         """
         reliabilities = []
-        n = len(challenges[0])
         for ins in instances:
             for challenge in challenges:
-                shaped_challenge = reshape(challenge, (1, n))
-                reliabilities.append(PropertyTest.reliability(ins, shaped_challenge, measurements=measurements))
+                reliabilities.append(PropertyTest.reliability(ins, challenge, measurements=measurements))
         return reliabilities
 
     def reliability_statistic(self, challenges, measurements=10):
@@ -117,7 +115,7 @@ class PropertyTest(object):
                  Uniqueness in percent.
         """
         # If we get simulations with response length > 1 then change response extraction.
-        responses = array([instance.eval(challenge)[0] for instance in instances])
+        responses = array([instance.eval(array([challenge]))[0] for instance in instances])
         m = len(instances)
         distance_sum = 0
         for u in range(m - 1):
@@ -138,11 +136,10 @@ class PropertyTest(object):
         :return: list of float
                  List of uniqueness.
         """
-        n = len((challenges[0]))
         uniqueness_set = []
         for challenge in challenges:
             for _ in range(measurements):
-                uniqueness_set.append(PropertyTest.uniqueness(instances, reshape(challenge, (1, n))))
+                uniqueness_set.append(PropertyTest.uniqueness(instances, challenge))
         return uniqueness_set
 
     def uniqueness_statistic(self, challenges, measurements=10):

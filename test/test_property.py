@@ -26,7 +26,7 @@ class TestPropertyTest(unittest.TestCase):
         challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB1A))
         reliabilities = []
         for challenge in challenges:
-            reliabilities.append(PropertyTest.reliability(instance, reshape(challenge, (1, n))))
+            reliabilities.append(PropertyTest.reliability(instance, challenge))
 
         # For noiseless simulations the responses are always the same hence the reliability is 0%
         assert_array_equal(reliabilities, repeat(0.0, N))
@@ -39,7 +39,7 @@ class TestPropertyTest(unittest.TestCase):
             random_instance=RandomState(0x5015E),
         )
         for challenge in challenges:
-            reliability = PropertyTest.reliability(noisy_instance, reshape(challenge, (1, n)))
+            reliability = PropertyTest.reliability(noisy_instance, challenge)
             # For noisy simulations the responses should vary
             self.assertNotEqual(reliability, 0.0)
 
@@ -143,7 +143,7 @@ class TestPropertyTest(unittest.TestCase):
         challenges = sample_inputs(n, N, random_instance=RandomState(0xFAB10))
         uniqueness = []
         for challenge in challenges:
-            uniqueness.append(PropertyTest.uniqueness(instances, reshape(challenge, (1, n))))
+            uniqueness.append(PropertyTest.uniqueness(instances, challenge))
         # For normal distributed weights is the expected uniqueness near 0.5
         self.assertEqual(round(mean(uniqueness), 1), 0.5)
 
