@@ -553,7 +553,7 @@ class LTFArray(Simulation):
             assert k == kk
 
             # get the weak puf responses, one for each challenge
-            weak_puf_values = weak_puf.eval(empty(shape=(N, 0))).reshape(N, n)
+            weak_puf_values = weak_puf.eval(empty(shape=(N, 0)), noise_free).reshape(N, n)
             assert weak_puf_values.shape == (N, n)
 
             # XOR challenge with weak puf values

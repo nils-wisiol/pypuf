@@ -433,7 +433,7 @@ class TestInputTransformation(unittest.TestCase):
             def response_length(self) -> int:
                 return self.n
 
-            def eval(self, challenges: ndarray) -> ndarray:
+            def eval(self, challenges: ndarray, _) -> ndarray:
                 (N, challenge_length) = challenges.shape
                 assert challenge_length == self.challenge_length()
                 return RandomState(0).choice([1], size=(N, self.response_length()))
