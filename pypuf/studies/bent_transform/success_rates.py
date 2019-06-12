@@ -20,7 +20,7 @@ class SuccessRatesStudy(Study):
         'transform_fixed_permutation': LTFArray.transform_fixed_permutation,
         'transform_random': LTFArray.transform_random,
         'transform_ipmod2_31415': CompoundTransformation(
-            generator=LTFArray.generate_ipmod2_transform,
+            generator=LTFArray.generate_bent_transform,
             args=(64, 4, 31415),
             name='transform_ipmod2_31415',
         )

@@ -150,7 +150,7 @@ class NoisyIPMod2TransformLTFArrayReliabilityExperiment(ReliabilityExperiment):
                     self.parameters.noisy_ltfarray_n, self.parameters.noisy_ltfarray_k,
                     random_instance=RandomState(seed=self.parameters.noisy_ltfarray_seed_weights + i),
                 ),
-                transform=LTFArray.generate_ipmod2_transform(
+                transform=LTFArray.generate_bent_transform(
                     n=self.parameters.noisy_ltfarray_n,
                     kk=self.parameters.noisy_ltfarray_k,
                     weak_puf=NoisySRAM(

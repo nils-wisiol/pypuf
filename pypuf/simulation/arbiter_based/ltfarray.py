@@ -2,10 +2,12 @@
 This module provides several different implementations of arbiter PUF simulations. The linear threshold function array
 model is the core of each simulation class.
 """
+from itertools import product
+
 from numpy import empty
+from numpy import int8
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
-from numpy import uint64
 from numpy.random import RandomState
 from numpy.random.mtrand import RandomState
 
@@ -535,18 +537,15 @@ class LTFArray(Simulation):
         return permutation_seeds
 
     @classmethod
-    def generate_ipmod2_transform(cls, n, kk, weak_puf, ipmod2_length=None):
-        if not ipmod2_length:
-            ipmod2_length = n
+    def generate_bent_transform(cls, n, kk, weak_puf):
         assert weak_puf.response_length() == n
         assert weak_puf.challenge_length() == 0
-        assert ipmod2_length % 2 == 0
-        pairs = zeros((kk, n, ipmod2_length // 2, 2), dtype=uint64)
+        assert n % 2 == 0
         prng = RandomState(271828)
-        for l in range(kk):
-            for i in range(n):
-                pairs[l, i] = prng.choice(range(n), ipmod2_length, replace=False).reshape((ipmod2_length // 2, 2))
-        assert pairs.shape == (kk, n, ipmod2_length // 2, 2)
+        permutations = zeros((kk, n, n))
+        for l, i in product(range(kk), range(n)):
+            permutations[l, i] = prng.choice(range(n), n, replace=False)
+        permutations = array(permutations, dtype=int8)
 
         def transform(challenges, k):
             (N, _) = challenges.shape
@@ -560,18 +559,25 @@ class LTFArray(Simulation):
             # XOR challenge with weak puf values
             challenges = challenges * weak_puf_values
 
-            # evaluate ipmod2 pairs (max == and)
-            result = amax(challenges[:, pairs], axis=4)
-            assert result.shape == (N, k, n, ipmod2_length // 2)
+            # compute permutations
+            sub_challenges = challenges[:, permutations]
 
-            # evaluate ipmod2 xor (prod == xor)
+            # evaluate ipmod2 pairs (max means and)
+            # Note that we deviate in notation, using IPmod2(X) = (X(1) AND X(n//2)) XOR ... XOR (X(n//2-1) AND X(n))
+            # instead of (X(1) AND X(2)) XOR ... XOR (X(n-1) AND X(n)). This is wlog.
+            front = sub_challenges[:, :, :, :n//2]
+            back = sub_challenges[:, :, :, n//2:]
+            and_result = amax(array([front, back]), axis=0)
+            assert and_result.shape == (N, k, n, n // 2)
+
+            # evaluate ipmod2 xor (prod means xor)
             # evaluate the parity of the pairs
-            result = prod(result, axis=3, dtype=BIT_TYPE)
-            assert result.shape == (N, k, n)
+            and_result = prod(and_result, axis=3, dtype=BIT_TYPE)
+            assert and_result.shape == (N, k, n)
 
-            return result
+            return and_result
 
-        transform.__name__ = 'transform_ipmod2_%s' % str(weak_puf)
+        transform.__name__ = 'transform_bent_%s' % str(weak_puf)
         return transform
 
     @classmethod

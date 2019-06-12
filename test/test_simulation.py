@@ -4,7 +4,7 @@ This module is used to test the different simulation models.
 
 import unittest
 
-from numpy import shape, dot, array, around, array_equal, reshape, zeros, ndarray, broadcast_to
+from numpy import shape, dot, array, around, array_equal, reshape, zeros, ndarray, broadcast_to, int8
 from numpy.random.mtrand import RandomState
 from numpy.testing import assert_array_equal
 
@@ -432,33 +432,34 @@ class TestInputTransformation(unittest.TestCase):
                 return self.n
 
             def eval(self, challenges: ndarray) -> ndarray:
-                (N, n) = challenges.shape
-                assert n == self.challenge_length()
-                return broadcast_to(array([1, -1] * (self.response_length() // 2)), (N, self.response_length()))
+                (N, challenge_length) = challenges.shape
+                assert challenge_length == self.challenge_length()
+                return RandomState(0).choice([1], size=(N, self.response_length()))
 
-        transform = LTFArray.generate_ipmod2_transform(n=8, kk=4, weak_puf=MockWeakPUF(8), ipmod2_length=8)
+        transform = LTFArray.generate_bent_transform(n=4, kk=2, weak_puf=MockWeakPUF(4))
         assert_array_equal(
             transform(
                 challenges=array([
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [-1, -1, -1, -1, -1, -1, -1, -1],
+                    [0, 1, 2, 3],
+                    [0, 10, 20, 30],
+                    [0, 100, 200, 300],
                 ]),
-                k=4,
+                k=2,
             ),
-            [
+            array([
                 [
-                    [-1, -1, -1, -1, -1, -1, -1, -1],
-                    [-1,  1, -1,  1,  1,  1,  1, -1],
-                    [+1, -1, -1,  1, -1, -1, -1,  1],
-                    [-1, -1, -1,  1, -1,  1,  1, -1],
+                    [6, 6, 6, 6],
+                    [6, 6, 6, 6]
                 ],
                 [
-                    [-1, -1, -1, -1, -1, -1, -1, -1],
-                    [-1,  1, -1,  1,  1,  1,  1, -1],
-                    [+1, -1, -1,  1, -1, -1, -1,  1],
-                    [-1, -1, -1,  1, -1,  1,  1, -1],
+                    [600, 600, 600, 600],
+                    [600, 600, 600, 600]
                 ],
-            ]
+                [
+                    [60000, 60000, 60000, 60000],
+                    [60000, 60000, 60000, 60000]
+                ]
+            ], dtype=int8)
         )
 
 

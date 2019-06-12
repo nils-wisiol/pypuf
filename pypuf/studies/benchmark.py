@@ -121,7 +121,7 @@ class Benchmark(Study):
         'fixed_permutation',
         'random',
         CompoundTransformation(
-            generator=LTFArray.generate_ipmod2_transform,
+            generator=LTFArray.generate_bent_transform,
             args=(64, 8, NoisySRAM((8, 64, 64), .2, 31415)),
             name='transform_ipmod2_NoisySRAM_31415_.2',
         )
