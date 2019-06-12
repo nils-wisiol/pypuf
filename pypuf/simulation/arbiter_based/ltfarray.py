@@ -981,7 +981,10 @@ class NoisyLTFArray(LTFArray):
         self.sigma_noise = sigma_noise
         self.random = random_instance
 
-    def ltf_eval(self, sub_challenges):
+    def eval_noise_free(self, challenges: ndarray):
+        return self.eval(challenges, noise_free=True)
+
+    def ltf_eval(self, sub_challenges, noise_free=False):
         """
         Calculates weight_array with given set of challenges including noise.
         The noise effect is a normal distributed random variable with mu=0,
@@ -990,7 +993,8 @@ class NoisyLTFArray(LTFArray):
         initializing the NoisyLTFArray.
         """
         evaled_inputs = super().ltf_eval(sub_challenges)
-        noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(len(evaled_inputs), self.k))
+        shape = (len(evaled_inputs), self.k)
+        noise = self.random.normal(loc=0, scale=self.sigma_noise, size=shape) if not noise_free else zeros(shape=shape)
         return evaled_inputs + noise
 
 
