@@ -1,5 +1,5 @@
 from numpy.random.mtrand import RandomState
-from numpy import sign, broadcast_to
+from numpy import sign, broadcast_to, ndarray, zeros
 
 from pypuf.simulation.base import Simulation
 
@@ -20,7 +20,7 @@ class NoisySRAM(Simulation):
     def response_length(self):
         return self._size
 
-    def eval(self, challenges):
+    def eval(self, challenges: ndarray, noise_free=False):
         (N, n) = challenges.shape
         assert n == 0
 
@@ -28,9 +28,13 @@ class NoisySRAM(Simulation):
         skew = broadcast_to(self._skew, (N, self._size))
 
         # Different noise for every evaluation
-        noise = self._noise_prng.normal(scale=self.noise, size=(N, self._size))
+        shape = (N, self._size)
+        noise = self._noise_prng.normal(scale=self.noise, size=shape) if not noise_free else zeros(shape=shape)
 
         return sign(skew + noise)
+
+    def eval_noise_free(self, challenges: ndarray):
+        return self.eval(challenges, noise_free=True)
 
     def __str__(self):
         return 'NoisySRAM_%i_%i_%f' % (self._seed_skew, self._seed_noise, self.noise)
