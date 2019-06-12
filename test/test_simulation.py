@@ -16,6 +16,7 @@ from test.utility import get_functions_with_prefix
 
 class TestCombiner(unittest.TestCase):
     """This class tests the different combiner functions with predefined input and outputs."""
+
     def test_combine_xor(self):
         """This function tests the xor combiner function with one pair of input and output."""
         assert_array_equal(
@@ -67,6 +68,7 @@ class TestCombiner(unittest.TestCase):
 
 class TestInputTransformation(unittest.TestCase):
     """This class tests the different functions used to transform the input of a LTFArray simulation."""
+
     def test_id(self):
         """
         This method test the identity function for the predefined inputs (challenges). If every challenge is duplicated
@@ -529,7 +531,7 @@ class TestLTFArray(unittest.TestCase):
         challenges = tools.all_inputs(n)
 
         weight_array = LTFArray.normal_weights(n, k, mu=mu, sigma=sigma, random_instance=RandomState(0xBADA556))
-        bias_array = LTFArray.normal_weights(1, k, mu=mu, sigma=sigma*2, random_instance=RandomState(0xBADAFF1))
+        bias_array = LTFArray.normal_weights(1, k, mu=mu, sigma=sigma * 2, random_instance=RandomState(0xBADAFF1))
 
         biased_ltf_array = LTFArray(
             weight_array=weight_array,
@@ -548,7 +550,7 @@ class TestLTFArray(unittest.TestCase):
         assert_array_equal(biased_ltf_array.weight_array[:, :n], ltf_array.weight_array[:, :n])
         assert_array_equal(biased_ltf_array.weight_array[:, :n], weight_array)
         assert_array_equal(biased_ltf_array.weight_array[:, n], reshape(bias_array, (k,)))
-        assert_array_equal(ltf_array.weight_array[:, n], zeros((k, )))
+        assert_array_equal(ltf_array.weight_array[:, n], zeros((k,)))
 
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
@@ -609,6 +611,7 @@ class TestLTFArray(unittest.TestCase):
 
 class TestNoisyLTFArray(TestLTFArray):
     """This class is used to test the NoisyLTFArray class."""
+
     def test_ltf_eval(self):
         """
         Test ltf_eval for correct evaluation of LTFs.
@@ -755,6 +758,7 @@ class TestNoisyLTFArray(TestLTFArray):
 
 class TestSimulationMajorityLTFArray(unittest.TestCase):
     """This class is used to test the SimulationMajorityLTFArray class."""
+
     def test_majority_voting(self):
         """This method is used to test if majority vote works.
         The first test checks for unequal PUF responses with a LTFArray without noise and a SimulationMajorityLTFArray
