@@ -62,7 +62,7 @@ class LTFArray(Simulation):
     """
 
     @classmethod
-    def combiner_xor(cls, responses):
+    def combiner_xor(cls, responses, **_):
         """
         combines output responses with the XOR operation
         :param responses: Array of int of float with shape(N,k,n)
@@ -73,7 +73,7 @@ class LTFArray(Simulation):
         return prod(responses, axis=1)
 
     @classmethod
-    def combiner_ip_mod2(cls, responses):
+    def combiner_ip_mod2(cls, responses, **_):
         """
         combines output responses with the inner product mod 2 operation
         :param responses: a array with a number of vectors of single LTF results
