@@ -1,5 +1,5 @@
+from numpy import sign, broadcast_to, ndarray, zeros, sum as asum
 from numpy.random.mtrand import RandomState
-from numpy import sign, broadcast_to, ndarray, zeros
 
 from pypuf.simulation.base import Simulation
 
@@ -38,3 +38,18 @@ class NoisySRAM(Simulation):
 
     def __str__(self):
         return 'NoisySRAM_%i_%i_%f' % (self._seed_skew, self._seed_noise, self.noise)
+
+
+class MajorityVoteNoisySRAM(NoisySRAM):
+
+    def __init__(self, size, noise, votes, seed_skew, seed_noise):
+        super().__init__(size * votes, noise, seed_skew, seed_noise)
+        self._votes = votes
+
+    def response_length(self):
+        return self._size // self._votes
+
+    def eval(self, challenges: ndarray, noise_free=False):
+        (N, n) = challenges.shape
+        all_responses = super().eval(challenges, noise_free)
+        return sign(asum(all_responses.reshape((N, self._size // self._votes, self._votes)), axis=2))
