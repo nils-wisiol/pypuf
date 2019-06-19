@@ -45,6 +45,7 @@ class Result(NamedTuple):
     iterations: int
     measured_time: float
     loss_curve: Iterable[float]
+    accuracy_curve: Iterable[float]
 
 
 class ExperimentMLPTensorflow(Experiment):
@@ -124,7 +125,6 @@ class ExperimentMLPTensorflow(Experiment):
             iteration_limit=self.parameters.iteration_limit,
             batch_size=self.parameters.batch_size,
             seed_model=self.parameters.seed_model,
-            checkpoint_name=self.id,
             print_learning=self.parameters.print_learning,
         )
         self.learner.prepare()
@@ -154,4 +154,5 @@ class ExperimentMLPTensorflow(Experiment):
             iterations=self.learner.history.epoch[-1],
             measured_time=self.measured_time,
             loss_curve=self.learner.history.history['val_loss'],
+            accuracy_curve=self.learner.history.history['val_pypuf_accuracy'],
         )

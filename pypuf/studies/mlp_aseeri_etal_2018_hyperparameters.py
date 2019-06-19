@@ -1,3 +1,5 @@
+from re import findall
+from math import log10
 from matplotlib.pyplot import subplots
 from matplotlib.ticker import FixedLocator
 from seaborn import lineplot, scatterplot
@@ -14,8 +16,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     COMBINER = 'xor'
     PREPROCESSING = 'no'
     ACTIVATION = 'relu'
-    PATIENCE = 10
-    ITERATION_LIMIT = 200
+    ITERATION_LIMIT = 25
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
@@ -62,20 +63,28 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         8: [(-1, -1), (-1, 0), (0, -1), (0, 0)],
     }
 
+    PATIENCES = {
+        4: [2, 3, 4],
+        5: [2, 3, 4],
+        6: [2, 3, 4],
+        7: [2, 3, 4],
+        8: [2, 3, 4],
+    }
+
     TOLERANCES = {
-        4: [0.1],
-        5: [0.1],
-        6: [0.1],
-        7: [0.1],
-        8: [0.1],
+        4: [0.01, 0.02],
+        5: [0.01, 0.02],
+        6: [0.01, 0.02],
+        7: [0.01, 0.02],
+        8: [0.01, 0.02],
     }
 
     LEARNING_RATES = {
-        4: [0.003, 0.005, 0.007],
-        5: [0.003, 0.005, 0.007],
-        6: [0.003, 0.005, 0.007],
-        7: [0.005, 0.007, 0.009],
-        8: [0.0005, 0.001, 0.002, 0.004],
+        4: [0.0005, 0.0015, 0.0025, 0.0035],
+        5: [0.0005, 0.0015, 0.0025, 0.0035],
+        6: [0.0005, 0.0015, 0.0025, 0.0035],
+        7: [0.0005, 0.0025, 0.0045, 0.0065],
+        8: [0.00025, 0.00075, 0.00125, 0.00175],
     }
 
     PENALTIES = {
@@ -138,91 +147,118 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                             for penalty in self.PENALTIES[k]:
                                 for beta_1 in self.BETAS_1[k]:
                                     for beta_2 in self.BETAS_2[k]:
-                                        for tolerance in self.TOLERANCES[k]:
-                                            experiments.append(
-                                                ExperimentMLPScikitLearn(
-                                                    progress_log_prefix=None,
-                                                    parameters=Parameters_skl(
-                                                        seed_simulation=0x3 + cycle,
-                                                        seed_challenges=0x1415 + cycle,
-                                                        seed_model=0x9265 + cycle,
-                                                        seed_distance=0x3589 + cycle,
-                                                        n=n,
-                                                        k=k,
-                                                        N=int(N),
-                                                        validation_frac=validation_frac,
-                                                        transformation=self.TRANSFORMATION,
-                                                        combiner=self.COMBINER,
-                                                        preprocessing=self.PREPROCESSING,
-                                                        layers=layers,
-                                                        activation=self.ACTIVATION,
-                                                        metric_in=metric_in,
-                                                        learning_rate=learning_rate,
-                                                        penalty=penalty,
-                                                        beta_1=beta_1,
-                                                        beta_2=beta_2,
-                                                        tolerance=tolerance,
-                                                        patience=self.PATIENCE,
-                                                        iteration_limit=self.ITERATION_LIMIT,
-                                                        batch_size=1000 if k < 6 else 10000,
-                                                        print_learning=self.PRINT_LEARNING,
-                                                    )
-                                                )
-                                            )
-                                            for loss in self.LOSSES[k]:
-                                                experiments.append(
-                                                    ExperimentMLPTensorflow(
-                                                        progress_log_prefix=None,
-                                                        parameters=Parameters_tf(
-                                                            seed_simulation=0x3 + cycle,
-                                                            seed_challenges=0x1415 + cycle,
-                                                            seed_model=0x9265 + cycle,
-                                                            seed_distance=0x3589 + cycle,
-                                                            n=n,
-                                                            k=k,
-                                                            N=int(N),
-                                                            validation_frac=validation_frac,
-                                                            transformation=self.TRANSFORMATION,
-                                                            combiner=self.COMBINER,
-                                                            preprocessing=self.PREPROCESSING,
-                                                            layers=layers,
-                                                            activation=self.ACTIVATION,
-                                                            loss=loss,
-                                                            metric_in=metric_in,
-                                                            metric_out=metric_out,
-                                                            learning_rate=learning_rate,
-                                                            penalty=penalty,
-                                                            beta_1=beta_1,
-                                                            beta_2=beta_2,
-                                                            tolerance=tolerance,
-                                                            patience=self.PATIENCE,
-                                                            iteration_limit=self.ITERATION_LIMIT,
-                                                            batch_size=1000 if k < 6 else 10000,
-                                                            print_learning=self.PRINT_LEARNING,
+                                        for patience in self.PATIENCES:
+                                            for tolerance in self.TOLERANCES[k]:
+                                                if metric_out == 0:
+                                                    experiments.append(
+                                                        ExperimentMLPScikitLearn(
+                                                            progress_log_prefix=None,
+                                                            parameters=Parameters_skl(
+                                                                seed_simulation=0x3 + cycle,
+                                                                seed_challenges=0x1415 + cycle,
+                                                                seed_model=0x9265 + cycle,
+                                                                seed_distance=0x3589 + cycle,
+                                                                n=n,
+                                                                k=k,
+                                                                N=int(N),
+                                                                validation_frac=validation_frac,
+                                                                transformation=self.TRANSFORMATION,
+                                                                combiner=self.COMBINER,
+                                                                preprocessing=self.PREPROCESSING,
+                                                                layers=layers,
+                                                                activation=self.ACTIVATION,
+                                                                metric_in=metric_in,
+                                                                learning_rate=learning_rate,
+                                                                penalty=penalty,
+                                                                beta_1=beta_1,
+                                                                beta_2=beta_2,
+                                                                tolerance=tolerance,
+                                                                patience=patience,
+                                                                iteration_limit=self.ITERATION_LIMIT,
+                                                                batch_size=1000 if k < 6 else 10000,
+                                                                print_learning=self.PRINT_LEARNING,
+                                                            )
                                                         )
                                                     )
-                                                )
+                                                for loss in self.LOSSES[k]:
+                                                    experiments.append(
+                                                        ExperimentMLPTensorflow(
+                                                            progress_log_prefix=None,
+                                                            parameters=Parameters_tf(
+                                                                seed_simulation=0x3 + cycle,
+                                                                seed_challenges=0x1415 + cycle,
+                                                                seed_model=0x9265 + cycle,
+                                                                seed_distance=0x3589 + cycle,
+                                                                n=n,
+                                                                k=k,
+                                                                N=int(N),
+                                                                validation_frac=validation_frac,
+                                                                transformation=self.TRANSFORMATION,
+                                                                combiner=self.COMBINER,
+                                                                preprocessing=self.PREPROCESSING,
+                                                                layers=layers,
+                                                                activation=self.ACTIVATION,
+                                                                loss=loss,
+                                                                metric_in=metric_in,
+                                                                metric_out=metric_out,
+                                                                learning_rate=learning_rate,
+                                                                penalty=penalty,
+                                                                beta_1=beta_1,
+                                                                beta_2=beta_2,
+                                                                tolerance=tolerance,
+                                                                patience=patience,
+                                                                iteration_limit=self.ITERATION_LIMIT,
+                                                                batch_size=1000 if k < 6 else 10000,
+                                                                print_learning=self.PRINT_LEARNING,
+                                                            )
+                                                        )
+                                                    )
         return experiments
 
     def plot(self):
         self.plot_helper(
-            name='Scikit-Learn',
-            df=self.experimenter.results[self.experimenter.results['experiment'] == 'ExperimentMLPScikitLearn'],
+            name='ScikitLearn',
+            df=self.experimenter.results,
         )
         self.plot_helper(
             name='Tensorflow',
-            df=self.experimenter.results[(self.experimenter.results['experiment'] == 'ExperimentMLPTensorflow')],
+            df=self.experimenter.results,
+        )
+        self.plot_history(
+            experiment='ScikitLearn',
+            name='Loss_Curves',
+            df=self.experimenter.results,
+            kind='loss',
+        )
+        self.plot_history(
+            experiment='ScikitLearn',
+            name='Accuracy_Curves',
+            df=self.experimenter.results,
+            kind='accuracy',
+        )
+        self.plot_history(
+            experiment='Tensorflow',
+            name='Loss_Curves',
+            df=self.experimenter.results,
+            kind='loss',
+        )
+        self.plot_history(
+            experiment='Tensorflow',
+            name='Accuracy_Curves',
+            df=self.experimenter.results,
+            kind='accuracy',
         )
 
     def plot_helper(self, name, df):
+        df = df[df['experiment'] == 'ExperimentMLP' + name]
         ks = sorted(list(set(self.experimenter.results['k'])))
+        ncols = len(ks)
+        nrows = len(self.PLOT_ESTIMATORS) + 2
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(8*ncols, 3 * nrows)
 
-        fig, axes = subplots(ncols=len(ks), nrows=len(self.PLOT_ESTIMATORS) + 2)
-        fig.set_size_inches(8*len(ks), 6 * len(self.PLOT_ESTIMATORS))
+        axes = axes.reshape((nrows, ncols))
 
-        axes = axes.reshape((len(self.PLOT_ESTIMATORS) + 2, len(ks)))
-
-        #self.experimenter.results['distance'] = 1 - self.experimenter.results['accuracy']
         for j, k in enumerate(ks):
             data = df[df['k'] == k]
 
@@ -248,13 +284,26 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                     legend='full' if i == 0 else False,
                 )
                 axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.28, 1.1))
-                axes[i][j].set_title('k={},   {} samples per combination\n'.format(k, self.SAMPLES_PER_POINT[k]))
+                axes[0][j].set_title('k={},   {} experiments per combination,   {}/{}\n'.format(
+                    k, self.SAMPLES_PER_POINT[k], len(data),
+                    len(self.experimenter.results[(self.experimenter.results['k'] == k) & (
+                        self.experimenter.results['experiment'] == 'ExperimentMLP' + name)])))
                 axes[i][j].set_ylabel('accuracy {}'.format(estimator))
                 axes[i][j].set_ylim((-0.05 if estimator.startswith('success') else 0.45, 1.05))
                 axes[i][j].xaxis.set_major_locator(FixedLocator(list(set(
                     self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
-                axes[i][j].xaxis.set_tick_params(rotation=45 if len(axes[i][j].get_xticks()) > 7 else 0)
 
+            lineplot(
+                x='learning_rate',
+                y='accuracy',
+                hue='metric_in',
+                style='metric_out',
+                data=data,
+                ax=axes[-2][j],
+                legend=False,
+                estimator=get_estimator('mean'),
+                ci=None,
+            )
             scatterplot(
                 x='learning_rate',
                 y='accuracy',
@@ -264,32 +313,70 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 ax=axes[-2][j],
                 legend=False,
             )
+
             axes[-2][j].xaxis.set_major_locator(FixedLocator(list(set(
                 self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
-            axes[-2][j].xaxis.set_tick_params(rotation=45 if len(axes[-2][j].get_xticks()) > 7 else 0)
             axes[-2][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
             axes[-2][j].grid(b=True, which='minor', color='gray', linestyle='--')
 
             lineplot(
                 x='accuracy',
                 y='measured_time',
+                hue='metric_in',
+                style='metric_out',
                 data=data,
                 ax=axes[-1][j],
                 estimator='mean',
                 ci=None,
             )
             y = self.REFERENCE_TIMES[(64, k)]
-            axes[-1][j].plot((0.5, 1), (y, y), label='reference time')
+            axes[-1][j].plot((0.5, 1), (y, y), label='reference: {}'.format(y))
             axes[-1][j].set_xscale('linear')
             axes[-1][j].set_yscale('linear')
             axes[-1][j].set_xlabel('accuracy')
             axes[-1][j].set_ylabel('runtime in s')
+            axes[-1][j].set_ylim(bottom=0)
             axes[-1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
             axes[-1][j].grid(b=True, which='minor', color='gray', linestyle='--')
-            axes[-1][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-            axes[-1][j].legend(loc='best')
+            axes[-1][j].legend(loc='upper right', bbox_to_anchor=(1.28, 1.1))
+            for i in range(nrows - 1):
+                ticks = axes[i][j].get_xticks()
+                e = int(log10(min(float(tick) for tick in ticks))) - 1
+                axes[i][j].set_xticklabels(['{0:.1f}'.format(float(tick) * 10**(-e)) for tick in ticks])
+                axes[i][j].set_xticklabels([str(round(float(label))) if float(label).is_integer() else label
+                                            for label in [item.get_text() for item in axes[i][j].get_xticklabels()]])
+                axes[i][j].set_xlabel('learning_rate times 1e{}'.format(e))
         fig.subplots_adjust(hspace=.5, wspace=.5)
         title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
         title.set_position([.5, 1.05])
 
         fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', pad_inches=.5)
+
+    def plot_history(self, experiment, name, df, kind):
+        df = df[df['experiment'] == 'ExperimentMLP' + experiment]
+        ks = sorted(list(set(self.experimenter.results['k'])))
+        intervals = {(.0, .7): 'bad', (.7, .9): 'medium', (.9, .98): 'good', (.98, 1.): 'perfect'}
+        ncols = len(ks)
+        nrows = len(intervals)
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(8 * ncols, 3 * nrows)
+        axes = axes.reshape((nrows, ncols))
+
+        for j, k in enumerate(ks):
+            data = df[df['k'] == k]
+            axes[0][j].set_title('k={},   {} experiments per combination,   {}/{}\n'.format(
+                k, self.SAMPLES_PER_POINT[k], len(data),
+                len(self.experimenter.results[(self.experimenter.results['k'] == k) & (
+                        self.experimenter.results['experiment'] == 'ExperimentMLP' + experiment)])))
+            for i, (low, high) in enumerate(intervals):
+                curves = data[(data.accuracy >= low) & (data.accuracy < high)][kind + '_curve']
+                axes[i][j].set_ylabel('{} results\n{}'.format(intervals[(low, high)], kind))
+                axes[i][j].set_xlabel('{}'.format('epoch'))
+                for curve in curves:
+                    axes[i][j].plot([float(s) for s in findall(pattern=r'-?\d+\.?\d*', string=curve)])
+
+        fig.subplots_adjust(hspace=.5, wspace=.5)
+        title = fig.suptitle('History of {} of {} Results on XOR Arbiter PUFs'.format(kind, experiment))
+        title.set_position([.5, 1.05])
+
+        fig.savefig('figures/{}_{}_{}.pdf'.format(self.name(), name, experiment), bbox_inches='tight', pad_inches=.5)

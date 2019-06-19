@@ -45,6 +45,7 @@ class Result(NamedTuple):
     iterations: int
     accuracy: float
     loss_curve: Iterable[float]
+    accuracy_curve: Iterable[float]
 
 
 class ExperimentMLPScikitLearn(Experiment):
@@ -144,4 +145,5 @@ class ExperimentMLPScikitLearn(Experiment):
                 random_instance=RandomState(seed=self.parameters.seed_distance),
             ),
             loss_curve=self.learner.nn.loss_curve_,
+            accuracy_curve=self.learner.accuracy_curve,
         )

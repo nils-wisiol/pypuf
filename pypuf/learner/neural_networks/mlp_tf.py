@@ -7,7 +7,7 @@ from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session,
 from tensorflow.python.platform.tf_logging import set_verbosity
 from tensorflow.python.training.tensorboard_logging import ERROR
 from tensorflow.python.keras.regularizers import l2
-from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, sign as tf_sign, set_session, log
+from tensorflow.python.keras.backend import maximum as tf_max, mean as tf_mean, abs as tf_abs, set_session, log
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Sequential
@@ -29,8 +29,8 @@ class MultiLayerPerceptronTensorflow(Learner):
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
                  activation='relu', loss='squared_hinge', metric_in=-1, metric_out=-1, learning_rate=0.001,
-                 penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=5, checkpoint_name=None,
-                 print_learning=False, iteration_limit=100, batch_size=1000, seed_model=0xc0ffee):
+                 penalty=0.0001, beta_1=0.9, beta_2=0.999, tolerance=0.001, patience=3, print_learning=False,
+                 iteration_limit=20, batch_size=1000, seed_model=0xc0ffee):
         """
         :param n:               int; positive, length of PUF (typically power of 2)
         :param k:               int; positive, width of PUF (typically between 1 and 8)
@@ -49,7 +49,6 @@ class MultiLayerPerceptronTensorflow(Learner):
         :param beta_2:          float; between 0 and 1, parameter of Adam optimizer
         :param tolerance:       float; between 0 and 1, stopping criterium: minimum change of loss
         :param patience:        int; positive, stopping criterium: maximum number of epochs with low change of loss
-        :param checkpoint_name: string; prefix of checkpoint's file name
         :param print_learning:  bool; whether to print learning progress of tensorflow
         :param iteration_limit: int; positive, maximum number of epochs
         :param batch_size:      int; between 1 and N, number of training samples used until updating the model's weights
@@ -75,7 +74,6 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.iteration_limit = iteration_limit
         self.batch_size = min(batch_size, training_set.N)
         self.seed_model = RandomState(seed_model).randint(self.SEED_RANGE)
-        self.checkpoint = 'checkpoint.{}_{}_{}_{}'.format(n, k, preprocessing, checkpoint_name) + '.hdf5'
         self.print_learning = 0 if not print_learning else 1
         self.nn = None
         self.history = None
@@ -122,27 +120,33 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.nn.add(Dense(units=1, activation='sigmoid' if self.metric_out == 0 else 'tanh', kernel_regularizer=l2_loss,
                           use_bias=True))
 
-        def pypuf_accuracy(y_true, y_pred):
-            accuracy = tf_mean(tf_sign(y_true * y_pred))
-            return tf_max(accuracy, 1 - accuracy)
+        if self.metric_out == 0:
+            def pypuf_accuracy(y_true, y_pred):
+                return 1 - tf_mean(tf_abs(y_true - y_pred))
 
-        def log_loss_1_1(y_true, y_pred):
-            y_true = (y_true + 1) / 2
-            y_pred = (y_pred + 1) / 2
-            return - multiply(y_true, log(y_pred + self.EPSILON)) \
-                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+            def log_loss(y_true, y_pred):
+                return - multiply(y_true, log(y_pred + self.EPSILON)) \
+                       - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
 
-        def log_loss_0_1(y_true, y_pred):
-            return - multiply(y_true, log(y_pred + self.EPSILON)) \
-                   - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+        elif self.metric_out == -1:
+            def pypuf_accuracy(y_true, y_pred):
+                return (1 + tf_mean(y_true * y_pred)) / 2
+
+            def log_loss(y_true, y_pred):
+                y_true = (y_true + 1) / 2
+                y_pred = (y_pred + 1) / 2
+                return - multiply(y_true, log(y_pred + self.EPSILON)) \
+                       - multiply((1 - y_true), log(1 - y_pred + self.EPSILON))
+
+        else:
+            raise(Exception('The parameter "metric_out" has to be 0 or -1!'))
 
         def squared_hinge_loss_0_1(y_true, y_pred):
-            return tf_max(0*y_true, (1 - ((y_true*2 - 1) * (y_pred*2 - 1))) ** 2)
+            return tf_max(0 * y_true, (1 - ((y_true * 2 - 1) * (y_pred * 2 - 1))) ** 2)
 
         self.nn.compile(
             optimizer=Adam(lr=self.learning_rate, beta_1=self.beta_1, beta_2=self.beta_2, epsilon=self.EPSILON),
-            loss=log_loss_0_1 if self.loss == 'log_loss' and self.metric_out == 0
-            else log_loss_1_1 if self.loss == 'log_loss' and self.metric_out == -1
+            loss=log_loss if self.loss == 'log_loss'
             else squared_hinge_loss_0_1 if self.loss == 'squared_hinge' and self.metric_out == 0
             else 'squared_hinge' if self.loss == 'squared_hinge' and self.metric_out == -1
             else 'binary_crossentropy',
@@ -150,27 +154,37 @@ class MultiLayerPerceptronTensorflow(Learner):
         )
 
         class Model:
-            def __init__(self, nn, n, k, preprocess, zero_one):
+            def __init__(self, nn, n, k, preprocess, metric_in, metric_out):
                 self.nn = nn
                 self.n = n
                 self.k = k
                 self.preprocess = preprocess
-                self.zero_one = zero_one
+                self.metric_in = metric_in
+                self.metric_out = metric_out
 
             def eval(self, cs):
-                predictions = self.nn.predict(x=self.preprocess(challenges=cs, k=self.k))
-                predictions = (predictions * 2) - 1 if self.zero_one else predictions
-                return sign(predictions).flatten()
+                cs_preprocessed = self.preprocess(challenges=cs, k=self.k)
+                challenges = cs_preprocessed if self.metric_in == -1 else (cs_preprocessed + 1) / 2
+                predictions = self.nn.predict(x=challenges)
+                predictions_1_1 = predictions if self.metric_out == -1 else predictions * 2 - 1
+                return sign(predictions_1_1).flatten()
 
-        self.model = Model(nn=self.nn, n=self.n, k=self.k, preprocess=preprocess, zero_one=self.metric_out)
+        self.model = Model(
+            nn=self.nn,
+            n=self.n,
+            k=self.k,
+            preprocess=preprocess,
+            metric_in=self.metric_in,
+            metric_out=self.metric_out,
+        )
 
     def learn(self):
         converged = EarlyStopping(
-            monitor='val_loss',
+            monitor='val_pypuf_accuracy',
             min_delta=self.tolerance,
             patience=self.patience,
             verbose=self.print_learning,
-            mode='min',
+            mode='max',
         )
         callbacks = [converged]
         self.history = self.nn.fit(
