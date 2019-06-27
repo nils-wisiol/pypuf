@@ -9,7 +9,8 @@ from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
 
-from numpy import abs as np_abs, absolute
+from numpy import abs as np_abs
+from numpy import absolute
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
 from numpy import sum as np_sum
@@ -549,3 +550,19 @@ def find_study_class(name):
         exit(1)
 
     return studies[0]
+
+
+def vdc_sequence_decimal(idx: int):
+    vdc, denom = 0, 1
+    while idx:
+        denom *= 2
+        idx, remainder = divmod(idx, 2)
+        vdc += remainder / denom
+    return vdc
+
+
+def vdc_sequence_bits(idx: int, n: int):
+    dec = int(vdc_sequence_decimal(idx) * 2**n)
+    string = bin(dec)[2:]
+    string = "0" * (n - len(string)) + string
+    return [0 if c == "0" else 1 for c in string]

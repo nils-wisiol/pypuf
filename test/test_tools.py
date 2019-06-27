@@ -1,13 +1,16 @@
 """This module is used to test the functions which are implemented in pypuf.tools."""
 import unittest
-from numpy import zeros, dtype, array_equal, array, column_stack
+from decimal import Decimal
+from tempfile import NamedTemporaryFile
+
+from numpy import zeros, dtype, array_equal, array, column_stack, int8
 from numpy.random import RandomState
 from numpy.testing import assert_array_equal
-from tempfile import NamedTemporaryFile
+
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import random_input, all_inputs, random_inputs, sample_inputs, chi_vectorized, append_last, \
     TrainingSet, BIT_TYPE, transform_challenge_11_to_01, transform_challenge_01_to_11, poly_mult_div, \
-    parse_file
+    parse_file, vdc_sequence_decimal, vdc_sequence_bits
 
 
 class TestAppendLast(unittest.TestCase):
@@ -184,3 +187,80 @@ class TestInputFunctions(unittest.TestCase):
             self.assertEqual(len(arr[i]), sub_arr_size,
                              'The sub array does not match the length of {0}.'.format(sub_arr_size))
             self.assertEqual(arr.dtype, arr_type, 'The array must be of type {0}'.format(arr_type))
+
+
+class VanDerCorputSequenceTestCase(unittest.TestCase):
+
+    REFERENCE_8 = array([
+        [1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0, 0],
+        [1, 0, 1, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0, 0, 0],
+        [1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [1, 0, 0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 1, 0, 0, 0, 0],
+        [1, 1, 0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0, 0, 0],
+        [1, 0, 1, 1, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0],
+    ], dtype=int8)
+
+    REFERENCE_8_DECIMALS = [1/2, 1/4, 3/4, 1/8, 5/8, 3/8, 7/8, 1/16, 9/16, 5/16, 13/16, 3/16, 11/16, 7/16, 15/16, 1/32]
+
+    def test_bits(self):
+        for i, bits in enumerate(self.REFERENCE_8):
+            assert_array_equal(
+                vdc_sequence_bits(i + 1, 8),
+                bits,
+                "Expected %i-th element to be %s, but got %s." % (i + 1, bits, vdc_sequence_bits(i + 1, 8))
+            )
+
+    def test_reference_values(self):
+        for i in range(min(len(self.REFERENCE_8), len(self.REFERENCE_8_DECIMALS))):
+            self.assertAlmostEqual(
+                self.REFERENCE_8_DECIMALS[i],
+                self.decimal(self.REFERENCE_8[i]),
+                msg="Expected the %i-th element to be %f, but was %f and %s." %
+                (i, self.REFERENCE_8_DECIMALS[i], self.decimal(self.REFERENCE_8[i]), str(self.REFERENCE_8[i]))
+            )
+        self.assertEqual(
+            len(self.REFERENCE_8_DECIMALS),
+            len(self.REFERENCE_8)
+        )
+
+    def test_decimals(self):
+        for i in range(len(self.REFERENCE_8_DECIMALS)):
+            self.assertEqual(
+                vdc_sequence_decimal(i + 1),
+                self.REFERENCE_8_DECIMALS[i],
+                msg="Expected the %i-th number to be %s, but got %s." %
+                    (i + 1, Decimal(self.REFERENCE_8_DECIMALS[i]).as_integer_ratio(),
+                     Decimal(vdc_sequence_decimal(i + 1)).as_integer_ratio())
+            )
+
+    @staticmethod
+    def decimal(bits) -> float:
+        return sum([2**-(i+1) * b for i, b in enumerate(bits)])
+
+    def test_decimal(self):
+        for value, bits in {
+            1/2: [1],
+            1/4: [0, 1],
+            3/4: [1, 1],
+            1/8: [0, 0, 1],
+            5/8: [1, 0, 1],
+            7/8: [1, 1, 1],
+            1/16: [0, 0, 0, 1],
+            9/16: [1, 0, 0, 1],
+        }.items():
+            self.assertAlmostEqual(
+                self.decimal(bits),
+                value,
+                places=10,
+                msg="Got %f for %s, but expected %f" % (self.decimal(bits), bits, value),
+            )
