@@ -38,6 +38,12 @@ class FourierExpansion(Simulation):
         self.fourier_coefficients = fourier_coefficients
         self.n = len(fourier_coefficients[0].s)
 
+    def challenge_length(self) -> int:
+        return self.n
+
+    def response_length(self) -> int:
+        return 1
+
     def eval(self, challenges):
         """
         Evaluates a given array of inputs.
