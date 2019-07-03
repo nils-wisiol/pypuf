@@ -79,6 +79,15 @@ class MonomialFactory():
         res = self.monomials_exp(mono, k)
         return self.to_index_notation(res)
 
+    def chain_monomials(self, m1, m2):
+        """
+        Returns monomials representation that corresponds to transforming X to X'
+        according to m1 and after that transform X' to X'' according to m2.
+        """
+        pass
+
+
+
 class LinearizationModel():
     """
     Helper class to linearize challenges of a k-XOR PUF.
