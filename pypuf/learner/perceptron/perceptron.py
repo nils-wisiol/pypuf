@@ -20,8 +20,6 @@ class MonomialFactory():
         Collection of functions to build monomials.
         Currently only k-XOR Arbiter PUF monomials are supported.
     """
-    def __init__(self):
-        self.DB = {}
 
     def to_index_notation(self, mon):
         return [list(s) for s in mon if len(s) > 0]
