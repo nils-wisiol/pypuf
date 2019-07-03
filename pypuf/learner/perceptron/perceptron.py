@@ -19,20 +19,44 @@ class MonomialFactory():
     """
         Collection of functions to build monomials.
         Currently only k-XOR Arbiter PUF monomials are supported.
+
+        In this class we use a internal representation of monomials:
+        {set(indices) : coefficients}
+        This means that {set(1,2,3) : 2, set(0) : 5} is interpreted as:
+        2*X1*X2*X3 + 5*X0
+
+        Each variable X is in {-1, 1}, this means that X**2 = 1, hence we can eliminate
+        these terms and shorten the monomials.
     """
 
     def to_index_notation(self, mon):
+        """
+        Converts the internal representation of a monomial (with coefficients and bias)
+        to a list of lists containing indices.
+        """
         return [list(s) for s in mon if len(s) > 0]
 
     def monomials_atf(self, n):
-        # Dict of set(indices) : coefficient
+        """
+        Generates a dict of set(indices) : coefficient according to the internal
+        representation of a linearized Arbiter PUF.
+        """
         return {frozenset(range(i,n)): 1 for i in range(n)}
 
     def multiply_sums(self, s1, s2):
+        """
+        Interpretes two dicts of set(indices) : coefficients as sums of monomials and
+        multiplies these two big sums.
+        """
         return {m1.symmetric_difference(m2):c1*c2 for m1,c1 in s1.items()
                                                   for m2,c2 in s2.items()}
 
     def monomials_exp(self, mono, k):
+        """
+        Interpretes a dict of set(indices) : coefficients as a sum of monomials
+        and raises this sum to the power of k.
+        This is done is a recursive manner, minimizing the number of multiplications.
+        """
         # Return monomials for k=1 and update DB if necessary
         if k == 1:
             return mono
@@ -48,6 +72,9 @@ class MonomialFactory():
         return res
 
     def get_xor_arbiter_monomials(self, n, k):
+        """
+        Returns the linearized monomial representation of n-bit k-XOR Arbiter PUF.
+        """
         mono = self.monomials_atf(n)
         res = self.monomials_exp(mono, k)
         return self.to_index_notation(res)
@@ -58,6 +85,7 @@ class LinearizationModel():
     Instantiate using 'monomials' - a list of lists containing indices,
     which defines how to compute linearized variables from a challenge.
     Example: [[1,2,4],[1,6]] => X1 = C1*C2*C4; X2 = C1*C6
+    These monomials can be generated from the MonomialFactory class above.
     """
 
     def __init__(self, monomials):
