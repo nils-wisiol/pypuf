@@ -167,7 +167,7 @@ class Perceptron(Learner):
         """
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + mean(sign(y_true * y_pred))) / 2
-            return maximum(accuracy, 1 - accuracy)
+            return accuracy
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_len))
         model.add(Activation('tanh'))
