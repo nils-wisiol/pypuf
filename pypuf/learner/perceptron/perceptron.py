@@ -20,36 +20,39 @@ class MonomialFactory():
         Collection of functions to build monomials.
         Currently only k-XOR Arbiter PUF monomials are supported.
     """
+    def __init__(self):
+        self.DB = {}
+
     def to_index_notation(self, mon):
-        res = []
-        for s in mon:
-            if len(s) > 0:
-                res.append(list(s))
-        return res
+        return [list(s) for s in mon if len(s) > 0]
 
     def monomials_atf(self, n):
         # Dict of set(indices) : coefficient
         return {frozenset(range(i,n)): 1 for i in range(n)}
 
-    def multiply_sums(self, m1, m2):
-        from collections import defaultdict
-        res = defaultdict(int)
-        for mon1, count1 in m1.items():
-            for mon2, count2 in m2.items():
-                 s3 = mon1.symmetric_difference(mon2)
-                 res[s3] += count1 * count2
+    def multiply_sums(self, s1, s2):
+        return {m1.symmetric_difference(m2):c1*c2 for m1,c1 in s1.items()
+                                                  for m2,c2 in s2.items()}
+
+    def monomials_exp(self, mono, k):
+        # Return monomials for k=1 and update DB if necessary
+        if k == 1:
+            return mono
+
+        # k is not computed yet -> split in two halves
+        k_star = k // 2
+        A = self.monomials_exp(mono, k_star)
+        res = self.multiply_sums(A, A)
+
+        # If k was uneven, we need to multiply with the base monomial again
+        if k % 2 == 1:
+            res = self.multiply_sums(res, mono)
         return res
 
     def get_xor_arbiter_monomials(self, n, k):
-        base_mon = self.monomials_atf(n)
-        # Compute base_mon**k
-        z = self.monomials_atf(n)
-        for _ in range(k-1):
-            z = self.multiply_sums(z, base_mon)
-        return self.to_index_notation(z)
-
-
-
+        mono = self.monomials_atf(n)
+        res = self.monomials_exp(mono, k)
+        return self.to_index_notation(res)
 
 class LinearizationModel():
     """
