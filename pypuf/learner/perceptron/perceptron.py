@@ -15,6 +15,42 @@ import numpy as np
 from functools import reduce
 
 
+class MonomialFactory():
+    """
+        Collection of functions to build monomials.
+        Currently only k-XOR Arbiter PUF monomials are supported.
+    """
+    def to_index_notation(self, mon):
+        res = []
+        for s in mon:
+            if len(s) > 0:
+                res.append(list(s))
+        return res
+
+    def monomials_atf(self, n):
+        # Dict of set(indices) : coefficient
+        return {frozenset(range(i,n)): 1 for i in range(n)}
+
+    def multiply_sums(self, m1, m2):
+        from collections import defaultdict
+        res = defaultdict(int)
+        for mon1, count1 in m1.items():
+            for mon2, count2 in m2.items():
+                 s3 = mon1.symmetric_difference(mon2)
+                 res[s3] += count1 * count2
+        return res
+
+    def get_xor_arbiter_monomials(self, n, k):
+        base_mon = self.monomials_atf(n)
+        # Compute base_mon**k
+        z = self.monomials_atf(n)
+        for _ in range(k-1):
+            z = self.multiply_sums(z, base_mon)
+        return self.to_index_notation(z)
+
+
+
+
 class LinearizationModel():
     """
     Helper class to linearize challenges of a k-XOR PUF.
