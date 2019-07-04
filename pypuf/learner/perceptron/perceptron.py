@@ -83,10 +83,17 @@ class MonomialFactory():
         """
         Returns monomials representation that corresponds to transforming X to X'
         according to m1 and after that transform X' to X'' according to m2.
+        params : m1 needs to be a ordered list with Xi at index i.
+        params : m2 is in the form of dict (see above for internal representation)
         """
-        pass
-
-
+        # For each monomial in m2, substitute the entry i with monimial i of m1
+        new_mon = {}
+        for mon, coeff in m2.items():
+            new_vars = frozenset()
+            for index in mon:
+                new_vars = new_vars.symmetric_difference(frozenset(m1[index]))
+            new_mon[new_vars] = coeff
+        return new_mon
 
 class LinearizationModel():
     """
