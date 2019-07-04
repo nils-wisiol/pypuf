@@ -8,6 +8,7 @@ from typing import NamedTuple
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.perceptron.perceptron import Perceptron
+from pypuf.learner.perceptron.perceptron import MonomialFactory # todo: put it somewh. else
 from pypuf import tools
 
 from uuid import UUID
@@ -67,13 +68,21 @@ class TestPerceptron(Experiment):
         self.train_set = tools.TrainingSet(self.simulation, N_train)
         self.valid_set = tools.TrainingSet(self.simulation, N_valid)
 
-        # H4rdcode monomials : todo - outsource and make dep. on n, k
-        assert self.parameters.k == 1
-        n = self.parameters.n
-        monomials = [range(i, n) for i in range(n)]
+        # Compute monomials
+        n, k = self.parameters.n, self.parameters.k
+        print("Computing monomials for n: %d k: %d"% (n, k))
+        id_monomials = {frozenset([i]):1 for i in range(n)}
+        atf_monomials = [list(range(i,n)) for i in range(n)]
 
+        # Note: Computing id_monomials**k and then substituting in the atf-linearization
+        # is faster than computing atf_monomials**k
+        id_pow_k_monos = MonomialFactory().monomials_exp(id_monomials, k)
+        final_monomials = MonomialFactory().chain_monomials(atf_monomials, id_pow_k_monos)
+        final_monomials = MonomialFactory().to_index_notation(final_monomials)
+
+        # Build learner from train/test set and monomials to transform features
         self.learner = Perceptron(self.train_set, self.valid_set,
-                                  monomials=monomials,
+                                  monomials=final_monomials,
                                   batch_size=self.parameters.batch_size,
                                   epochs=self.parameters.epochs)
 
