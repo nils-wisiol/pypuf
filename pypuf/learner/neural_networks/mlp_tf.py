@@ -25,7 +25,7 @@ set_verbosity(ERROR)
 class MultiLayerPerceptronTensorflow(Learner):
 
     SEED_RANGE = 2 ** 32
-    EPSILON = 1e-7  # should not be smaller, else NaN in log
+    EPSILON = 1e-6  # should not be smaller, else NaN in log
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
                  activation='relu', loss='squared_hinge', metric_in=-1, metric_out=-1, learning_rate=0.001,

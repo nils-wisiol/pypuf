@@ -79,7 +79,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
     def learn(self):
         def accuracy(y_true, y_pred):
             return 1 - mean(abs(y_true - y_pred))
-        X, X_val, y, y_val = train_test_split(
+        x, x_val, y, y_val = train_test_split(
             self.training_set.challenges,
             self.training_set.responses,
             random_state=self.seed_model,
@@ -95,10 +95,10 @@ class MultiLayerPerceptronScikitLearn(Learner):
                 y=self.training_set.responses,
                 classes=[-1, 1],
             )
-            accuracy_curr = accuracy(y_true=y_val, y_pred=self.model.eval(cs=X_val))
-            self.accuracy_curve.append(accuracy_curr)
-            accuracy_highest = accuracy_curr if accuracy_curr < accuracy_highest else accuracy_highest
-            if accuracy_curr >= accuracy_threshold + self.tolerance:
+            accuracy_tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
+            self.accuracy_curve.append(accuracy_tmp)
+            accuracy_highest = accuracy_tmp if accuracy_tmp > accuracy_highest else accuracy_highest
+            if accuracy_tmp >= accuracy_threshold + self.tolerance:
                 accuracy_threshold = accuracy_highest
                 counter = 0
             else:
