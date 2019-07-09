@@ -24,8 +24,8 @@ class Parameters(NamedTuple):
     layers: Iterable[int]
     activation: str
     loss: str
-    metric_in: int
-    metric_out: int
+    domain_in: int
+    domain_out: int
     learning_rate: float
     penalty: float
     beta_1: float
@@ -69,8 +69,8 @@ class ExperimentMLPTensorflow(Experiment):
                 parameters.layers,
                 parameters.activation,
                 parameters.loss,
-                parameters.metric_in,
-                parameters.metric_out,
+                parameters.domain_in,
+                parameters.domain_out,
                 parameters.learning_rate,
                 parameters.beta_1,
                 parameters.beta_2,
@@ -114,8 +114,8 @@ class ExperimentMLPTensorflow(Experiment):
             layers=self.parameters.layers,
             activation=self.parameters.activation,
             loss=self.parameters.loss,
-            metric_in=self.parameters.metric_in,
-            metric_out=self.parameters.metric_out,
+            domain_in=self.parameters.domain_in,
+            domain_out=self.parameters.domain_out,
             learning_rate=self.parameters.learning_rate,
             penalty=self.parameters.penalty,
             beta_1=self.parameters.beta_1,
@@ -141,9 +141,9 @@ class ExperimentMLPTensorflow(Experiment):
         """
         assert self.model is not None
         accuracy = 1.0 - tools.approx_dist(
-                self.simulation,
-                self.model,
-                min(self.NUM_ACCURACY, 2 ** self.parameters.n),
+                instance1=self.simulation,
+                instance2=self.model,
+                num=min(self.NUM_ACCURACY, 2 ** self.parameters.n),
                 random_instance=RandomState(seed=self.parameters.seed_distance),
         )
         return Result(

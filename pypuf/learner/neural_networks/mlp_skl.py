@@ -1,4 +1,4 @@
-from numpy import reshape, mean, abs
+from numpy import reshape, mean, abs, sign
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from numpy.random import RandomState
@@ -12,8 +12,8 @@ class MultiLayerPerceptronScikitLearn(Learner):
     SEED_RANGE = 2 ** 32
 
     def __init__(self, n, k, training_set, validation_frac, transformation, preprocessing, layers=(10, 10),
-                 activation='relu', metric_in=-1, learning_rate=0.001, penalty=0.0001, beta_1=0.9, beta_2=0.999,
-                 tolerance=0.001, patience=3, print_learning=False, iteration_limit=20, batch_size=1000,
+                 activation='relu', domain_in=-1, learning_rate=0.001, penalty=0.0002, beta_1=0.9, beta_2=0.999,
+                 tolerance=0.0025, patience=4, print_learning=False, iteration_limit=40, batch_size=1000,
                  seed_model=0xc0ffee):
         self.n = n
         self.k = k
@@ -23,7 +23,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         self.preprocessing = preprocessing
         self.layers = layers
         self.activation = activation
-        self.metric_in = metric_in
+        self.domain_in = domain_in
         self.learning_rate = learning_rate
         self.penalty = penalty
         self.beta_1 = beta_1
@@ -49,13 +49,14 @@ class MultiLayerPerceptronScikitLearn(Learner):
             if self.preprocessing == 'full':
                 in_shape = self.k * self.n
             self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
-        if self.metric_in == 0:
+        if self.domain_in == 0:
             self.training_set.challenges = (self.training_set.challenges + 1) / 2
         self.nn = MLPClassifier(
             solver='adam',
             alpha=self.penalty,
             hidden_layer_sizes=self.layers,
             random_state=self.seed_model,
+            learning_rate='constant',
             learning_rate_init=self.learning_rate,
             batch_size=self.batch_size,
             shuffle=False,  # a bug in scikit learn stops us from shuffling, no matter what we set here
@@ -66,19 +67,31 @@ class MultiLayerPerceptronScikitLearn(Learner):
         )
 
         class Model:
-            def __init__(self, n, nn, preprocess):
-                self.n = n
+            def __init__(self, nn, n, k, preprocess, domain_in):
                 self.nn = nn
+                self.n = n
+                self.k = k
                 self.preprocess = preprocess
+                self.domain_in = domain_in
 
             def eval(self, cs):
-                return self.nn.predict(X=cs)
+                cs_preprocessed = self.preprocess(challenges=cs, k=self.k)
+                challenges = cs_preprocessed if self.domain_in == -1 else (cs_preprocessed + 1) / 2
+                predictions = self.nn.predict(X=challenges)
+                predictions_1_1 = predictions * 2 - 1
+                return sign(predictions_1_1).flatten()
 
-        self.model = Model(n=self.n, nn=self.nn, preprocess=preprocess)
+        self.model = Model(
+            nn=self.nn,
+            n=self.n,
+            k=self.k,
+            preprocess=preprocess,
+            domain_in=self.domain_in
+        )
 
     def learn(self):
         def accuracy(y_true, y_pred):
-            return 1 - mean(abs(y_true - y_pred))
+            return (1 + mean(y_true * y_pred)) / 2
         x, x_val, y, y_val = train_test_split(
             self.training_set.challenges,
             self.training_set.responses,
@@ -95,12 +108,15 @@ class MultiLayerPerceptronScikitLearn(Learner):
                 y=self.training_set.responses,
                 classes=[-1, 1],
             )
+            if epoch < self.k:
+                continue
             accuracy_tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(accuracy_tmp)
-            accuracy_highest = accuracy_tmp if accuracy_tmp > accuracy_highest else accuracy_highest
-            if accuracy_tmp >= accuracy_threshold + self.tolerance:
-                accuracy_threshold = accuracy_highest
-                counter = 0
+            if accuracy_tmp > accuracy_highest:
+                accuracy_highest = accuracy_tmp
+                if accuracy_tmp >= accuracy_threshold + self.tolerance:
+                    accuracy_threshold = accuracy_highest
+                    counter = 0
             else:
                 counter += 1
                 if counter >= self.patience:

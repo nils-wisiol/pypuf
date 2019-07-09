@@ -23,7 +23,7 @@ class Parameters(NamedTuple):
     preprocessing: str
     layers: Iterable[int]
     activation: str
-    metric_in: int
+    domain_in: int
     learning_rate: float
     penalty: float
     beta_1: float
@@ -39,7 +39,7 @@ class Result(NamedTuple):
     name: str
     experiment_id: UUID
     pid: int
-    metric_out: int
+    domain_out: int
     loss: str
     measured_time: float
     iterations: int
@@ -54,7 +54,7 @@ class ExperimentMLPScikitLearn(Experiment):
     """
 
     NAME = 'Multilayer Perceptron (scikit-learn)'
-    NUM_DISTANCE = 10000
+    NUM_ACCURACY = 10000
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
@@ -68,7 +68,7 @@ class ExperimentMLPScikitLearn(Experiment):
                 parameters.validation_frac,
                 parameters.layers,
                 parameters.activation,
-                parameters.metric_in,
+                parameters.domain_in,
                 parameters.learning_rate,
                 parameters.beta_1,
                 parameters.beta_2,
@@ -130,20 +130,22 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         Analyzes the learned result.
         """
+        assert self.model is not None
+        accuracy = 1.0 - tools.approx_dist(
+            instance1=self.simulation,
+            instance2=self.model,
+            num=min(self.NUM_ACCURACY, 2 ** self.parameters.n),
+            random_instance=RandomState(seed=self.parameters.seed_distance),
+        )
         return Result(
             name=self.NAME,
             experiment_id=self.id,
             pid=getpid(),
-            metric_out=0,
+            domain_out=0,
             loss='log_loss',
             measured_time=self.measured_time,
             iterations=self.learner.nn.n_iter_,
-            accuracy=1.0 - tools.approx_dist(
-                self.simulation,
-                self.model,
-                min(self.NUM_DISTANCE, 2 ** self.parameters.n),
-                random_instance=RandomState(seed=self.parameters.seed_distance),
-            ),
+            accuracy=accuracy,
             loss_curve=self.learner.nn.loss_curve_,
             accuracy_curve=self.learner.accuracy_curve,
         )

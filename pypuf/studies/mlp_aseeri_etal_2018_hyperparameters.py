@@ -16,7 +16,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     COMBINER = 'xor'
     PREPROCESSING = 'no'
     ACTIVATION = 'relu'
-    ITERATION_LIMIT = 25
+    ITERATION_LIMIT = 40
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
@@ -32,8 +32,8 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     ]
 
     SAMPLES_PER_POINT = {
-        4: 20,
-        5: 20,
+        4: 10,
+        5: 10,
         6: 10,
         7: 10,
         8: 10,
@@ -48,14 +48,14 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LOSSES = {
-        4: ['squared_hinge', 'log_loss'],
-        5: ['squared_hinge', 'log_loss'],
-        6: ['squared_hinge', 'log_loss'],
-        7: ['squared_hinge', 'log_loss'],
-        8: ['squared_hinge', 'log_loss'],
+        4: ['log_loss', 'squared_hinge'],
+        5: ['log_loss', 'squared_hinge'],
+        6: ['log_loss', 'squared_hinge'],
+        7: ['log_loss', 'squared_hinge'],
+        8: ['log_loss', 'squared_hinge'],
     }
 
-    METRICS = {
+    DOMAINS = {
         4: [(-1, -1)],
         5: [(-1, -1)],
         6: [(-1, -1)],
@@ -64,27 +64,27 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     PATIENCE = {
-        4: [2, 3, 4],
-        5: [2, 3, 4],
-        6: [2, 3, 4],
-        7: [2, 3, 4],
-        8: [2, 3, 4],
+        4: [4],
+        5: [4],
+        6: [4],
+        7: [4],
+        8: [4],
     }
 
     TOLERANCES = {
-        4: [0.01, 0.02],
-        5: [0.01, 0.02],
-        6: [0.01, 0.02],
-        7: [0.01, 0.02],
-        8: [0.01, 0.02],
+        4: [0.0025],
+        5: [0.0025],
+        6: [0.0025],
+        7: [0.0025],
+        8: [0.0025],
     }
 
     LEARNING_RATES = {
-        4: [0.0025, 0.0040, 0.0055],
-        5: [0.0015, 0.0025, 0.0035, 0.0045, 0.0055],
-        6: [0.0035, 0.0050, 0.0065],
-        7: [0.0030, 0.0040, 0.0050],
-        8: [0.0002, 0.0004, 0.0006, 0.0008],
+        4: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007],
+        5: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007],
+        6: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007],
+        7: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007],
+        8: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055, 0.006, 0.0065, 0.007],
     }
 
     PENALTIES = {
@@ -139,7 +139,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
 
     def experiments(self):
         for (n, k, N) in self.SIZES:
-            for metric_in, metric_out in self.METRICS[k]:
+            for domain_in, domain_out in self.DOMAINS[k]:
                 validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
                 for layers in self.LAYERS[k]:
                     for i in range(self.SAMPLES_PER_POINT[k]):
@@ -148,9 +148,9 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                             for penalty in self.PENALTIES[k]:
                                 for beta_1 in self.BETAS_1[k]:
                                     for beta_2 in self.BETAS_2[k]:
-                                        for patience in self.PATIENCE:
+                                        for patience in self.PATIENCE[k]:
                                             for tolerance in self.TOLERANCES[k]:
-                                                # if metric_out == 0:
+                                                # if domain_out == 0:
                                                 self.EXPERIMENTS.append(
                                                     ExperimentMLPScikitLearn(
                                                         progress_log_prefix=None,
@@ -168,7 +168,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                             preprocessing=self.PREPROCESSING,
                                                             layers=layers,
                                                             activation=self.ACTIVATION,
-                                                            metric_in=metric_in,
+                                                            domain_in=domain_in,
                                                             learning_rate=learning_rate,
                                                             penalty=penalty,
                                                             beta_1=beta_1,
@@ -200,8 +200,8 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                                                 layers=layers,
                                                                 activation=self.ACTIVATION,
                                                                 loss=loss,
-                                                                metric_in=metric_in,
-                                                                metric_out=metric_out,
+                                                                domain_in=domain_in,
+                                                                domain_out=domain_out,
                                                                 learning_rate=learning_rate,
                                                                 penalty=penalty,
                                                                 beta_1=beta_1,
@@ -222,10 +222,16 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         self.plot_helper(
             name='ScikitLearn',
             df=self.experimenter.results,
+            param_x='learning_rate',
+            param_1=None,
+            param_2=None,
         )
         self.plot_helper(
             name='Tensorflow',
             df=self.experimenter.results,
+            param_x='learning_rate',
+            param_1='loss',
+            param_2=None,
         )
         self.plot_history(
             experiment='ScikitLearn',
@@ -252,14 +258,15 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             kind='accuracy',
         )
 
-    def plot_helper(self, name, df):
+    def plot_helper(self, name, df, param_x, param_1, param_2=None):
+        param_y = 'accuracy'
         df = df[df['experiment'] == 'ExperimentMLP' + name]
         ks = sorted(list(set(self.experimenter.results['k'])))
         ncols = len(ks)
         num_estimators = len(self.PLOT_ESTIMATORS)
         nrows = num_estimators + 3 if name == 'Tensorflow' else num_estimators + 2
         fig, axes = subplots(ncols=ncols, nrows=nrows)
-        fig.set_size_inches(9*ncols, 3 * nrows)
+        fig.set_size_inches(9*ncols, 4 * nrows)
 
         axes = axes.reshape((nrows, ncols))
 
@@ -268,10 +275,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
 
             for i, estimator in enumerate(self.PLOT_ESTIMATORS):
                 lineplot(
-                    x='learning_rate',
-                    y='accuracy',
-                    hue='patience',
-                    style='tolerance',
+                    x=param_x,
+                    y=param_y,
+                    hue=param_1,
+                    style=param_2,
                     data=data,
                     ax=axes[i][j],
                     legend=False,
@@ -279,10 +286,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                     ci=None,
                 )
                 scatterplot(
-                    x='learning_rate',
-                    y='accuracy',
-                    hue='patience',
-                    style='tolerance',
+                    x=param_x,
+                    y=param_y,
+                    hue=param_1,
+                    style=param_2,
                     data=data,
                     ax=axes[i][j],
                     legend='full' if i == 0 else False,
@@ -290,13 +297,13 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 axes[i][j].set_ylabel('accuracy {}'.format(estimator))
                 axes[i][j].set_ylim((-0.05 if estimator.startswith('success') else 0.45, 1.05))
                 axes[i][j].xaxis.set_major_locator(FixedLocator(list(set(
-                    self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
+                    self.experimenter.results[param_x][self.experimenter.results['k'] == k]))))
 
             lineplot(
-                x='learning_rate',
-                y='accuracy',
-                hue='patience',
-                style='tolerance',
+                x=param_x,
+                y=param_y,
+                hue=param_1,
+                style=param_2,
                 data=data,
                 ax=axes[num_estimators][j],
                 legend=False,
@@ -304,29 +311,30 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 ci=None,
             )
             scatterplot(
-                x='learning_rate',
-                y='accuracy',
-                hue='patience',
-                style='tolerance',
+                x=param_x,
+                y=param_y,
+                hue=param_1,
+                style=param_2,
                 data=data,
                 ax=axes[num_estimators][j],
                 legend='full',
             )
-            axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.25, 1.06))
+            if param_1:
+                axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.25, 1.06))
             lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
             total = sum([e.parameters.k == k and lib in e.NAME for e in self.EXPERIMENTS])
             axes[0][j].set_title('k={}\n\n{} experiments per combination,   {}/{}\n'.format(
                 k, self.SAMPLES_PER_POINT[k], len(data), total))
 
             axes[num_estimators][j].xaxis.set_major_locator(FixedLocator(list(set(
-                self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
+                self.experimenter.results[param_x][self.experimenter.results['k'] == k]))))
             axes[num_estimators][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-            axes[num_estimators][j].grid(b=True, which='minor', color='gray', linestyle='--')
+            axes[num_estimators][j].grid(b=True, which='minor', color='gray', linestyle=':')
 
             if name == 'Tensorflow':
                 lineplot(
-                    x='learning_rate',
-                    y='accuracy',
+                    x=param_x,
+                    y=param_y,
                     hue='loss',
                     data=data,
                     ax=axes[-2][j],
@@ -335,8 +343,8 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                     ci=None,
                 )
                 scatterplot(
-                    x='learning_rate',
-                    y='accuracy',
+                    x=param_x,
+                    y=param_y,
                     hue='loss',
                     data=data,
                     ax=axes[-2][j],
@@ -344,18 +352,20 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                 )
 
             axes[-2][j].xaxis.set_major_locator(FixedLocator(list(set(
-                self.experimenter.results['learning_rate'][self.experimenter.results['k'] == k]))))
+                self.experimenter.results[param_x][self.experimenter.results['k'] == k]))))
             axes[-2][j].yaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-            axes[-2][j].grid(b=True, which='minor', color='gray', linestyle='--')
-            axes[-2][j].legend(loc='upper right', bbox_to_anchor=(1.325, 1.06))
+            axes[-2][j].grid(b=True, which='minor', color='gray', linestyle=':')
+            if param_1:
+                axes[-2][j].legend(loc='upper right', bbox_to_anchor=(1.325, 1.06))
 
             lineplot(
                 x='accuracy',
                 y='measured_time',
-                hue='patience',
-                style='tolerance',
+                hue=param_1,
+                style=param_2,
                 data=data,
                 ax=axes[-1][j],
+                legend='full',
                 estimator='mean',
                 ci=None,
             )
@@ -363,11 +373,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
             axes[-1][j].plot((0.5, 1), (y, y), label='reference: {}'.format(y))
             axes[-1][j].set_xscale('linear')
             axes[-1][j].set_yscale('linear')
-            axes[-1][j].set_xlabel('accuracy')
+            axes[-1][j].set_xlabel(param_y)
             axes[-1][j].set_ylabel('runtime in s')
             axes[-1][j].set_ylim(bottom=0)
             axes[-1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-            axes[-1][j].grid(b=True, which='minor', color='gray', linestyle='--')
+            axes[-1][j].grid(b=True, which='minor', color='gray', linestyle=':')
             if len([self.experimenter.results['k'] == k]) > 0:
                 axes[-1][j].legend(loc='upper right', bbox_to_anchor=(1.275 + 0.015*len(str(y)), 1.06))
             for i in range(nrows - 1):
@@ -406,7 +416,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                       else '{}'.format(kind))
                 axes[i][j].set_xlabel('{}'.format('epoch'))
                 for curve in curves:
-                    axes[i][j].plot([float(s) for s in findall(pattern=r'-?\d+\.?\d*', string=curve)])
+                    axes[i][j].plot([float(s) for s in findall(pattern=r'-?\d+\.?\d*', string=str(curve))])
 
         fig.subplots_adjust(hspace=.5, wspace=.5)
         title = fig.suptitle('History of {} of {} Results on XOR Arbiter PUFs'.format(kind, experiment))
