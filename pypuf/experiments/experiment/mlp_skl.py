@@ -146,6 +146,6 @@ class ExperimentMLPScikitLearn(Experiment):
             measured_time=self.measured_time,
             iterations=self.learner.nn.n_iter_,
             accuracy=accuracy,
-            loss_curve=self.learner.nn.loss_curve_,
-            accuracy_curve=self.learner.accuracy_curve,
+            loss_curve=[round(loss, 3) for loss in self.learner.nn.loss_curve_],
+            accuracy_curve=[round(accuracy, 3) for accuracy in self.learner.accuracy_curve],
         )

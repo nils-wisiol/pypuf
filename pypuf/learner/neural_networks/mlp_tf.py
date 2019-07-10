@@ -178,10 +178,10 @@ class MultiLayerPerceptronTensorflow(Learner):
         )
 
     def learn(self):
+
         class DelayedEarlyStopping(EarlyStopping):
-            def __init__(self, delay, patience, tolerance, **kwargs):
+            def __init__(self, delay, tolerance, **kwargs):
                 self.delay = delay
-                self.patience = patience
                 self.tolerance = tolerance
                 self.counter = 0
                 self.current = 0
@@ -189,23 +189,23 @@ class MultiLayerPerceptronTensorflow(Learner):
                 super().__init__(**kwargs)
 
             def on_epoch_end(self, epoch, logs=None):
-                if epoch >= self.delay:
+                if epoch > self.delay:
                     value = logs.get(self.monitor)
                     if value > self.highest:
                         self.highest = value
                         if value >= self.current + self.tolerance:
                             self.current = self.highest
                             self.counter = 0
-                    else:
-                        self.counter += 1
-                        if self.counter >= self.patience:
-                            self.model.stop_training = True
+                            return
+                    self.counter += 1
+                    if self.counter >= self.patience:
+                        self.model.stop_training = True
 
         converged = DelayedEarlyStopping(
-            monitor='val_pypuf_accuracy',
             delay=self.k,
-            patience=self.patience,
             tolerance=self.tolerance,
+            patience=self.patience,
+            monitor='val_pypuf_accuracy',
             verbose=self.print_learning,
         )
         callbacks = [converged]

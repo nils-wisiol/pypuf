@@ -153,6 +153,6 @@ class ExperimentMLPTensorflow(Experiment):
             accuracy=accuracy,
             iterations=self.learner.history.epoch[-1],
             measured_time=self.measured_time,
-            loss_curve=self.learner.history.history['val_loss'],
-            accuracy_curve=self.learner.history.history['val_pypuf_accuracy'],
+            loss_curve=[round(loss, 3) for loss in self.learner.history.history['val_loss']],
+            accuracy_curve=[round(accuracy, 3) for accuracy in self.learner.history.history['val_pypuf_accuracy']],
         )

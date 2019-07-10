@@ -59,7 +59,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             learning_rate='constant',
             learning_rate_init=self.learning_rate,
             batch_size=self.batch_size,
-            shuffle=False,  # a bug in scikit learn stops us from shuffling, no matter what we set here
+            shuffle=True,  # a bug in scikit learn stops us from shuffling, no matter what we set here
             activation=self.activation,
             verbose=self.print_learning,
             beta_1=self.beta_1,
@@ -100,25 +100,25 @@ class MultiLayerPerceptronScikitLearn(Learner):
             stratify=self.training_set.responses,
         )
         counter = 0
-        accuracy_threshold = 0
-        accuracy_highest = 0
+        threshold = 0
+        best = 0
         for epoch in range(self.iteration_limit):
             self.nn = self.nn.partial_fit(
                 X=self.training_set.challenges,
                 y=self.training_set.responses,
                 classes=[-1, 1],
             )
+            tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
+            self.accuracy_curve.append(tmp)
             if epoch < self.k:
                 continue
-            accuracy_tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
-            self.accuracy_curve.append(accuracy_tmp)
-            if accuracy_tmp > accuracy_highest:
-                accuracy_highest = accuracy_tmp
-                if accuracy_tmp >= accuracy_threshold + self.tolerance:
-                    accuracy_threshold = accuracy_highest
+            if tmp > best:
+                best = tmp
+                if tmp >= threshold + self.tolerance:
+                    threshold = best
                     counter = 0
-            else:
-                counter += 1
-                if counter >= self.patience:
-                    break
+                    continue
+            counter += 1
+            if counter >= self.patience:
+                break
         return self.model
