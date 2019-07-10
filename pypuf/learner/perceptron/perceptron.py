@@ -111,23 +111,17 @@ class LinearizationModel():
         """
         # Monomials, defining how to build Xs from a challenge
         self.monomials = monomials
-        # Multiply all values in the iterable
-        self.multiply = lambda values: reduce(lambda x, y: x*y, values)
 
-    def chal_to_xs(self, chal):
+    def linearize(self, inputs):
         """
-        Convert challenge to Xs according to self.monomials
+        Convert array of challenges to Xs accoring to self.monomials.
+        Param inputs has shape N, n - meaning N challenges of n bits.
         """
-        def mono_to_chalbits(mono, chal):
-            """
-            Map indices in monomial to challenge-bits
-            """
-            return map(lambda i: chal[i], mono)
-
-        Xs = [self.multiply(mono_to_chalbits(mono, chal))
-              for mono in self.monomials]
-        return Xs
-
+        N, n = inputs.shape
+        out = np.empty(shape=(N, len(self.monomials)), dtype=np.int8)
+        for idx, m in enumerate(self.monomials):
+            out[:, idx] = np.prod(inputs[:, list(m)], axis=1)
+        return out
 
 class Perceptron(Learner):
     """
@@ -171,7 +165,7 @@ class Perceptron(Learner):
         # Build linearization model
         linearizer = LinearizationModel(self.monomials)
         # Apply linearization to each row in numpy array
-        self.linearize = lambda C: np.apply_along_axis(linearizer.chal_to_xs, 1, C)
+        self.linearize = linearizer.linearize
 
         # Debugging data
         self.history = None
