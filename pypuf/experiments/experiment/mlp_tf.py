@@ -1,3 +1,8 @@
+"""
+This module provides an Experiment that generates a PUF with corresponding training data and passes them to a
+(Tensorflow) Multilayer Perceptron Learner.
+"""
+
 from os import getpid
 from uuid import UUID
 from typing import NamedTuple, Iterable
@@ -10,6 +15,9 @@ from pypuf import tools
 
 
 class Parameters(NamedTuple):
+    """
+    Define all parameters to be documented within the result file that are not included in the input parameters.
+    """
     seed_simulation: int
     seed_challenges: int
     seed_model: int
@@ -38,6 +46,9 @@ class Parameters(NamedTuple):
 
 
 class Result(NamedTuple):
+    """
+    This Experiment uses the Scikit-learn implementation of the Multilayer Perceptron Learner.
+    """
     name: str
     experiment_id: UUID
     pid: int
@@ -50,7 +61,7 @@ class Result(NamedTuple):
 
 class ExperimentMLPTensorflow(Experiment):
     """
-    This Experiment uses the MLP learner on an LTFArray PUF simulation.
+    This Experiment uses the Tensorflow implementation of the Multilayer Perceptron Learner.
     """
 
     NAME = 'Multilayer Perceptron (tensorflow)'
@@ -102,8 +113,8 @@ class ExperimentMLPTensorflow(Experiment):
         prng_challenges = RandomState(seed=self.parameters.seed_challenges)
         N_val = int(self.parameters.N * self.parameters.validation_frac)
         N_train = self.parameters.N - N_val
-        self.training_set = tools.TrainingSet(self.simulation, N_train, prng_challenges)
-        validation_set = tools.TrainingSet(self.simulation, N_val, prng_challenges)
+        self.training_set = tools.TrainingSet(instance=self.simulation, N=N_train, random_instance=prng_challenges)
+        validation_set = tools.TrainingSet(instance=self.simulation, N=N_val, random_instance=prng_challenges)
         self.learner = MultiLayerPerceptronTensorflow(
             n=self.parameters.n,
             k=self.parameters.k,
@@ -131,7 +142,7 @@ class ExperimentMLPTensorflow(Experiment):
 
     def run(self):
         """
-        Train the learner.
+        Execute the learning process.
         """
         self.model = self.learner.learn()
 

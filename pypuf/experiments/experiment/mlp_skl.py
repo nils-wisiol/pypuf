@@ -1,3 +1,8 @@
+"""
+This module provides an Experiment that generates a PUF with corresponding training data and passes them to a
+(Scikit-learn) Multilayer Perceptron Learner.
+"""
+
 from os import getpid
 from typing import NamedTuple, Iterable
 from uuid import UUID
@@ -10,6 +15,9 @@ from pypuf import tools
 
 
 class Parameters(NamedTuple):
+    """
+    Define all input parameters for the Experiment.
+    """
     seed_simulation: int
     seed_challenges: int
     seed_model: int
@@ -36,6 +44,9 @@ class Parameters(NamedTuple):
 
 
 class Result(NamedTuple):
+    """
+    Define all parameters to be documented within the result file that are not included in the input parameters.
+    """
     name: str
     experiment_id: UUID
     pid: int
@@ -50,7 +61,7 @@ class Result(NamedTuple):
 
 class ExperimentMLPScikitLearn(Experiment):
     """
-    This Experiment uses the MLP learner on an LTFArray PUF simulation.
+    This Experiment uses the Scikit-learn implementation of the Multilayer Perceptron Learner.
     """
 
     NAME = 'Multilayer Perceptron (scikit-learn)'
@@ -90,15 +101,19 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         self.simulation = LTFArray(
             weight_array=LTFArray.normal_weights(
-                self.parameters.n,
-                self.parameters.k,
+                n=self.parameters.n,
+                k=self.parameters.k,
                 random_instance=RandomState(seed=self.parameters.seed_simulation),
             ),
             transform=self.parameters.transformation,
             combiner=self.parameters.combiner,
         )
         prng_challenges = RandomState(seed=self.parameters.seed_challenges)
-        self.training_set = tools.TrainingSet(self.simulation, self.parameters.N, prng_challenges)
+        self.training_set = tools.TrainingSet(
+            instance=self.simulation,
+            N=self.parameters.N,
+            random_instance=prng_challenges
+        )
         self.learner = MultiLayerPerceptronScikitLearn(
             n=self.parameters.n,
             k=self.parameters.k,
@@ -122,13 +137,13 @@ class ExperimentMLPScikitLearn(Experiment):
 
     def run(self):
         """
-        Runs the learner
+        Execute the learning process.
         """
         self.model = self.learner.learn()
 
     def analyze(self):
         """
-        Analyzes the learned result.
+        Calculate statistics of the trained model and write them into a result log file.
         """
         assert self.model is not None
         accuracy = 1.0 - tools.approx_dist(

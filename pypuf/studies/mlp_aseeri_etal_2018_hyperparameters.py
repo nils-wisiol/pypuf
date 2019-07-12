@@ -1,3 +1,12 @@
+"""
+This module describes a study that defines a set of experiments in order to find good hyperparameters and to examine
+the quality of Deep Learning based modeling attacks on XOR Arbiter PUFs. Furthermore, some plots are defined to
+visualize the experiment's results.
+The Deep Learning technique used here is the Optimization technique Adam for a Stochastic Gradient Descent on a Feed-
+Forward Neural Network architecture called Multilayer Perceptron (MLP). Implementations of the MLP and Adam are
+used from Scikit-Learn and Tensorflow, respectively.
+"""
+
 from re import findall
 from math import log10
 from matplotlib.pyplot import subplots
@@ -11,6 +20,9 @@ from pypuf.plots import get_estimator
 
 
 class MLPAseeriEtAlHyperparameterStudy(Study):
+    """
+    Define a set of experiments by combining several sets of hyperparameters.
+    """
 
     TRANSFORMATION = 'id'
     COMBINER = 'xor'
@@ -32,11 +44,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     ]
 
     SAMPLES_PER_POINT = {
-        4: 5,
-        5: 5,
-        6: 5,
-        7: 5,
-        8: 5,
+        4: 50,
+        5: 50,
+        6: 50,
+        7: 50,
+        8: 50,
     }
 
     LAYERS = {
@@ -48,11 +60,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LOSSES = {
-        4: ['log_loss', 'squared_hinge'],
-        5: ['log_loss', 'squared_hinge'],
-        6: ['log_loss', 'squared_hinge'],
-        7: ['log_loss', 'squared_hinge'],
-        8: ['log_loss', 'squared_hinge'],
+        4: ['log_loss'],
+        5: ['log_loss'],
+        6: ['log_loss'],
+        7: ['log_loss'],
+        8: ['log_loss'],
     }
 
     DOMAINS = {
@@ -80,11 +92,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005],
-        5: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005],
-        6: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005],
-        7: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005],
-        8: [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005],
+        4: [0.001],
+        5: [0.005],
+        6: [0.005],
+        7: [0.002],
+        8: [0.0005],
     }
 
     PENALTIES = {
@@ -138,6 +150,9 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     EXPERIMENTS = []
 
     def experiments(self):
+        """
+        Generate an experiment for every parameter combination corresponding to the definitions above.
+        """
         for (n, k, N) in self.SIZES:
             for domain_in, domain_out in self.DOMAINS[k]:
                 validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
@@ -217,6 +232,10 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         return self.EXPERIMENTS
 
     def plot(self):
+        """
+        Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
+        and the measured time of each experiment, respectively.
+        """
         if not self.EXPERIMENTS:
             self.experiments()
         self.plot_helper(

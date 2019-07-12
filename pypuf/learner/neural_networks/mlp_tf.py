@@ -1,3 +1,10 @@
+"""
+This module provides a learning algorithm for Arbiter PUFs using a Multilayer Perceptron and Adam from Tensorflow.
+This approach is based on the work of Aseeri et. al. "A Machine Learning-based Security Vulnerability Study on XOR PUFs
+for Resource-Constraint Internet of Things", 2018 IEEE International Congress on Internet of Things (ICIOT),
+San Francisco, CA, 2018, pp. 49-56.
+"""
+
 from os import environ
 
 from numpy import reshape, sign
@@ -23,6 +30,9 @@ set_verbosity(ERROR)
 
 
 class MultiLayerPerceptronTensorflow(Learner):
+    """
+    Define Learner that generates a Multilayer Perceptron model which uses the Adam optimization method.
+    """
 
     SEED_RANGE = 2 ** 32
     EPSILON = 1e-6  # should not be smaller, else NaN in log
@@ -48,11 +58,11 @@ class MultiLayerPerceptronTensorflow(Learner):
         :param beta_1:          float; between 0 and 1, parameter of Adam optimizer
         :param beta_2:          float; between 0 and 1, parameter of Adam optimizer
         :param tolerance:       float; between 0 and 1, stopping criterium: minimum change of loss
-        :param patience:        int; positive, stopping criterium: maximum number of epochs with low change of loss
-        :param print_learning:  bool; whether to print learning progress of tensorflow
+        :param patience:        int; positive, stopping criterion: maximum number of epochs with low change of loss
         :param iteration_limit: int; positive, maximum number of epochs
         :param batch_size:      int; between 1 and N, number of training samples used until updating the model's weights
         :param seed_model:      int; between 1 and 2**32, seed for PRNG
+        :param print_learning:  bool; whether to print learning progress of tensorflow
         """
         self.n = n
         self.k = k
@@ -80,6 +90,9 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.model = None
 
     def prepare(self):
+        """
+        Preprocess training data and initialize the Multilayer Perceptron.
+        """
         seed(self.seed_model)
         set_random_seed(self.seed_model)
         session_conf = ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
@@ -153,6 +166,9 @@ class MultiLayerPerceptronTensorflow(Learner):
         )
 
         class Model:
+            """
+            This defines a wrapper for the learning model to fit in with the Learner framework.
+            """
             def __init__(self, nn, n, k, preprocess, domain_in, domain_out):
                 self.nn = nn
                 self.n = n
@@ -178,8 +194,12 @@ class MultiLayerPerceptronTensorflow(Learner):
         )
 
     def learn(self):
+        """
+        Train the model with early stopping.
+        """
 
         class DelayedEarlyStopping(EarlyStopping):
+
             def __init__(self, delay, tolerance, **kwargs):
                 self.delay = delay
                 self.tolerance = tolerance
