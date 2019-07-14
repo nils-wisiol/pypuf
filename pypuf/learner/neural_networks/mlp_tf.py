@@ -129,8 +129,18 @@ class MultiLayerPerceptronTensorflow(Learner):
         ))
         if len(self.layers) > 1:
             for nodes in self.layers[1:]:
-                self.nn.add(Dense(units=nodes, activation=self.activation, kernel_regularizer=l2_loss, use_bias=True))
-        self.nn.add(Dense(units=1, activation='sigmoid' if self.domain_out == 0 else 'tanh', use_bias=True))
+                self.nn.add(Dense(
+                    units=nodes,
+                    activation=self.activation,
+                    kernel_regularizer=l2_loss,
+                    use_bias=True
+                ))
+        self.nn.add(Dense(
+            units=1,
+            activation='sigmoid' if self.domain_out == 0 else 'tanh',
+            kernel_regularizer=l2_loss,
+            use_bias=True
+        ))
 
         if self.domain_out == 0:
             def pypuf_accuracy(y_true, y_pred):

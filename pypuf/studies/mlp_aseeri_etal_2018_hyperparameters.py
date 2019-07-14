@@ -44,11 +44,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     ]
 
     SAMPLES_PER_POINT = {
-        4: 50,
-        5: 50,
-        6: 50,
-        7: 50,
-        8: 50,
+        4: 100,
+        5: 100,
+        6: 100,
+        7: 100,
+        8: 100,
     }
 
     LAYERS = {
@@ -92,11 +92,11 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     }
 
     LEARNING_RATES = {
-        4: [0.001],
-        5: [0.005],
-        6: [0.005],
+        4: [0.002],
+        5: [0.002],
+        6: [0.002],
         7: [0.002],
-        8: [0.0005],
+        8: [0.001],
     }
 
     PENALTIES = {
@@ -152,14 +152,16 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     def experiments(self):
         """
         Generate an experiment for every parameter combination corresponding to the definitions above.
+        For each combination of (size, samples_per_point, learning_rate) different random seeds are used.
         """
-        for (n, k, N) in self.SIZES:
-            for domain_in, domain_out in self.DOMAINS[k]:
-                validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
-                for layers in self.LAYERS[k]:
-                    for i in range(self.SAMPLES_PER_POINT[k]):
-                        for j, learning_rate in enumerate(self.LEARNING_RATES[k]):
-                            cycle = i * (len(self.LEARNING_RATES[k])) + j
+        for c1, (n, k, N) in enumerate(self.SIZES):
+            for c2 in range(self.SAMPLES_PER_POINT[k]):
+                for c3, learning_rate in enumerate(self.LEARNING_RATES[k]):
+                    cycle = c1 * (self.SAMPLES_PER_POINT[k] * len(self.LEARNING_RATES[k])) \
+                            + c2 * len(self.LEARNING_RATES[k]) + c3
+                    for domain_in, domain_out in self.DOMAINS[k]:
+                        validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
+                        for layers in self.LAYERS[k]:
                             for penalty in self.PENALTIES[k]:
                                 for beta_1 in self.BETAS_1[k]:
                                     for beta_2 in self.BETAS_2[k]:
