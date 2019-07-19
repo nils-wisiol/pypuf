@@ -38,7 +38,7 @@ class MultiLayerPerceptronTensorflow(Learner):
     EPSILON = 1e-6  # should not be smaller, else NaN in log
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
-                 activation='relu', loss='squared_hinge', domain_in=-1, domain_out=-1, learning_rate=0.001,
+                 activation='relu', loss='log_loss', domain_in=-1, domain_out=-1, learning_rate=0.001,
                  penalty=0.0002, beta_1=0.9, beta_2=0.999, tolerance=0.0025, patience=4, print_learning=False,
                  iteration_limit=40, batch_size=1000, seed_model=0xc0ffee):
         """
