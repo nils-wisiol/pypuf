@@ -9,7 +9,7 @@ from pypuf.simulation.base import Simulation    # Perceptron return type
 # ML Utilities
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense, Activation
-from tensorflow.python.keras.backend import maximum, mean, sign
+from tensorflow.python.keras.backend import maximum, mean, sign, exp
 import numpy as np
 
 from functools import reduce
@@ -17,83 +17,55 @@ from functools import reduce
 
 class MonomialFactory():
     """
-        Collection of functions to build monomials.
-        Currently only k-XOR Arbiter PUF monomials are supported.
-
-        In this class we use a internal representation of monomials:
-        {set(indices) : coefficients}
-        This means that {set(1,2,3) : 2, set(0) : 5} is interpreted as:
-        2*X1*X2*X3 + 5*X0
-
-        Each variable X is in {-1, 1}, this means that X**2 = 1, hence we can eliminate
-        these terms and shorten the monomials.
+    Collection of functions to build monomials.
+    Currently only k-XOR Arbiter PUF monomials are supported.
     """
+    from bipoly import BiPoly, to_index_notation
 
-    def to_index_notation(self, mon):
-        """
-        Converts the internal representation of a monomial (with coefficients and bias)
-        to a list of lists containing indices.
-        """
-        return [list(s) for s in mon if len(s) > 0]
-
-    def monomials_atf(self, n):
+    @staticmethod
+    def monomials_atf(n):
         """
         Generates a dict of set(indices) : coefficient according to the internal
         representation of a linearized Arbiter PUF.
         """
-        return {frozenset(range(i,n)): 1 for i in range(n)}
+        return BiPoly(list(range(i,n)): 1 for i in range(n)))
 
-    def multiply_sums(self, s1, s2):
-        """
-        Interpretes two dicts of set(indices) : coefficients as sums of monomials and
-        multiplies these two big sums.
-        """
-        return {m1.symmetric_difference(m2):c1*c2 for m1,c1 in s1.items()
-                                                  for m2,c2 in s2.items()}
-
-    def monomials_exp(self, mono, k):
-        """
-        Interpretes a dict of set(indices) : coefficients as a sum of monomials
-        and raises this sum to the power of k.
-        This is done is a recursive manner, minimizing the number of multiplications.
-        """
-        # Return monomials for k=1 and update DB if necessary
-        if k == 1:
-            return mono
-
-        # k is not computed yet -> split in two halves
-        k_star = k // 2
-        A = self.monomials_exp(mono, k_star)
-        res = self.multiply_sums(A, A)
-
-        # If k was uneven, we need to multiply with the base monomial again
-        if k % 2 == 1:
-            res = self.multiply_sums(res, mono)
-        return res
-
-    def get_xor_arbiter_monomials(self, n, k):
+    @staticmethod
+    def get_xor_arbiter_monomials(n, k):
         """
         Returns the linearized monomial representation of n-bit k-XOR Arbiter PUF.
         """
-        mono = self.monomials_atf(n)
-        res = self.monomials_exp(mono, k)
-        return self.to_index_notation(res)
+        mono = MonomialFactory.monomials_atf(n)
+        res = mono.pow(k)
+        return to_index_notation(res) #todo change
 
-    def chain_monomials(self, m1, m2):
-        """
-        Returns monomials representation that corresponds to transforming X to X'
-        according to m1 and after that transform X' to X'' according to m2.
-        params : m1 needs to be a ordered list with Xi at index i.
-        params : m2 is in the form of dict (see above for internal representation)
-        """
-        # For each monomial in m2, substitute the entry i with monimial i of m1
-        new_mon = {}
-        for mon, coeff in m2.items():
-            new_vars = frozenset()
-            for index in mon:
-                new_vars = new_vars.symmetric_difference(frozenset(m1[index]))
-            new_mon[new_vars] = coeff
-        return new_mon
+    @staticmethod
+    def monomials_ipuf(n, k_up, k_down, m_up=None):
+        m_up = m_up or MonomialFactory.monomials_atf(n).pow(k_up)
+
+        group_1 = BiPoly()
+        for i in range(n//2):
+            group_1 = group_1 + (BiPoly(list(range(i, n)) * m_up)
+
+        group_2 = m_up.copy()
+
+        group_3 = BiPoly([list(range(i-1, n))
+                            for i in range(n//2+2, n+1)])
+
+        m_down = group_1 + group_2 + group_3
+
+        return m_down.pow(k_down)
+
+    """
+    @staticmethod
+    def monomials_to_vector(monomials, n):
+        chi_set = []
+        for m in monomials.keys():
+            s = zeros(n, dtype=BIT_TYPE)
+            s[list(m)] = 1
+            chi_set.append(s)
+        return chi_set
+    """
 
 class LinearizationModel():
     """
@@ -178,9 +150,11 @@ class Perceptron(Learner):
         def pypuf_accuracy(y_true, y_pred):
             accuracy = (1 + mean(sign(y_true * y_pred))) / 2
             return accuracy
+        def soelter_d(y_true, y_pred):
+            return 1 - (1/exp(-y_true*y_pred))
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_len))
-        model.add(Activation('tanh'))
+        model.add(Activation('softsign'))
         model.compile(loss='squared_hinge',
                       optimizer='adam',
                       metrics=[pypuf_accuracy])

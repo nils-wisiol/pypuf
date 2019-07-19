@@ -1,6 +1,13 @@
 from numpy import bincount, array, where
 """
     Implements polynomials over {-1, 1}.
+    In this class we use a internal representation of monomials:
+    {set(indices) : coefficients}
+    This means that {set(1,2,3) : 2, set(0) : 5} is interpreted as:
+    2*X1*X2*X3 + 5*X0
+
+    Each variable X is in {-1, 1}, this means that X**2 = 1, hence we can eliminate
+    these terms and shorten the monomials.
 """
 
 #-----------------------------------------------------------------------
@@ -12,6 +19,9 @@ def to_index_notation(mon):
     return [list(s) for s in mon if len(s) > 0]
 
 def to_dict_notation(mon):
+    """
+    Converts a list of lists containing indices to the internal representation.
+    """
     res = {frozenset(x):1 for x in mon}
     return res
 
@@ -132,4 +142,18 @@ str(c)]) for c in coeff])
 
     def coef_dist(self):
         return bincount(array(list(self.monomials.values())))
-#-----------------------------------------------------------------------
+
+    def substitute(self, mapping):
+        """
+        Returns BiPoly that corresponds to substituting each variable by a monomial.
+        params : mapping needs to be a ordered list with Xi at index i.
+        """
+        # For each monomial in self, substitute the entry i with monimial i of mapping
+        new_poly = BiPoly
+        for mon, coeff in self:
+            new_vars = frozenset()
+            for index in mon:
+                new_vars = new_vars.symmetric_difference(frozenset(mapping[index]))
+            new_poly[new_vars] = (new_poly.get(new_vars) or 0) + coeff
+        return new_poly
+    #-----------------------------------------------------------------------
