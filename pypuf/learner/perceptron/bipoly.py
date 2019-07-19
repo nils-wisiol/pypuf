@@ -11,12 +11,6 @@ from numpy import bincount, array, where
 """
 
 #-----------------------------------------------------------------------
-def to_index_notation(mon):
-    """
-    Converts the internal representation of a monomial (with coefficients and bias)
-    to a list of lists containing indices.
-    """
-    return [list(s) for s in mon if len(s) > 0]
 
 def to_dict_notation(mon):
     """
@@ -143,6 +137,9 @@ str(c)]) for c in coeff])
     def coef_dist(self):
         return bincount(array(list(self.monomials.values())))
 
+    def to_index_notation(self):
+        return [list(s) for s, _ in self if len(s) > 0]
+
     def substitute(self, mapping):
         """
         Returns BiPoly that corresponds to substituting each variable by a monomial.
@@ -156,4 +153,5 @@ str(c)]) for c in coeff])
                 new_vars = new_vars.symmetric_difference(frozenset(mapping[index]))
             new_poly[new_vars] = (new_poly.get(new_vars) or 0) + coeff
         return new_poly
+
     #-----------------------------------------------------------------------

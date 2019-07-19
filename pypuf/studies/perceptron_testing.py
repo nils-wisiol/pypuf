@@ -19,7 +19,7 @@ class PerceptronTesting(Study):
 
     def experiments(self):
         experiments = []
-        params = Parameters(n=32, k=2, N=10000,
+        params = Parameters(n=32, k=2, N=1000,
                             batch_size=100,
                             epochs=100)
         e = TestPerceptron(

@@ -20,7 +20,11 @@ class MonomialFactory():
     Collection of functions to build monomials.
     Currently only k-XOR Arbiter PUF monomials are supported.
     """
-    from bipoly import BiPoly, to_index_notation
+    from bipoly import BiPoly
+
+    @staticmethod
+    def monomials_id(n):
+        return BiPoly([[i] for i in range(n)])
 
     @staticmethod
     def monomials_atf(n):
@@ -28,7 +32,7 @@ class MonomialFactory():
         Generates a dict of set(indices) : coefficient according to the internal
         representation of a linearized Arbiter PUF.
         """
-        return BiPoly(list(range(i,n)): 1 for i in range(n)))
+        return BiPoly(list(range(i,n)) for i in range(n))
 
     @staticmethod
     def get_xor_arbiter_monomials(n, k):
@@ -37,7 +41,7 @@ class MonomialFactory():
         """
         mono = MonomialFactory.monomials_atf(n)
         res = mono.pow(k)
-        return to_index_notation(res) #todo change
+        return res.to_index_notation()
 
     @staticmethod
     def monomials_ipuf(n, k_up, k_down, m_up=None):
@@ -45,7 +49,7 @@ class MonomialFactory():
 
         group_1 = BiPoly()
         for i in range(n//2):
-            group_1 = group_1 + (BiPoly(list(range(i, n)) * m_up)
+            group_1 = group_1 + (BiPoly(list(range(i, n)) * m_up))
 
         group_2 = m_up.copy()
 
