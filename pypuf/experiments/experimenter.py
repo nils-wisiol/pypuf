@@ -59,6 +59,7 @@ class Experimenter(object):
 
         # Setup parallel execution limit
         self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count()) if cpu_limit else multiprocessing.cpu_count()
+        self.cpu_limit = int(os.environ.get('PYPUF_CPU_LIMIT', self.cpu_limit))
         self.semaphore = None
 
         # Setup GPU usage
@@ -151,7 +152,9 @@ class Experimenter(object):
         # setup process pool
         self.jobs_total = len(self.experiments)
         start_time = datetime.now()
-        print("Using up to %i CPUs with numpy multi-threading disabled" % self.cpu_limit)
+        print("Using up to %i CPUs %s" %
+              (self.cpu_limit,
+               'with numpy multi-threading disabled' if os.environ.get('OMP_NUM_THREADS', None) == '1' else ''))
         with multiprocessing.Pool(self.cpu_limit) as pool:
 
             # print status function
@@ -303,6 +306,9 @@ class Experimenter(object):
         already imported and the environment was not yet set accordingly, an
         Exception will be raised.
         """
+        if os.environ.get('PYPUF_CPU_LIMIT', None) == '1':
+            return
+
         desired_environment = {
             'OMP_NUM_THREADS': '1',
             'NUMEXPR_NUM_THREADS': '1',
@@ -314,7 +320,9 @@ class Experimenter(object):
                     raise Exception('Cannot disable numpy\'s automatic parallel computing, '
                                     'because it was already imported. To fix this issue, '
                                     'import Experimenter before numpy or run python in the '
-                                    'following environment: ' + str(desired_environment))
+                                    'following environment: %s or restrict the number of '
+                                    'parallel jobs that pypuf will run using the '
+                                    'PYPUF_CPU_LIMIT environment variable set to 1.' % str(desired_environment))
         for key, val in desired_environment.items():
             os.environ[key] = val
 
