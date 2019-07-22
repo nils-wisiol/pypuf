@@ -424,8 +424,9 @@ def find_study_class(name):
 
     try:
         study_module = import_module(name)
-    except ModuleNotFoundError:
-        print('Module {} cannot be found.'.format(name))
+    except ModuleNotFoundError as e:
+        print('Module {} cannot be imported due to the following exception:'.format(name))
+        print(e)
         exit(1)
 
     studies = [
