@@ -8,6 +8,8 @@ used from Scikit-Learn and Tensorflow, respectively.
 """
 
 from matplotlib.pyplot import subplots
+from numpy.ma import ones
+from numpy.random.mtrand import seed
 from seaborn import stripplot
 
 from pypuf.studies.base import Study
@@ -227,13 +229,13 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         """
         if not self.EXPERIMENTS:
             self.experiments()
+            seed(42)
             df = self.experimenter.results
             ncols = 2
             nrows = 3
             fig, axes = subplots(ncols=ncols, nrows=nrows)
             fig.set_size_inches(7 * ncols, 4 * nrows)
             axes = axes.reshape((nrows, ncols))
-            thresholds = {'medium': 0.7, 'good': 0.9, 'perfect': 0.98}
             distances = 1 - df['accuracy']
             df['distance'] = distances
             color_ref = 'black'
@@ -258,10 +260,9 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                     linewidth=2, label=str(round(means_accuracy[j], 4)))
                     axes[0][i].plot((-0.25 + j, 0.235 + j), 2 * (accuracy_ref,),
                                     color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
-                for threshold in thresholds.values():
-                    axes[0][i].plot((-0.215, 4.2), 2 * (threshold,), color='gray', linestyle=':')
                 lib = 'tensorflow' if 'Tensorflow' in experiment \
                     else 'scikit-learn' if 'ScikitLearn' in experiment else '?'
+                axes[0][i].set_xlim(left=-0.5, right=4.485)
                 axes[0][i].set_title('Library: {}\n'.format(lib))
                 axes[0][i].set_yscale('linear')
                 axes[0][i].set_ylabel('accuracy')
@@ -284,11 +285,18 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                     linewidth=2, label=str(round(means_distance[j], 3)))
                     axes[1][i].plot((-0.25 + j, 0.235 + j), 2 * (1 - accuracy_ref,),
                                     color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
-                for threshold in thresholds.values():
-                    axes[1][i].plot((-0.215, 4.2), 2 * (1 - threshold,), color='gray', linestyle=':')
                 axes[1][i].set_yscale('log')
-                axes[1][i].set_ylim(bottom=0.005)
-                axes[1][i].legend(loc='upper right', bbox_to_anchor=(1.24, 1.02), title='means')
+                axes[1][i].invert_yaxis()
+                axes[1][i].set_xlim(left=-0.5, right=4.485)
+                axes[1][i].set_ylim(top=0.005, bottom=0.6)
+                major_ticks = [0.1, 0.2, 0.3, 0.4, 0.5]
+                minor_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
+                axes[1][i].set_yticks(ticks=major_ticks, minor=False)
+                axes[1][i].set_yticks(ticks=minor_ticks, minor=True)
+                axes[1][i].set_yticklabels(ones(shape=5) - major_ticks, minor=False)
+                axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
+                axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
+                axes[1][i].set_ylabel('accuracy')
 
                 stripplot(
                     x='k',
@@ -307,6 +315,9 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                                     linewidth=2, label=str(round(means_time[j], 0)))
                     axes[2][i].plot((-0.25 + j, 0.235 + j), 2 * (ref_time,),
                                     color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
+                    if j > 0:
+                        axes[2][i].plot((j-1, j), (means_time[j-1], means_time[j]),
+                                        color='gray', linestyle='-', linewidth=2, zorder=0)
                 axes[2][i].set_yscale('log')
                 axes[2][i].legend(loc='upper right', bbox_to_anchor=(1.28, 1.02), title='means')
 
