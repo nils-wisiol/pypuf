@@ -12,3 +12,5 @@ script:
   - python -m unittest
   # command to run python code check
   - python linter.py
+  # run doc tests
+  - python -m doctest pypuf/bipoly.py
