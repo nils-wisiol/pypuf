@@ -224,7 +224,6 @@ def get_estimator(estimator):
 
     return
 
-
 class PermutationIndexPlot:
     """
     Show the distribution of indices of the permutations which lead to a successful learning of the instance using
