@@ -6,6 +6,7 @@
 """
 from typing import NamedTuple
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.perceptron.perceptron import Perceptron
 from pypuf.bipoly import BiPoly
@@ -53,7 +54,9 @@ class TestPerceptron(Experiment):
         """
         Prepare learning: Initialize Perceptron, split training sets, etc.
         """
+        n, k = self.parameters.n, self.parameters.k
         # Create simulation that generates PUF challenge-response pairs
+        """
         self.simulation = LTFArray(
             weight_array=LTFArray.normal_weights(
                 self.parameters.n,
@@ -62,6 +65,15 @@ class TestPerceptron(Experiment):
             transform='atf',  # todo: make dynamic
             combiner='xor'
         )
+        """
+
+        self.simulation = InterposePUF(
+                n=n,
+                k=k,
+                k_up=k,
+                transform='atf'
+                )
+
         # Generate training and test sets from PUF simulation
         N_valid = max(min(self.parameters.N // 20, 10000), 200)  # ???@chris
         N_train = self.parameters.N - N_valid
@@ -69,16 +81,22 @@ class TestPerceptron(Experiment):
         self.valid_set = tools.TrainingSet(self.simulation, N_valid)
 
         # Compute monomials
-        n, k = self.parameters.n, self.parameters.k
         print("Computing monomials for n: %d k: %d"% (n, k))
+
+        """
         id_monomials = BiPoly.linear(n)
         atf_mapping = [list(range(i,n)) for i in range(n)]
-
         # Note: Computing id_monomials**k and then substituting in the atf-linearization
         # is faster than computing atf_monomials**k
         id_pow_k_monos = id_monomials ** k
         final_monomials = id_pow_k_monos.substitute(atf_mapping)
         final_monomials = final_monomials.to_index_notation()
+        """
+
+        final_monomials = BiPoly.interpose_puf_approximation(n, k, k)
+        final_monomials = final_monomials.to_index_notation()
+
+
         print("Done computing monomials!")
 
         # Build learner from train/test set and monomials to transform features
