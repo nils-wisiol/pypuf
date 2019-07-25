@@ -11,6 +11,7 @@ from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense, Activation
 from tensorflow.python.keras.backend import maximum, mean, sign, exp
 import numpy as np
+from numpy import empty, zeros, int8, float32
 
 from pypuf.bipoly import BiPoly
 
@@ -30,7 +31,7 @@ class LinearizationModel():
         # Monomials, defining how to build Xs from a challenge
         self.monomials = monomials
 
-    def linearize(self, inputs):
+    def lin_old(self, inputs):
         """
         Convert array of challenges to Xs accoring to self.monomials.
         Param inputs has shape N, n - meaning N challenges of n bits.
@@ -40,6 +41,20 @@ class LinearizationModel():
         for idx, m in enumerate(self.monomials):
             out[:, idx] = np.prod(inputs[:, list(m)], axis=1)
         return out
+
+    def linearize(self, inputs, block_size=10**5):
+        N, n = inputs.shape
+        try:
+            linearized_challenges = empty(shape=(N, len(self.monomials)), dtype=int8)
+        except MemoryError as e:
+            print(e)
+        monomial_matrix = zeros(shape=(len(self.monomials), n), dtype=float32)
+        for idx, m in enumerate(self.monomials):
+            monomial_matrix[idx, list(m)] = 1
+        for start in range(0, len(inputs), block_size):
+            inputs01 = .5 - .5 * inputs[start:start+block_size]
+            linearized_challenges[start:start+block_size] = 1 - 2 * ((inputs01 @ monomial_matrix.T).astype(int8) % 2)
+        return linearized_challenges
 
 class Perceptron(Learner):
     """
@@ -112,10 +127,12 @@ class Perceptron(Learner):
         Called in self.learn().
         """
         # Convert challenges to linearized subchallenge representation
+        print("Tranforming CRPs according to Monomials.")
         x = self.linearize(self.train_set.challenges)
         y = self.train_set.responses
         x_valid = self.linearize(self.valid_set.challenges)
         y_valid = self.valid_set.responses
+        print("Done Tranforming!")
 
         self.history = self.model.fit(x=x, y=y,
                                       batch_size=self.batch_size,
