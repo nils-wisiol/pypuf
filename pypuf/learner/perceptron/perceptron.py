@@ -13,6 +13,7 @@ from tensorflow.python.keras.backend import maximum, mean, sign, exp
 import numpy as np
 
 from functools import reduce
+from pypuf.learner.perceptron.bipoly import BiPoly
 
 
 class MonomialFactory():
@@ -20,7 +21,6 @@ class MonomialFactory():
     Collection of functions to build monomials.
     Currently only k-XOR Arbiter PUF monomials are supported.
     """
-    from bipoly import BiPoly
 
     @staticmethod
     def monomials_id(n):

@@ -71,7 +71,7 @@ class TestPerceptron(Experiment):
         # Compute monomials
         n, k = self.parameters.n, self.parameters.k
         print("Computing monomials for n: %d k: %d"% (n, k))
-        id_monomials = MonomialsFactory.monomials_id(n)
+        id_monomials = MonomialFactory.monomials_id(n)
         atf_mapping = [list(range(i,n)) for i in range(n)]
 
         # Note: Computing id_monomials**k and then substituting in the atf-linearization
@@ -79,6 +79,7 @@ class TestPerceptron(Experiment):
         id_pow_k_monos = id_monomials.pow(k)
         final_monomials = id_pow_k_monos.substitute(atf_mapping)
         final_monomials = final_monomials.to_index_notation()
+        print("Done computing monomials!")
 
         # Build learner from train/test set and monomials to transform features
         self.learner = Perceptron(self.train_set, self.valid_set,
