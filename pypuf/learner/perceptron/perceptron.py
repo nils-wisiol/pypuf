@@ -12,64 +12,7 @@ from tensorflow.python.keras.layers import Dense, Activation
 from tensorflow.python.keras.backend import maximum, mean, sign, exp
 import numpy as np
 
-from functools import reduce
-from pypuf.learner.perceptron.bipoly import BiPoly
-
-
-class MonomialFactory():
-    """
-    Collection of functions to build monomials.
-    Currently only k-XOR Arbiter PUF monomials are supported.
-    """
-
-    @staticmethod
-    def monomials_id(n):
-        return BiPoly([[i] for i in range(n)])
-
-    @staticmethod
-    def monomials_atf(n):
-        """
-        Generates a dict of set(indices) : coefficient according to the internal
-        representation of a linearized Arbiter PUF.
-        """
-        return BiPoly(list(range(i,n)) for i in range(n))
-
-    @staticmethod
-    def get_xor_arbiter_monomials(n, k):
-        """
-        Returns the linearized monomial representation of n-bit k-XOR Arbiter PUF.
-        """
-        mono = MonomialFactory.monomials_atf(n)
-        res = mono.pow(k)
-        return res.to_index_notation()
-
-    @staticmethod
-    def monomials_ipuf(n, k_up, k_down, m_up=None):
-        m_up = m_up or MonomialFactory.monomials_atf(n).pow(k_up)
-
-        group_1 = BiPoly()
-        for i in range(n//2):
-            group_1 = group_1 + (BiPoly(list(range(i, n)) * m_up))
-
-        group_2 = m_up.copy()
-
-        group_3 = BiPoly([list(range(i-1, n))
-                            for i in range(n//2+2, n+1)])
-
-        m_down = group_1 + group_2 + group_3
-
-        return m_down.pow(k_down)
-
-    """
-    @staticmethod
-    def monomials_to_vector(monomials, n):
-        chi_set = []
-        for m in monomials.keys():
-            s = zeros(n, dtype=BIT_TYPE)
-            s[list(m)] = 1
-            chi_set.append(s)
-        return chi_set
-    """
+from pypuf.bipoly import BiPoly
 
 class LinearizationModel():
     """
@@ -77,7 +20,6 @@ class LinearizationModel():
     Instantiate using 'monomials' - a list of lists containing indices,
     which defines how to compute linearized variables from a challenge.
     Example: [[1,2,4],[1,6]] => X1 = C1*C2*C4; X2 = C1*C6
-    These monomials can be generated from the MonomialFactory class above.
     """
 
     def __init__(self, monomials):

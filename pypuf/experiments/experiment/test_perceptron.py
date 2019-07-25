@@ -8,7 +8,7 @@ from typing import NamedTuple
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.perceptron.perceptron import Perceptron
-from pypuf.learner.perceptron.perceptron import MonomialFactory # todo: put it somewh. else
+from pypuf.bipoly import BiPoly
 from pypuf import tools
 
 from uuid import UUID
@@ -71,12 +71,12 @@ class TestPerceptron(Experiment):
         # Compute monomials
         n, k = self.parameters.n, self.parameters.k
         print("Computing monomials for n: %d k: %d"% (n, k))
-        id_monomials = MonomialFactory.monomials_id(n)
+        id_monomials = BiPoly.linear(n)
         atf_mapping = [list(range(i,n)) for i in range(n)]
 
         # Note: Computing id_monomials**k and then substituting in the atf-linearization
         # is faster than computing atf_monomials**k
-        id_pow_k_monos = id_monomials.pow(k)
+        id_pow_k_monos = id_monomials ** k
         final_monomials = id_pow_k_monos.substitute(atf_mapping)
         final_monomials = final_monomials.to_index_notation()
         print("Done computing monomials!")
