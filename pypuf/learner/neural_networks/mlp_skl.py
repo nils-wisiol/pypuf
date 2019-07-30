@@ -142,6 +142,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         counter = 0
         threshold = 0
         best = 0
+        waiting = min(8, max(4, self.k))
         for epoch in range(self.iteration_limit):
             self.nn = self.nn.partial_fit(
                 X=self.training_set.challenges,
@@ -150,7 +151,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             )
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(tmp)
-            if epoch < self.k:
+            if epoch < waiting:
                 continue
             if tmp > best:
                 best = tmp

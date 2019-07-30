@@ -232,7 +232,7 @@ class MultiLayerPerceptronTensorflow(Learner):
                         self.model.stop_training = True
 
         converged = DelayedEarlyStopping(
-            delay=self.k,
+            delay=min(8, max(4, self.k)),
             tolerance=self.tolerance,
             patience=self.patience,
             monitor='val_pypuf_accuracy',

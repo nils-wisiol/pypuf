@@ -6,7 +6,9 @@ The Deep Learning technique used here is the Optimization technique Adam for a S
 Forward Neural Network architecture called Multilayer Perceptron (MLP). Implementations of the MLP and Adam are
 used from Scikit-Learn and Tensorflow, respectively.
 """
+from re import findall
 
+from math import floor
 from matplotlib.pyplot import subplots
 from matplotlib.ticker import FixedLocator
 from numpy.ma import ones, log10
@@ -42,45 +44,45 @@ class MLPPUFSizesStudy(Study):
     PLOT_ESTIMATORS = []
 
     SIZES = {
-        (32, 1): [6e3, 8e3, 10e3],
-        (32, 2): [12e3, 16e3, 20e3],
-        (32, 3): [12e3, 14e3, 16e3],
-        (64, 1): [8e3, 10e3, 12e3],
-        (64, 2): [12e3, 15e3, 18e3],
-        (64, 3): [20e3, 25e3, 30e3],
-        (128, 1): [8e3, 12e3, 16e3],
-        (128, 2): [16e3, 20e3, 24e3],
-        (128, 3): [80e3, 100e3, 120e3],
-        (256, 1): [10e3, 14e3, 18e3],
-        (256, 2): [30e3, 40e3, 50e3],
-        (256, 3): [250e3, 300e3, 350e3],
-        (512, 1): [16e3, 24e3, 30e3],
-        (512, 2): [60e3, 80e3, 100e3],
-        (512, 3): [600e3, 800e3, 1000e3],
-        (1024, 1): [20e3, 28e3, 36e3],
-        (1024, 2): [100e3, 150e3, 200e3],
-        (1024, 3): [1000e3, 1250e3, 1500e3],
+        (32, 1): [4e3, 10e3, 25e3],   # [2e3, 4e3, 6e3, 8e3, 10e3, 12e3, 14e3, 16e3, 18e3, 20e3, 22e3, 24e3, 26e3, 28e3, 30e3],
+        (32, 2): [4e3, 8e3, 12e3, 16e3, 20e3, 24e3, 28e3, 32e3, 36e3, 40e3, 44e3, 48e3, 52e3],
+        (32, 3): [5e3, 10e3, 15e3, 20e3, 25e3, 30e3, 35e3, 40e3, 45e3, 50e3, 55e3, 60e3, 65e3, 70e3, 75e3, 80e3],
+        (64, 1): [2e3, 4e3, 6e3, 8e3, 10e3, 12e3, 14e3, 16e3, 18e3, 20e3, 22e3, 24e3, 26e3, 28e3, 30e3, 32e3, 34e3, 36e3],
+        (64, 2): [5e3, 10e3, 15e3, 20e3, 25e3, 30e3, 35e3, 40e3, 45e3, 50e3, 55e3, 60e3, 65e3, 70e3, 75e3, 80e3],
+        (64, 3): [50e3, 150e3, 300e3],   # [25e3, 50e3, 75e3, 100e3, 125e3, 150e3, 175e3, 200e3, 225e3, 250e3, 275e3, 300e3],
+        (128, 1): [3e3, 6e3, 9e3, 12e3, 15e3, 18e3, 21e3, 24e3, 27e3, 30e3, 33e3, 36e3, 39e3, 42e3, 45e3, 48e3, 51e3],
+        (128, 2): [20e3, 40e3, 60e3, 80e3, 100e3, 120e3, 140e3, 160e3, 180e3, 200e3, 220e3, 240e3, 260e3],
+        (128, 3): [80e3, 240e3, 520e3],    # [40e3, 80e3, 120e3, 160e3, 200e3, 240e3, 280e3, 320e3, 360e3, 400e3, 440e3, 480e3, 520e3],
+        (256, 1): [4e3, 8e3, 12e3, 16e3, 20e3, 24e3, 28e3, 32e3, 36e3, 40e3, 44e3, 48e3, 52e3, 56e3, 60e3, 64e3],
+        (256, 2): [10e3, 20e3, 40e3, 80e3, 120e3, 160e3, 200e3, 240e3, 280e3, 320e3, 360e3, 400e3, 440e3, 480e3, 520e3],
+        (256, 3): [25e3, 50e3, 100e3, 150e3, 200e3, 250e3, 300e3, 350e3, 400e3, 450e3, 500e3, 550e3, 600e3, 650e3, 700e3],
+        (512, 1): [12e3, 36e3, 90e3],   # [6e3, 12e3, 18e3, 24e3, 30e3, 36e3, 42e3, 48e3, 54e3, 60e3, 66e3, 72e3, 78e3, 84e3, 90e3],
+        (512, 2): [25e3, 50e3, 100e3, 150e3, 200e3, 250e3, 300e3, 350e3, 400e3, 450e3, 500e3, 550e3, 600e3, 650e3, 700e3],
+        (512, 3): [50e3, 100e3, 200e3, 400e3, 600e3, 800e3, 1000e3, 1200e3, 1400e3, 1600e3, 1800e3, 2000e3, 2200e3, 2400e3],
+        (1024, 1): [8e3, 16e3, 24e3, 32e3, 40e3, 48e3, 56e3, 64e3, 72e3, 80e3, 88e3, 96e3, 104e3],
+        (1024, 2): [25e3, 50e3, 100e3, 200e3, 400e3, 600e3, 800e3, 1000e3, 1200e3, 1400e3, 1600e3, 1800e3, 2000e3],
+        (1024, 3): [50e3, 100e3, 200e3, 400e3, 800e3, 1200e3, 1600e3, 2000e3, 2400e3, 2800e3, 3200e3, 3600e3, 4000e3],
     }
 
     SAMPLES_PER_POINT = {
-        (32, 1): 50,
-        (32, 2): 50,
-        (32, 3): 50,
-        (64, 1): 50,
-        (64, 2): 50,
-        (64, 3): 50,
-        (128, 1): 50,
-        (128, 2): 50,
-        (128, 3): 50,
-        (256, 1): 50,
-        (256, 2): 50,
-        (256, 3): 50,
-        (512, 1): 50,
-        (512, 2): 50,
-        (512, 3): 50,
-        (1024, 1): 50,
-        (1024, 2): 50,
-        (1024, 3): 50,
+        (32, 1): 30,
+        (32, 2): 30,
+        (32, 3): 30,
+        (64, 1): 30,
+        (64, 2): 30,
+        (64, 3): 30,
+        (128, 1): 30,
+        (128, 2): 30,
+        (128, 3): 30,
+        (256, 1): 30,
+        (256, 2): 30,
+        (256, 3): 30,
+        (512, 1): 30,
+        (512, 2): 30,
+        (512, 3): 30,
+        (1024, 1): 30,
+        (1024, 2): 30,
+        (1024, 3): 30,
     }
 
     LAYERS = {
@@ -105,24 +107,24 @@ class MLPPUFSizesStudy(Study):
     }
 
     LEARNING_RATES = {
-        (32, 1): [0.037, 0.0375, 0.038, 0.0385, 0.039, 0.04, 0.045, 0.041, 0.0415, 0.042, 0.0425, 0.043, 0.0435, 0.044, 0.0445, 0.045, 0.0455, 0.046, 0.0465, 0.047, 0.0475, 0.048, 0.0485, 0.049, 0.0495, 0.05],
-        (32, 2): [0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05, 0.051, 0.052, 0.053, 0.054, 0.055, 0.056, 0.057, 0.058, 0.059, 0.06, 0.061, 0.062, 0.063, 0.064, 0.065, 0.066, 0.067],
+        (32, 1): [0.01, 0.014, 0.018, 0.022, 0.026, 0.03, 0.034, 0.037, 0.038, 0.039, 0.04],
+        (32, 2): [0.0475],
         (32, 3): [0.0182],
-        (64, 1): [0.055, 0.056, 0.057, 0.058, 0.059, 0.06, 0.061, 0.062, 0.063, 0.064, 0.065, 0.066, 0.067, 0.068, 0.069, 0.07, 0.071,0.072, 0.073, 0.074, 0.075, 0.085, 0.0875, 0.09, 0.0925, 0.095, 0.0975, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.22],
-        (64, 2): [0.0225, 0.023, 0.0235, 0.024, 0.0245, 0.025, 0.0255, 0.026, 0.0265, 0.027, 0.0275, 0.028, 0.0285, 0.029, 0.0295, 0.03, 0.0305, 0.031, 0.0315, 0.032, 0.0325, 0.033],
-        (64, 3): [0.018, 0.0182, 0.0184, 0.0186, 0.0188, 0.019, 0.0192, 0.0194, 0.0196, 0.0198, 0.02, 0.0202, 0.0204, 0.0206, 0.0208, 0.021, 0.0212, 0.0214, 0.0216, 0.0218, 0.022, 0.0222, 0.0224, 0.0226, 0.0228, 0.023, 0.0232, 0.0234, 0.0236, 0.0238, 0.024, 0.0242, 0.0244, 0.0246, 0.0248, 0.025, 0.0252, 0.0254, 0.0256, 0.0258, 0.026, 0.0263, 0.0267, 0.027, 0.0273, 0.0277, 0.028],
-        (128, 1): [0.079, 0.08, 0.081, 0.082, 0.083, 0.084, 0.085, 0.086, 0.087, 0.088, 0.089, 0.09, 0.091],
-        (128, 2): [0.022, 0.0225, 0.023, 0.0235, 0.024, 0.0245, 0.025, 0.0255, 0.026, 0.0265, 0.027, 0.0275, 0.028, 0.0285, 0.029],
-        (128, 3): [0.01, 0.0105, 0.011, 0.0115, 0.012, 0.0125, 0.013, 0.0135, 0.014, 0.0145, 0.015, 0.0155, 0.016, 0.0165, 0.017, 0.0175, 0.018, 0.0185, 0.019, 0.0195, 0.02, 0.0205, 0.021, 0.0215, 0.022],
+        (64, 1): [0.088],
+        (64, 2): [0.0255],
+        (64, 3): [0.01, 0.012, 0.014, 0.016, 0.018, 0.019, 0.02, 0.027, 0.028, 0.029, 0.03, 0.032, 0.034, 0.036, 0.04, 0.045, 0.05, 0.06, 0.07],
+        (128, 1): [0.083],
+        (128, 2): [0.024],
+        (128, 3): [0.005, 0.0055, 0.006, 0.0065, 0.007, 0.0075, 0.008, 0.0085, 0.009, 0.0095, 0.01, 0.0105, 0.011, 0.0115, 0.012],
         (256, 1): [0.06],
         (256, 2): [0.0125],
         (256, 3): [0.0115],
-        (512, 1): [0.05, 0.051, 0.052, 0.053, 0.054, 0.055, 0.056, 0.057, 0.058, 0.059, 0.06, 0.061, 0.062, 0.063, 0.064, 0.065, 0.066, 0.067, 0.068, 0.069, 0.07, 0.071, 0.072, 0.073, 0.074, 0.075, 0.076, 0.077, 0.078, 0.079, 0.08, 0.081, 0.082, 0.083, 0.084, 0.085, 0.086, 0.087, 0.088, 0.089, 0.09],
-        (512, 2): [0.0045, 0.0046, 0.0047, 0.0048, 0.0049, 0.005, 0.0051, 0.0052, 0.0053, 0.0054, 0.0055, 0.0056, 0.0057, 0.0058],
-        (512, 3): [0.003, 0.0031, 0.0032, 0.0033, 0.0034, 0.0035, 0.0036, 0.0037, 0.0038, 0.0039, 0.004, 0.0041, 0.0042, 0.0043, 0.0044, 0.0045, 0.0046, 0.0047, 0.0048, 0.0049, 0.005],
-        (1024, 1): [0.027, 0.0275, 0.028, 0.0285, 0.029, 0.0295, 0.03, 0.0305, 0.031, 0.0315, 0.032, 0.0325, 0.033, 0.0335, 0.034, 0.0345, 0.035, 0.0355, 0.036, 0.0365, 0.037, 0.0375, 0.038, 0.0385,  0.039, 0.0395, 0.04, 0.0405, 0.041, 0.0415, 0.042, 0.0425, 0.043],
-        (1024, 2): [0.00425, 0.0043, 0.00435, 0.0044, 0.00445, 0.0045, 0.00455, 0.0046, 0.00465, 0.0047, 0.00475, 0.0048, 0.00485, 0.0049, 0.00495, 0.005, 0.00505, 0.0051, 0.00515, 0.0052, 0.00525],
-        (1024, 3): [0.00275, 0.0028, 0.00285, 0.0029, 0.00295, 0.003, 0.00305, 0.0031, 0.00315, 0.0032, 0.00325],
+        (512, 1): [0.025, 0.026, 0.027, 0.028, 0.029, 0.03, 0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04, 0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05, 0.051, 0.0515, 0.052, 0.0525, 0.053, 0.077, 0.0775, 0.078, 0.0785, 0.079],
+        (512, 2): [0.005],
+        (512, 3): [0.0048],
+        (1024, 1): [0.031],
+        (1024, 2): [0.005],
+        (1024, 3): [0.003],
     }
 
     EXPERIMENTS = []
@@ -177,8 +179,10 @@ class MLPPUFSizesStudy(Study):
         Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
         and the measured time of each experiment, respectively.
         """
+        pass
         if not self.EXPERIMENTS:
             self.experiments()
+        """
         self.plot_helper(
             name='ScikitLearn',
             df=self.experimenter.results,
@@ -186,8 +190,13 @@ class MLPPUFSizesStudy(Study):
             param_1='N',
             param_2=None,
         )
+        self.plot_history(
+            df=self.experimenter.results
+        )
+        """
 
     def plot_helper(self, name, df, param_x, param_1, param_2=None):
+        """
         param_y = 'accuracy'
         df['layers'] = df['layers'].apply(str)
         df = df[df['experiment'] == 'ExperimentMLP' + name]
@@ -246,4 +255,124 @@ class MLPPUFSizesStudy(Study):
         title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
         title.set_position([.5, 1.05])
         fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', pad_inches=.5)
+        """
+
+        def pypuf_round(x, p):
+            precision = -floor(log10(x)) + p
+            return round(x, precision) if precision > 0 else int(round(x, 0))
+        alpha = 0.1
+        width = 0.3
+        seed(42)
+        df = self.experimenter.results
+        distances = 1 - df.accuracy
+        df['distance'] = distances
+        ncols = len(set([k for n, k in self.SIZES.keys()]))
+        nrows = 3
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(7 * ncols, 4 * nrows)
+        axes = axes.reshape((nrows, ncols))
+        marker = 'o'
+
+        for i, k in enumerate(list(sorted(set(df.k)))):
+            stripplot(
+                x='n',
+                y='accuracy',
+                data=df[df.k == k],
+                ax=axes[0][i],
+                jitter=True,
+                alpha=alpha,
+                zorder=1,
+                marker=marker,
+            )
+            for j, n in enumerate(list(sorted(set(df.n)))):
+                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
+                for l, N in enumerate(Ns):
+                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].accuracy.mean()
+                    axes[0][i].plot([j - width / 2, j + width / 2], [mean, mean],
+                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
+            axes[0][i].set_title('k={}\n'.format(k))
+            axes[0][i].set_yscale('linear')
+            axes[0][i].set_ylabel('accuracy')
+            #axes[0][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
+
+            stripplot(
+                x='n',
+                y='distance',
+                data=df[df.k == k],
+                ax=axes[1][i],
+                jitter=True,
+                alpha=alpha,
+                zorder=1,
+                marker=marker,
+            )
+            for j, n in enumerate(list(sorted(set(df.n)))):
+                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
+                for l, N in enumerate(Ns):
+                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].distance.mean()
+                    axes[1][i].plot([j - width / 2, j + width / 2], [mean, mean],
+                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
+            axes[1][i].set_yscale('log')
+            axes[1][i].invert_yaxis()
+            axes[1][i].set_ylim(top=0.002, bottom=1.0)
+            major_ticks = [0.1, 0.2, 0.3, 0.4, 0.5]
+            minor_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
+            axes[1][i].set_yticks(ticks=major_ticks, minor=False)
+            axes[1][i].set_yticks(ticks=minor_ticks, minor=True)
+            axes[1][i].set_yticklabels(ones(shape=5) - major_ticks, minor=False)
+            axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
+            axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
+            axes[1][i].set_ylabel('accuracy')
+            #axes[1][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
+
+            stripplot(
+                x='n',
+                y='measured_time',
+                data=df[df.k == k],
+                ax=axes[2][i],
+                jitter=True,
+                alpha=alpha,
+                zorder=1,
+                marker=marker,
+            )
+            for j, n in enumerate(list(sorted(set(df.n)))):
+                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
+                for l, N in enumerate(Ns):
+                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].measured_time.mean()
+                    axes[2][i].plot([j - width / 2, j + width / 2], [mean, mean],
+                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
+            axes[2][i].set_yscale('log')
+            #axes[2][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
+
+        axes[2][0].set_ylabel('runtime in s')
+        fig.subplots_adjust(hspace=0.3, wspace=0.3)
+        title = fig.suptitle('Overview of Learning Results on XOR Arbiter PUFs of length 64\n'
+                             'using Multilayer Perceptron on each 100 PUF simulations per width k', size=16)
+        title.set_position([0.5, 1.0])
+        fig.savefig('figures/{}_overview.pdf'.format(self.name()), bbox_inches='tight', pad_inches=.5)
+
+    def plot_history(self, df):
+        ks = list(sorted(set(self.experimenter.results.k)))
+        intervals = {(.0, .7): 'bad', (.7, .9): 'medium', (.9, .98): 'good', (.98, 1.): 'perfect'}
+        sizes = [(k, n) for k in ks for n in list(sorted(set(df[df.k == k].n)))]
+        ncols = len(sizes)
+        nrows = len(intervals)
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(8 * ncols, 3 * nrows)
+        axes = axes.reshape((nrows, ncols))
+        for j, (k, n) in enumerate(sizes):
+            data = df[(df.k == k) & (df.n == n)]
+            #total = sum([e.parameters.k == k and lib in e.NAME for e in self.EXPERIMENTS])
+            axes[0][j].set_title('k={}, n={}\n'.format(k, n))
+            for i, (low, high) in enumerate(intervals):
+                curves = data[(data.accuracy >= low) & (data.accuracy < high)].accuracy_curve
+                axes[i][j].set_ylabel('{} results\n\n{}'.format(intervals[(low, high)], 'accuracy') if j == 0
+                                      else '{}'.format('accuracy'))
+                axes[i][j].set_xlabel('{}'.format('epoch'))
+                for curve in curves:
+                    axes[i][j].plot([float(s) for s in findall(pattern=r'-?\d+\.?\d*', string=str(curve))])
+        fig.subplots_adjust(hspace=.5, wspace=.5)
+        title = fig.suptitle('History of {} of MLP learning Results on XOR Arbiter PUFs'.format('accuracy'))
+        title.set_position([.5, 1.05])
+
+        fig.savefig('figures/{}_history.pdf'.format(self.name()), bbox_inches='tight', pad_inches=.5)
 
