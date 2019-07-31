@@ -20,6 +20,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
     """
 
     SEED_RANGE = 2 ** 32
+    DELAY = 8
 
     def __init__(self, n, k, training_set, validation_frac, transformation, preprocessing, layers=(10, 10),
                  activation='relu', domain_in=-1, learning_rate=0.001, penalty=0.0002, beta_1=0.9, beta_2=0.999,
@@ -142,7 +143,6 @@ class MultiLayerPerceptronScikitLearn(Learner):
         counter = 0
         threshold = 0
         best = 0
-        waiting = min(8, max(4, self.k))
         for epoch in range(self.iteration_limit):
             self.nn = self.nn.partial_fit(
                 X=self.training_set.challenges,
@@ -151,7 +151,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             )
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(tmp)
-            if epoch < waiting:
+            if epoch < self.DELAY:
                 continue
             if tmp > best:
                 best = tmp

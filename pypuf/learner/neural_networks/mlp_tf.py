@@ -36,6 +36,7 @@ class MultiLayerPerceptronTensorflow(Learner):
 
     SEED_RANGE = 2 ** 32
     EPSILON = 1e-6  # should not be smaller, else NaN in log
+    DELAY = 8
 
     def __init__(self, n, k, training_set, validation_set, transformation, preprocessing, layers=(10, 10),
                  activation='relu', loss='log_loss', domain_in=-1, domain_out=-1, learning_rate=0.001,
@@ -232,7 +233,7 @@ class MultiLayerPerceptronTensorflow(Learner):
                         self.model.stop_training = True
 
         converged = DelayedEarlyStopping(
-            delay=min(8, max(4, self.k)),
+            delay=self.DELAY,
             tolerance=self.tolerance,
             patience=self.patience,
             monitor='val_pypuf_accuracy',
