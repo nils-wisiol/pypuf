@@ -122,7 +122,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             self.parameters.noisiness,
             self.parameters.reps,
             self.parameters.pop_size,
-            1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c),
+            1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.parameters.n), self.prng_c),
             ','.join(map(str, self.calc_individual_accs())),
             self.measured_time,
             self.learner.stops,
@@ -134,7 +134,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c),
+            accuracy=1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.parameters.n), self.prng_c),
         )
 
 

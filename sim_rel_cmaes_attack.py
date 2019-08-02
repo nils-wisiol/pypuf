@@ -132,7 +132,7 @@ def main(args):
 
     ax.set_xlabel('Accuracy')
     # ax.set_ylabel('Count')
-    fig.suptitle('pypuf CMAES Accuracy Distribution')
+    fig.suptitle('CMAES Accuracy Distribution, k={}, n={}'.format(k, n))
     fig.savefig('figures/cmaes_accuracy_dist', bbox_inches='tight', pad_inches=.5)
 
     fig = figure()
