@@ -4,11 +4,13 @@ PUF LTFarray simulation with the reliability based CMAES learning algorithm. If 
 to define nine parameters which define the experiment.
 """
 from sys import argv, stderr
+from pypuf.experiments.experimenter import Experimenter
+
 import numpy.random as rnd
 
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.experiments.experiment.reliability_based_cmaes import ExperimentReliabilityBasedCMAES, Parameters
-from pypuf.experiments.experimenter import Experimenter
+
 
 
 def main(args):
@@ -112,6 +114,38 @@ def main(args):
         experimenter.queue(e)
     # Run the instances
     experimenter.run()
+
+    # prepare data
+    data = experimenter.results
+    accuracy = data['accuracy']
+    time = data['measured_time']
+
+    # plot
+    from matplotlib.pyplot import figure
+    fig = figure()
+    import seaborn as sns
+    import numpy as np
+    # ax = fig.add_subplot(1, 1, 1)
+    sns.set()
+    # bins = np.linspace(0,1,10)
+    ax = sns.distplot(accuracy)  # , bins=bins)
+
+    ax.set_xlabel('Accuracy')
+    # ax.set_ylabel('Count')
+    fig.suptitle('pypuf CMAES Accuracy Distribution')
+    fig.savefig('figures/cmaes_accuracy_dist', bbox_inches='tight', pad_inches=.5)
+
+    fig = figure()
+    ax = sns.distplot(time)
+
+    # ax.set_xlabel('Time')
+    # # ax.set_ylabel('Count')
+    # fig.suptitle('pypuf Hybrid Attack Duration Distribution')
+    # fig.savefig('figures/hybrid_attack_duration', bbox_inches='tight', pad_inches=.5)
+
+    print("mean accuracy = " + str(np.mean(accuracy)))
+    print("mean time = " + str(np.mean(time)))
+    print("% success =" + str(sum(accuracy > .95)/len(accuracy)))
 
 
 if __name__ == '__main__':

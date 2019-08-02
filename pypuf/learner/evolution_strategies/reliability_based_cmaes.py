@@ -160,7 +160,7 @@ class ReliabilityBasedCMAES(Learner):
                         break
 
                 # add testing
-                # print(search.result.xmean)  xfavorite
+                # print(search.result.xmean)  # xfavorite
                 # solution = search.result.xbest
                 # self.chains_learned[self.num_learned] = normalize * solution / norm(solution)
                 # model = LTFArray(self.chains_learned, self.transform, self.combiner)
@@ -171,8 +171,8 @@ class ReliabilityBasedCMAES(Learner):
                 # print(acc)
 
                 # use own sigma abortion here
-                if search.sigma / np.max(search.D) < search.sigma0 * 0.05: # and iteration > magic_num?   # maybe tweak a little. e. 0.05 is tolupsigma
-                    break
+                # if search.sigma / np.max(search.D) < search.sigma0 * 0.05: # and iteration > magic_num?   # maybe tweak a little. e. 0.05 is tolupsigma
+                #     break
 
             solution = search.result.xbest
 
@@ -184,7 +184,7 @@ class ReliabilityBasedCMAES(Learner):
                     self.stops += ','
                 self.stops += '_'.join(list(search.stop()))
 
-            print(counter)
+            # print(counter)
         # Polarize the learned combined LTF array
         majority_responses = self.majority_responses(self.training_set.responses.T)
         self.chains_learned = self.polarize_chains(

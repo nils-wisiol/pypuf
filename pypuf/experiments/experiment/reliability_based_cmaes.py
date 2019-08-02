@@ -93,20 +93,20 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             self.parameters.seed_model,
             self.progress_logger,
         )
-        import sys
-        from time import time, clock
-        timer = clock if sys.platform == 'win32' else time
-        start_time = timer()
+        # import sys
+        # from time import time, clock
+        # timer = clock if sys.platform == 'win32' else time
+        # start_time = timer()
         self.model = self.learner.learn()
-        measured_time = timer() - start_time
-        print("measured time: " + str(measured_time))
+        # measured_time = timer() - start_time
+        # print("measured time: " + str(measured_time))
         print("distance")
         print(1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c))
-        print(','.join(map(str, self.calc_individual_accs())))
-        print("seed")
-        print(self.parameters.seed_instance)
-        print("learner stops")
-        print(self.learner.stops)
+        # print(','.join(map(str, self.calc_individual_accs())))
+        # print("seed")
+        # print(self.parameters.seed_instance)
+        # print("learner stops")
+        # print(self.learner.stops)
 
     def analyze(self):
         """Analyze the learned model"""
