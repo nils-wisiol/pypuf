@@ -436,10 +436,9 @@ class TrainingSet(ChallengeResponseSet):
 =======
         self.N = min(N, 2 ** instance.n)
         challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        responses = zeros((reps, self.N))
+        responses = zeros((self.N, reps))
         for i in range(reps):
-            challenges, copy = itertools.tee(challenges)
-            responses[i, :] = instance.eval(array(list(copy)))
+            responses[:, i] = instance.eval(challenges[:, :]).T
         if reps == 1:
             responses = squeeze(responses, axis=0)
         self.reps = reps

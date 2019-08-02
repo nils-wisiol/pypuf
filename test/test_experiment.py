@@ -319,7 +319,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
         listener.start()
 
         experiment = ExperimentReliabilityBasedCMAES(
-            log_name=logger_name,
+            progress_log_name=logger_name,
             seed_instance=0xbee,
             k=2,
             n=16,
@@ -342,7 +342,7 @@ class TestExperimentReliabilityBasedCMAES(TestBase):
     def test_calc_individual_accs(self):
         """This method tests the calculation of individual (non-polarized) accuracies of a learned model."""
         exp = ExperimentReliabilityBasedCMAES(
-            log_name='exp_log',
+            progress_log_name='exp_log',
             seed_instance=0x123,
             k=2,
             n=16,
