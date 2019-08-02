@@ -109,12 +109,12 @@ class HybridAccuracy(Study):
                 HybridAccuracyExperiment(
                     progress_log_prefix=None,
                     parameters=HybridAccuracyParameters(
-                        n=32,
-                        k=2,
-                        N=1200,
+                        n=64,
+                        k=6,
+                        N=4000000,
                         transform='id',
                         combiner='xor',
-                        seed_instance=314159 + i,
+                        seed_instance=314221 + i,
                         iteration_limit=200,
                     )
                 )

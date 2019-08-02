@@ -16,22 +16,26 @@ def main():
     Run an example how to use pypuf.
     Developers Notice: Changes here need to be mirrored to README!
     """
+    k = 10
+    n = 32
+    print("k=" + str(k))
+    print("n=" + str(n))
     timer = clock if sys.platform == 'win32' else time
     start_time = timer()
 
     instance = LTFArray(
-        weight_array=LTFArray.normal_weights(n=32, k=2),  # do not change, can be simulated by learner
+        weight_array=LTFArray.normal_weights(n=n, k=k),  # do not change, can be simulated by learner
         transform=LTFArray.transform_id,  # has to match learner, otherwise learner cannot match
         combiner=LTFArray.combiner_xor,  # do not change
     )
 
-    N = 12000
+    N = 12000000
 
     lr_learner = LogisticRegression(
         t_set=tools.TrainingSetHybrid(instance=instance, N=N),
-        n=comb(32, 2, exact=True),
+        n=comb(n, 2, exact=True),
         # n=2016,  # n choose k_original/k_new = 2
-        k=1,  # k divided by 2
+        k=k//2,  # k divided by 2
         transformation=LTFArray.transform_id,
         combiner=LTFArray.combiner_xor,
         iteration_limit=200,
@@ -45,8 +49,8 @@ def main():
     accuracy = 1 - tools.approx_dist_hybrid(instance, model, 10000)
     print("time after accuracy calc: " + str(timer() - start_time))
 
-    print("k=2")
-    print("n=32")
+    # print("k=6")
+    # print("n=32")
     # output the result
     print('Learned a 64bit 2-xor XOR Arbiter PUF from %d CRPs with accuracy %f' % (N, accuracy))
 
