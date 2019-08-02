@@ -7,13 +7,15 @@ import itertools
 from importlib import import_module
 from inspect import getmembers, isclass
 from math import ceil, log
+from random import sample
 
+from numpy import abs as np_abs
+from numpy import copy as np_copy
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
+from numpy import squeeze
 from numpy import sum as np_sum
-from numpy import abs as np_abs
 from numpy.random import RandomState
-from random import sample
 
 from pypuf.simulation.base import Simulation
 from pypuf.studies.base import Study
@@ -189,7 +191,7 @@ def transform_challenge_01_to_11(challenge):
              Same vector in -1,1 notation
     """
     assert_result_type(challenge)
-    res = copy(challenge)
+    res = np_copy(challenge)
     res[res == 1] = -1
     res[res == 0] = 1
     return res
@@ -204,7 +206,7 @@ def transform_challenge_11_to_01(challenge):
              Same vector in 0,1 notation
     """
     assert_result_type(challenge)
-    res = copy(challenge)
+    res = np_copy(challenge)
     res[res == 1] = 0
     res[res == -1] = 1
     return res
@@ -393,20 +395,30 @@ class TrainingSet(ChallengeResponseSet):
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState()):
+    def __init__(self, instance, N, random_instance=RandomState(), reps=1):
         """
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
-        :param N: int
-                  Number of desired challenges
+        :param instance:        pypuf.simulation.base.Simulation
+                                Instance which is used to generate responses for random challenges
+        :param N:               int
+                                Number of desired challenges
         :param random_instance: numpy.random.RandomState
-                                PRNG which is used to draft challenges.
+                                PRNG instance for pseudo random sampling challenges
+        :param reps:            int
+                                Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
-        challenges = array(list(sample_inputs(instance.n, N, random_instance=random_instance)))
+        self.N = min(N, 2 ** instance.n)
+        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
+        responses = zeros((reps, self.N))
+        for i in range(reps):
+            challenges, copy = itertools.tee(challenges)
+            responses[i, :] = instance.eval(array(list(copy)))
+        if reps == 1:
+            responses = squeeze(responses, axis=0)
+        self.reps = reps
         super().__init__(
             challenges=challenges,
-            responses=instance.eval(challenges)
+            responses=responses,
         )
 
 
