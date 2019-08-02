@@ -107,7 +107,7 @@ class ReliabilityBasedCMAES(Learner):
         epsilon = np.sqrt(self.n) * self.CONST_EPSILON
         fitness = self.create_fitness_function(
             challenges=self.training_set.challenges,
-            measured_rels=self.measure_rels(self.training_set.responses),
+            measured_rels=self.measure_rels(self.training_set.responses.T),
             epsilon=epsilon,
             transform=self.transform,
             combiner=self.combiner,
@@ -186,7 +186,7 @@ class ReliabilityBasedCMAES(Learner):
 
             print(counter)
         # Polarize the learned combined LTF array
-        majority_responses = self.majority_responses(self.training_set.responses)
+        majority_responses = self.majority_responses(self.training_set.responses.T)
         self.chains_learned = self.polarize_chains(
             chains_learned=self.chains_learned,
             challenges=self.training_set.challenges,

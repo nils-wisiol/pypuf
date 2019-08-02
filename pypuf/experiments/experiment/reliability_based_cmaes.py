@@ -3,13 +3,41 @@ It is based on the work from G. T. Becker in "The Gap Between Promise and Realit
 XOR Arbiter PUFs". The learning algorithm applies Covariance Matrix Adaptation Evolution Strategies from N. Hansen
 in "The CMA Evolution Strategy: A Comparing Review".
 """
-import numpy as np
+from os import getpid
+from typing import NamedTuple
+from uuid import UUID
 
+import numpy as np
+from numpy.random.mtrand import RandomState
+
+from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
-from pypuf import tools
 
+
+class Parameters(NamedTuple):
+    n: int
+    k: int
+    seed_instance: int
+    seed_model: int
+    seed_challenges: int
+    transform: str
+    combiner: str
+    noisiness: float
+    num: int
+    reps: int
+    pop_size: int
+    limit_stag: int
+    limit_iter: int
+
+
+class Result(NamedTuple):
+    experiment_id: UUID
+    measured_time: float
+    pid: int
+    accuracy: float
+    
 
 class ExperimentReliabilityBasedCMAES(Experiment):
     """This class implements an experiment for executing the reliability based CMAES learner for XOR LTF arrays.
@@ -17,59 +45,26 @@ class ExperimentReliabilityBasedCMAES(Experiment):
     Furthermore, the learning results are being logged into csv files.
     """
 
-    def __init__(
-            self, log_name,
-            seed_instance, k, n, transform, combiner, noisiness,
-            seed_challenges, num, reps,
-            seed_model, pop_size, limit_stag, limit_iter
-    ):
+    def __init__(self, progress_log_name, parameters: Parameters):
         """Initialize an Experiment using the Reliability based CMAES Learner for modeling LTF Arrays
-        :param log_name:        Log name, Prefix of the name of the experiment log file
-        :param seed_instance:   PRNG seed used to create an LTF array instance to learn
-        :param k:               Width, the number of parallel LTFs in the LTF array
-        :param n:               Length, the number stages within the LTF array
-        :param transform:       Transformation function, the function that modifies the input within the LTF array
-        :param combiner:        Combiner, the function that combines particular chains' outputs within the LTF array
-        :param noisiness:       Noisiness, the relative scale of noise of instance compared to the scale of weights
-        :param seed_challenges: PRNG seed used to sample challenges
-        :param num:             Challenge number, the number of binary inputs (challenges) for the LTF array
-        :param reps:            Repetitions, the number of evaluations of every challenge (part of training_set)
-        :param seed_model:      PRNG seed used by the CMAES algorithm for sampling solution points
-        :param pop_size:        Population size, the number of sampled points of every CMAES iteration
-        :param limit_stag:      Stagnation limit, the maximal number of stagnating iterations within the CMAES
-        :param limit_iter:      Iteration limit, the maximal number of iterations within the CMAES
+        :param progress_log_name:        Log name, Prefix of the name of the experiment log file
+        :param parameters Parameters object for this experiment
         """
         super().__init__(
-            log_name='%s.0x%x_%i_%i_%i_%i_%i' % (
-                log_name,
-                seed_instance,
-                k,
-                n,
-                num,
-                reps,
-                pop_size,
+            '%s.0x%x_%i_%i_%i_%i_%i' % (
+                progress_log_name,
+                parameters.seed_instance,
+                parameters.k,
+                parameters.n,
+                parameters.num,
+                parameters.reps,
+                parameters.pop_size,
             ),
+            parameters,
         )
-        # Instance of LTF array to learn
-        self.seed_instance = seed_instance
-        self.prng_i = np.random.RandomState(seed=self.seed_instance)
-        self.k = k
-        self.n = n
-        self.transform = transform
-        self.combiner = combiner
-        self.noisiness = noisiness
-        # Training set
-        self.seed_challenges = seed_challenges
-        self.prng_c = np.random.RandomState(seed=self.seed_instance)
-        self.num = num
-        self.reps = reps
+        self.prng_i = RandomState(seed=self.parameters.seed_instance)
+        self.prng_c = RandomState(seed=self.parameters.seed_instance)  # TODO add different seed?
         self.training_set = None
-        # Parameters for CMAES
-        self.seed_model = seed_model
-        self.pop_size = pop_size
-        self.limit_s = limit_stag
-        self.limit_i = limit_iter
-        # Basic objects
         self.instance = None
         self.learner = None
         self.model = None
@@ -79,23 +74,23 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         to then run the Reliability based CMAES with the given parameters
         """
         self.instance = NoisyLTFArray(
-            weight_array=LTFArray.normal_weights(self.n, self.k, random_instance=self.prng_i),
-            transform=self.transform,
-            combiner=self.combiner,
-            sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(self.n, 1, self.noisiness),
+            weight_array=LTFArray.normal_weights(self.parameters.n, self.parameters.k, random_instance=self.prng_i),
+            transform=self.parameters.transform,
+            combiner=self.parameters.combiner,
+            sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(self.parameters.n, 1, self.parameters.noisiness),
             random_instance=self.prng_i,
         )
-        self.training_set = tools.TrainingSet(self.instance, self.num, self.prng_c, self.reps)
+        self.training_set = tools.TrainingSet(self.instance, self.parameters.num, self.prng_c, self.parameters.reps)
         self.learner = ReliabilityBasedCMAES(
             self.training_set,
-            self.k,
-            self.n,
-            self.transform,
-            self.combiner,
-            self.pop_size,
-            self.limit_s,
-            self.limit_i,
-            self.seed_model,
+            self.parameters.k,
+            self.parameters.n,
+            self.parameters.transform,
+            self.parameters.combiner,
+            self.parameters.pop_size,
+            self.parameters.limit_stag,
+            self.parameters.limit_iter,
+            self.parameters.seed_model,
             self.progress_logger,
         )
         import sys
@@ -106,10 +101,10 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         measured_time = timer() - start_time
         print("measured time: " + str(measured_time))
         print("distance")
-        print(1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.n), self.prng_c))
+        print(1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c))
         print(','.join(map(str, self.calc_individual_accs())))
         print("seed")
-        print(self.seed_instance)
+        print(self.parameters.seed_instance)
         print("learner stops")
         print(self.learner.stops)
 
@@ -118,16 +113,16 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         assert self.model is not None
         self.result_logger.info(
             '0x%x\t0x%x\t0x%x\t%i\t%i\t%i\t%f\t%i\t%i\t%f\t%s\t%f\t%s\t%i\t%i\t%s',
-            self.seed_instance,
-            self.seed_challenges,
-            self.seed_model,
-            self.n,
-            self.k,
-            self.num,
-            self.noisiness,
-            self.reps,
-            self.pop_size,
-            1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.n), self.prng_c),
+            self.parameters.seed_instance,
+            self.parameters.seed_challenges,
+            self.parameters.seed_model,
+            self.parameters.n,
+            self.parameters.k,
+            self.parameters.num,
+            self.parameters.noisiness,
+            self.parameters.reps,
+            self.parameters.pop_size,
+            1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c),
             ','.join(map(str, self.calc_individual_accs())),
             self.measured_time,
             self.learner.stops,
@@ -135,18 +130,25 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             self.learner.num_iterations,
             ','.join(map(str, self.model.weight_array.flatten() / np.linalg.norm(self.model.weight_array.flatten()))),
         )
+        return Result(
+            experiment_id=self.id,
+            measured_time=self.measured_time,
+            pid=getpid(),
+            accuracy=1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c),
+        )
+
 
     def calc_individual_accs(self):
         """Calculate the accuracies of individual chains of the learned model"""
         transform = self.model.transform
         combiner = self.model.combiner
-        accuracies = np.zeros(self.k)
-        poles = np.zeros(self.k)
-        for i in range(self.k):
+        accuracies = np.zeros(self.parameters.k)
+        poles = np.zeros(self.parameters.k)
+        for i in range(self.parameters.k):
             chain_original = LTFArray(self.instance.weight_array[i, np.newaxis, :], transform, combiner)
-            for j in range(self.k):
+            for j in range(self.parameters.k):
                 chain_model = LTFArray(self.model.weight_array[j, np.newaxis, :], transform, combiner)
-                accuracy = tools.approx_dist(chain_original, chain_model, min(10000, 2 ** self.n), self.prng_c)
+                accuracy = tools.approx_dist(chain_original, chain_model, min(10000, 2 ** self.parameters.n), self.prng_c)
                 pole = 1
                 if accuracy < 0.5:
                     accuracy = 1.0 - accuracy
@@ -155,7 +157,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                     accuracies[i] = accuracy
                     poles[i] = pole
         accuracies *= poles
-        for i in range(self.k):
+        for i in range(self.parameters.k):
             if accuracies[i] < 0:
                 accuracies[i] += 1
         return accuracies
