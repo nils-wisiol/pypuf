@@ -63,7 +63,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             parameters,
         )
         self.prng_i = RandomState(seed=self.parameters.seed_instance)
-        self.prng_c = RandomState(seed=self.parameters.seed_instance)  # TODO add different seed?
+        self.prng_c = RandomState(seed=self.parameters.seed_challenges)
         self.training_set = None
         self.instance = None
         self.learner = None
@@ -100,8 +100,8 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         self.model = self.learner.learn()
         # measured_time = timer() - start_time
         # print("measured time: " + str(measured_time))
-        print("distance")
-        print(1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c))
+        # print("distance")
+        # print(1.0 - tools.approx_dist(self.instance, self.model, min(100000, 2 ** self.parameters.n), self.prng_c))
         # print(','.join(map(str, self.calc_individual_accs())))
         # print("seed")
         # print(self.parameters.seed_instance)
