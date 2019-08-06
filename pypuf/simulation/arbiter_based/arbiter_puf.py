@@ -4,11 +4,11 @@ Collection of important Arbiter PUF variations.
 from numpy import concatenate
 from numpy.random.mtrand import RandomState
 
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 from pypuf.simulation.base import Simulation
 
 
-class XORArbiterPUF(LTFArray):
+class XORArbiterPUF(NoisyLTFArray):
     """
     XOR Arbiter PUF. k Arbiter PUFs (so-called chains) are evaluated in parallel, the individual results are XORed and
     then returned.
@@ -16,12 +16,18 @@ class XORArbiterPUF(LTFArray):
     Embedded Systems (2009)
     """
 
-    def __init__(self, n: int, k: int, seed: int = None):
+    def __init__(self, n: int, k: int, seed: int = None, transform=None, noisiness=0, noise_seed=None):
         random_instance = RandomState(seed=seed) if seed is not None else RandomState()
         super().__init__(
             weight_array=self.normal_weights(n=n, k=k, random_instance=random_instance),
-            transform=LTFArray.transform_atf,
+            transform=transform or LTFArray.transform_id,
             combiner=LTFArray.combiner_xor,
+            sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
+                n=n,
+                sigma_weight=1,
+                noisiness=noisiness,
+            ),
+            random_instance=RandomState(seed=noise_seed) if noise_seed else RandomState()
         )
         self.n = n
         self.k = k
@@ -41,9 +47,8 @@ class LightweightSecurePUF(XORArbiterPUF):
     Computer-Aided Design (ICCAD 2008).
     """
 
-    def __init__(self, n: int, k: int, seed: int = None):
-        super().__init__(n, k, seed)
-        self.transform = self.transform_lightweight_secure
+    def __init__(self, n: int, k: int, seed: int = None, noisiness=0):
+        super().__init__(n, k, seed, self.transform_lightweight_secure, noisiness)
 
 
 class InterposePUF(Simulation):
@@ -54,10 +59,13 @@ class InterposePUF(Simulation):
     "The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks", CHES 2019.
     """
 
-    def __init__(self, n: int, k: int, k_up: int = 1, interpose_pos: int = None, seed: int = None):
-        super().__init__(n, k_up, seed)
-        self.up = XORArbiterPUF(n, k, seed)
-        self.down = XORArbiterPUF(n + 1, k, seed + 1)
+    def __init__(self, n: int, k_down: int, k_up: int = 1, interpose_pos: int = None, seed: int = None, transform=None,
+                 noisiness=0, noise_seed=None):
+        super().__init__()
+        self.n = n
+        self.up = XORArbiterPUF(n, k_up, seed, transform, noisiness, noise_seed)
+        self.down = XORArbiterPUF(n + 1, k_down, seed + 1 if seed is not None else None, transform, noisiness,
+                                  noise_seed + 1 if noise_seed is not None else 0)
         self.interpose_pos = interpose_pos or n // 2
 
     def challenge_length(self) -> int:
@@ -66,9 +74,13 @@ class InterposePUF(Simulation):
     def response_length(self) -> int:
         return self.down.response_length()
 
+    def _interpose_bits(self, challenges):
+        (N, _) = challenges.shape
+        return self.up.eval(challenges).reshape(N, 1)
+
     def eval(self, challenges):
         (N, n) = challenges.shape
-        interpose_bits = self.up.eval(challenges).reshape(N, 1)
+        interpose_bits = self._interpose_bits(challenges)
         down_challenges = concatenate(
             (challenges[:, :self.interpose_pos], interpose_bits, challenges[:, self.interpose_pos:]),
             axis=1
