@@ -11,6 +11,48 @@ from os import getpid
 from time import time, clock
 from uuid import uuid4
 
+PROC_STATUS_MEMORY_INFO = ['VmPeak', 'VmSize', 'VmLck', 'VmPin', 'VmHWM', 'VmRSS', 'RssAnon', 'RssFile', 'RssShmem',
+                           'VmData', 'VmStk', 'VmExe', 'VmLib', 'VmPTE', 'VmSwap', 'HugetlbPages']
+
+
+def memory_info():
+    """
+    Obtain memory info about the current python process. Linux only.
+    :return: Dictionary keyed with kernel memory information names and number of byte values.
+    """
+    def convert(proc_memory_size_value_kb: str):
+        return int(proc_memory_size_value_kb.strip('kB \t')) * 1024
+
+    # noinspection PyBroadException
+    try:
+        status = proc_status()
+    except (OSError, LookupError, TypeError, EOFError, ValueError):
+        return {}
+
+    result = {}
+
+    for key in PROC_STATUS_MEMORY_INFO:
+        try:
+            result[key] = convert(status[key][0])
+        except LookupError:
+            result[key] = None
+
+    return result
+
+
+def proc_status():
+    """
+    Read and process /proc/self/status.
+    :return: Dictionary with information in /proc/self/status.
+    """
+    with open('/proc/self/status') as fh:
+        s = fh.read()
+    return {
+        line.split('\t', 1)[0].rstrip(':'): line.split('\t')[1:]
+        for line in s.split('\n')
+        if line
+    }
+
 
 class NoResultException(Exception):
     """Indicates that an experiment did not yield a result."""
@@ -24,6 +66,18 @@ class NoResultException(Exception):
 
 class ExperimentCanceledException(Exception):
     """Indicates that an experiment has been canceled."""
+
+
+class LogMemoryUsageLoggerAdapter(logging.LoggerAdapter):
+    """Provides logger with memory usage (VmRSS) information, in Gigabytes."""
+    propagate = False
+
+    def process(self, msg, kwargs):
+        try:
+            self.extra['memory_gib'] = memory_info()['VmRSS'] / 1024**3
+        except (TypeError, KeyError):
+            self.extra['memory_gib'] = float('nan')
+        return super().process(msg, kwargs)
 
 
 class Experiment(object):
@@ -101,11 +155,15 @@ class Experiment(object):
                 raise ExperimentCanceledException()
             # set up the progress logger
             if self.progress_log_name:
-                self.progress_logger = logging.getLogger(self.progress_log_name)
+                self.progress_logger = LogMemoryUsageLoggerAdapter(logging.getLogger(self.progress_log_name), {})
                 self.progress_logger.setLevel(logging.DEBUG)
                 file_handler = logging.FileHandler('logs/%s.log' % self.progress_log_name, mode='w')
                 file_handler.setLevel(logging.DEBUG)
-                self.progress_logger.addHandler(file_handler)
+                file_handler.setFormatter(
+                    logging.Formatter(fmt='%(asctime)s %(memory_gib).2fGiB %(levelname)-8s %(message)s',
+                                      datefmt='%Y-%m-%d %H:%M:%S')
+                )
+                self.progress_logger.logger.addHandler(file_handler)
                 self.progress_logger.propagate = False
 
             # set up the result logger
@@ -147,8 +205,19 @@ class Experiment(object):
         finally:
             # clean up and return
             if self.progress_logger and file_handler:
-                self.progress_logger.removeHandler(file_handler)
+                self.progress_logger.logger.removeHandler(file_handler)
                 file_handler.close()
             if self.result_logger and queue_handler:
                 self.result_logger.removeHandler(queue_handler)
                 queue_handler.close()
+
+    @staticmethod
+    def max_memory():
+        """
+        Information about peak memory usage.
+        :return: peak memory usage in bytes (int) or float('nan') if not available
+        """
+        try:
+            return memory_info()['VmPeak']
+        except KeyError:
+            return float('nan')
