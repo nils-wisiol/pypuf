@@ -69,22 +69,18 @@ class TestExperimentLogisticRegression(TestBase):
             # Execute experiments
             experiment_1.execute(logger.queue, logger.logger_name)
             experiment_2.execute(logger.queue, logger.logger_name)
-            # Open logs
-            exp_1_result_log = open('logs/' + experiment_1.progress_log_name + '.log', 'r')
-            exp_2_result_log = open('logs/' + experiment_2.progress_log_name + '.log', 'r')
-            # Save the results
-            result_1 = exp_1_result_log.read()
-            result_2 = exp_2_result_log.read()
-            # Close logs
-            exp_1_result_log.close()
-            exp_2_result_log.close()
-            # Check the results to be not empty
-            self.assertFalse(result_1 == '', 'The experiment log {0} was empty.'.format(experiment_1.progress_log_name))
-            self.assertFalse(result_2 == '', 'The experiment log {0} was empty.'.format(experiment_2.progress_log_name))
-            # Compare logs
-            self.assertTrue(result_1 == result_2,
-                            'The results of {0} and {1} must be equal.'.format(experiment_1.progress_log_name,
-                                                                               experiment_2.progress_log_name))
+            # Check the results to be equal
+            experiment_1_result = experiment_1.result._asdict()
+            experiment_2_result = experiment_2.result._asdict()
+            for field in [
+                    'experiment_id',
+                    'measured_time',
+                    'model',
+                    'memory_rss_max',
+            ]:
+                experiment_1_result.pop(field)
+                experiment_2_result.pop(field)
+            self.assertDictEqual(experiment_1_result, experiment_2_result)
 
         def get_exp(name, trans, comb):
             """Experiment creation shortcut
@@ -136,18 +132,17 @@ class TestExperimentLogisticRegression(TestBase):
         self.assertFalse(result_str == '', 'The result log was empty.')
 
         error = 'LR learning results deviate from legacy learning results.'
-        self.assertEqual(experiment.result.iteration_count, 256, error)
-        self.assertEqual(experiment.result.epoch_count, 256, error)
-        self.assertEqual(experiment.result.gradient_step_count, 256, error)
+        self.assertEqual(experiment.result.iteration_count, 274, error)
+        self.assertEqual(experiment.result.epoch_count, 274, error)
+        self.assertEqual(experiment.result.gradient_step_count, 274, error)
         self.assertEqual(experiment.result.accuracy, 0.98828125, error)
+        print(experiment.result.model)
         assert_array_equal(
             around(experiment.result.model, decimals=8),
             around([
-                3.99071615e-03, -5.65532862e-03, 1.63862406e-02, 5.37762262e-03,
-                7.29781422e-03, -3.35141930e-03, -2.95642974e-03, 9.40114614e-03,
-                1.26572532e-07, 3.49183531e-02, 3.68758330e-01, -7.85028286e-02,
-                4.17595994e-01, 5.09973673e-01, 5.13855116e-01, 2.97216086e-04,
-                -3.96978992e-01, -5.41390228e-03
+                0.00351544, -0.00504143, 0.01470355, 0.00481524, 0.00649157, -0.00301955,
+                -0.0025765, 0.00841928, 0., 0.03248558, 0.37524702, -0.0683109,
+                0.40447738, 0.49995907, 0.52796785, 0.00060493, -0.40093716, 0.,
             ], decimals=8),
             error
         )
@@ -304,5 +299,3 @@ class TestExperimentPropertyTest(TestBase):
             exp_rel = create_experiment(N, test_function,
                                         'create_noisy_ltf_arrays', array_parameter)
             exp_rel.execute(logger.queue, logger.logger_name)
-            with open('logs/' + exp_rel.progress_log_name + '.log', 'r') as log_file:
-                self.assertNotEqual(log_file.read(), '')

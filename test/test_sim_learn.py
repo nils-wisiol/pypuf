@@ -156,6 +156,9 @@ class TestSimLearn(unittest.TestCase):
         # remove timing info
         del res_param_set1[0][2]
         del res_param_set2[0][2]
+        # remove memory info
+        del res_param_set1[0][-1]
+        del res_param_set2[0][-1]
         self.assertNotEqual(res_param_set1, res_param_set2)
 
         sim_learn.main(parameter_set1)
@@ -171,6 +174,9 @@ class TestSimLearn(unittest.TestCase):
         # remove timing info
         del res_param_set1_2[0][2]
         del res_param_set2_2[0][2]
+        # remove memory usage
+        del res_param_set1_2[0][-1]
+        del res_param_set2_2[0][-1]
         self.assertEqual(res_param_set2, res_param_set2_2)
         self.assertEqual(res_param_set1, res_param_set1_2)
 
