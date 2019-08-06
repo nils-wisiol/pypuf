@@ -50,6 +50,7 @@ class Result(NamedTuple):
     accuracy: float
     model: list
     transformation_name: str
+    memory_rss_max: int
 
 
 class ExperimentLogisticRegression(Experiment):
@@ -131,5 +132,6 @@ class ExperimentLogisticRegression(Experiment):
             measured_time=self.measured_time,
             accuracy=accuracy,
             model=self.model.weight_array.flatten() / norm(self.model.weight_array.flatten()),
-            transformation_name=self.instance.transform.__name__
+            transformation_name=self.instance.transform.__name__,
+            memory_rss_max=self.max_memory(),
         )
