@@ -682,7 +682,7 @@ class LTFArray(Simulation):
         self.weight_array = append(self.weight_array, self.bias, axis=1)
 
     def challenge_length(self) -> int:
-        return self.weight_array.shape[1]
+        return self.weight_array.shape[1] - 1
 
     def response_length(self) -> int:
         return 1
