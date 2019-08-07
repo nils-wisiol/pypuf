@@ -59,12 +59,12 @@ class InterposePUF(Simulation):
     "The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks", CHES 2019.
     """
 
-    def __init__(self, n: int, k_down: int, k_up: int = 1, interpose_pos: int = None, seed: int = None, transform=None,
+    def __init__(self, n: int, k: int, k_up: int = 1, interpose_pos: int = None, seed: int = None, transform=None,
                  noisiness=0, noise_seed=None):
         super().__init__()
         self.n = n
         self.up = XORArbiterPUF(n, k_up, seed, transform, noisiness, noise_seed)
-        self.down = XORArbiterPUF(n + 1, k_down, seed + 1 if seed is not None else None, transform, noisiness,
+        self.down = XORArbiterPUF(n + 1, k, seed + 1 if seed is not None else None, transform, noisiness,
                                   noise_seed + 1 if noise_seed is not None else 0)
         self.interpose_pos = interpose_pos or n // 2
 
