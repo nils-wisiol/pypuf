@@ -3,13 +3,12 @@
 This command line tool is used to start the python code analysis. For this purpose it uses pep8 for coding conventions
 and pylint for extended issues.
 """
-from sys import argv, executable
 from argparse import ArgumentParser
-from subprocess import call
 from fnmatch import filter as fn_filter
-from os import walk, path
 from functools import reduce
-import platform
+from os import walk, path
+from subprocess import call
+from sys import argv, executable
 
 
 def main(arguments):
@@ -74,7 +73,5 @@ def main(arguments):
     exit(returncode)
 
 
-# astroid/pylint is incompatible with Python 3.7
-# Since travis runs the linter for Python 3.6, we don't need to run it again.
-if __name__ == '__main__' and platform.python_version_tuple()[0:2] != ('3', '7'):
+if __name__ == '__main__':
     main(argv[1:])
