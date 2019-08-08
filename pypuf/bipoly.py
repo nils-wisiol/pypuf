@@ -263,6 +263,24 @@ class BiPoly(object):
         """
         return array(list(map(len, list(self.monomials.keys()))))
 
+    def weight(self):
+        """
+        Returns the sum of squares of all coefficients.
+
+        >>> BiPoly.linear(1337).weight()
+        1337
+
+        >>> BiPoly({frozenset({1, 2}): .5, frozenset(): .25}).weight()
+        0.3125
+
+        This is useful in combination with the filtering for low degrees, e.g.
+        >>> BiPoly.arbiter_puf(64).low_degrees(2).weight()
+        1
+
+        :return:
+        """
+        return sum([v**2 for v in self.monomials.values()])
+
     def degrees_count(self):
         """
         Returns an array of degree-occurances, where value v of index i means
