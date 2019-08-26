@@ -6,6 +6,7 @@ The Deep Learning technique used here is the Optimization technique Adam for a S
 Forward Neural Network architecture called Multilayer Perceptron (MLP). Implementations of the MLP and Adam are
 used from Scikit-Learn and Tensorflow, respectively.
 """
+from itertools import product
 
 from matplotlib.pyplot import subplots
 from numpy.ma import ones
@@ -151,75 +152,73 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
                             + c2 * len(self.LEARNING_RATES[k]) + c3
                     for domain_in, domain_out in self.DOMAINS[k]:
                         validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
-                        for layers in self.LAYERS[k]:
-                            for penalty in self.PENALTIES[k]:
-                                for beta_1 in self.BETAS_1[k]:
-                                    for beta_2 in self.BETAS_2[k]:
-                                        for patience in self.PATIENCE[k]:
-                                            for tolerance in self.TOLERANCES[k]:
-                                                self.EXPERIMENTS.append(
-                                                    ExperimentMLPScikitLearn(
-                                                        progress_log_prefix=None,
-                                                        parameters=Parameters_skl(
-                                                            seed_simulation=0x3 + cycle,
-                                                            seed_challenges=0x1415 + cycle,
-                                                            seed_model=0x9265 + cycle,
-                                                            seed_distance=0x3589 + cycle,
-                                                            n=n,
-                                                            k=k,
-                                                            N=int(N),
-                                                            validation_frac=validation_frac,
-                                                            transformation=self.TRANSFORMATION,
-                                                            combiner=self.COMBINER,
-                                                            preprocessing=self.PREPROCESSING,
-                                                            layers=layers,
-                                                            activation=self.ACTIVATION,
-                                                            domain_in=domain_in,
-                                                            learning_rate=learning_rate,
-                                                            penalty=penalty,
-                                                            beta_1=beta_1,
-                                                            beta_2=beta_2,
-                                                            tolerance=tolerance,
-                                                            patience=patience,
-                                                            iteration_limit=self.ITERATION_LIMIT,
-                                                            batch_size=1000 if k < 6 else 10000,
-                                                            print_learning=self.PRINT_LEARNING,
-                                                        )
-                                                    )
-                                                )
-                                                for loss in self.LOSSES[k]:
-                                                    self.EXPERIMENTS.append(
-                                                        ExperimentMLPTensorflow(
-                                                            progress_log_prefix=None,
-                                                            parameters=Parameters_tf(
-                                                                seed_simulation=0x3 + cycle,
-                                                                seed_challenges=0x1415 + cycle,
-                                                                seed_model=0x9265 + cycle,
-                                                                seed_distance=0x3589 + cycle,
-                                                                n=n,
-                                                                k=k,
-                                                                N=int(N),
-                                                                validation_frac=validation_frac,
-                                                                transformation=self.TRANSFORMATION,
-                                                                combiner=self.COMBINER,
-                                                                preprocessing=self.PREPROCESSING,
-                                                                layers=layers,
-                                                                activation=self.ACTIVATION,
-                                                                loss=loss,
-                                                                domain_in=domain_in,
-                                                                domain_out=domain_out,
-                                                                learning_rate=learning_rate,
-                                                                penalty=penalty,
-                                                                beta_1=beta_1,
-                                                                beta_2=beta_2,
-                                                                tolerance=tolerance,
-                                                                patience=patience,
-                                                                iteration_limit=self.ITERATION_LIMIT,
-                                                                batch_size=1000 if k < 6 else 10000,
-                                                                print_learning=self.PRINT_LEARNING,
-                                                            )
-                                                        )
-                                                    )
+                        for (layers, penalty, beta_1, beta_2, patience, tolerance) in list(product(*[
+                            self.LAYERS[k], self.PENALTIES[k], self.BETAS_1[k], self.BETAS_2[k], self.PATIENCE[k],
+                            self.TOLERANCES[k]
+                        ])):
+                            self.EXPERIMENTS.append(
+                                ExperimentMLPScikitLearn(
+                                    progress_log_prefix=None,
+                                    parameters=Parameters_skl(
+                                        seed_simulation=0x3 + cycle,
+                                        seed_challenges=0x1415 + cycle,
+                                        seed_model=0x9265 + cycle,
+                                        seed_distance=0x3589 + cycle,
+                                        n=n,
+                                        k=k,
+                                        N=int(N),
+                                        validation_frac=validation_frac,
+                                        transformation=self.TRANSFORMATION,
+                                        combiner=self.COMBINER,
+                                        preprocessing=self.PREPROCESSING,
+                                        layers=layers,
+                                        activation=self.ACTIVATION,
+                                        domain_in=domain_in,
+                                        learning_rate=learning_rate,
+                                        penalty=penalty,
+                                        beta_1=beta_1,
+                                        beta_2=beta_2,
+                                        tolerance=tolerance,
+                                        patience=patience,
+                                        iteration_limit=self.ITERATION_LIMIT,
+                                        batch_size=1000 if k < 6 else 10000,
+                                        print_learning=self.PRINT_LEARNING,
+                                    )
+                                )
+                            )
+                            for loss in self.LOSSES[k]:
+                                self.EXPERIMENTS.append(
+                                    ExperimentMLPTensorflow(
+                                        progress_log_prefix=None,
+                                        parameters=Parameters_tf(
+                                            seed_simulation=0x3 + cycle,
+                                            seed_challenges=0x1415 + cycle,
+                                            seed_model=0x9265 + cycle,
+                                            seed_distance=0x3589 + cycle,
+                                            n=n,
+                                            k=k,
+                                            N=int(N),
+                                            validation_frac=validation_frac,
+                                            transformation=self.TRANSFORMATION,
+                                            combiner=self.COMBINER,
+                                            preprocessing=self.PREPROCESSING,
+                                            layers=layers,
+                                            activation=self.ACTIVATION,
+                                            loss=loss,
+                                            domain_in=domain_in,
+                                            domain_out=domain_out,
+                                            learning_rate=learning_rate,
+                                            penalty=penalty,
+                                            beta_1=beta_1,
+                                            beta_2=beta_2,
+                                            tolerance=tolerance,
+                                            patience=patience,
+                                            iteration_limit=self.ITERATION_LIMIT,
+                                            batch_size=1000 if k < 6 else 10000,
+                                            print_learning=self.PRINT_LEARNING,
+                                        )
+                                    )
+                                )
         return self.EXPERIMENTS
 
     def plot(self):

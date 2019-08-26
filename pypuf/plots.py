@@ -6,7 +6,8 @@ from itertools import cycle
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, MultipleLocator
-from numpy import max as max_np, min as min_np
+from mpl_toolkits.mplot3d import Axes3D
+from numpy import max as max_np, min as min_np, log, array, log2, log10
 from numpy import mean as mean_np, quantile as quantile_np, sum as sum_np
 from numpy import zeros
 from pandas import read_csv, DataFrame
@@ -224,6 +225,7 @@ def get_estimator(estimator):
 
     return
 
+
 class PermutationIndexPlot:
     """
     Show the distribution of indices of the permutations which lead to a successful learning of the instance using
@@ -325,3 +327,48 @@ class PermutationIndexPlot:
 
         plt.tight_layout()
         self.figure.savefig(self.filename)
+
+
+def plot3d_size_dependency(df):
+    fig = plt.figure(figsize=(20, 10))
+    ax1 = fig.add_subplot(121, projection='3d')
+    xs = log2(df.n)
+    ys = df.k
+    zs1 = log10(df.x_N)
+    ax1.scatter(xs, ys, zs1)
+    ax1.set_xticks(xs)
+    ax1.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax1.set_yticks(ys)
+    # ax1.set_zticklabels([rf'${int(round(2**(z-10), 0))} \times 2^{ {10} }$' for z in ax1.get_zticks()[1:]])
+    ax1.set_zticklabels([rf'${int(round(10**(z-3), 0))} \times 10^3$' for z in ax1.get_zticks()[1:]])
+    ax1.set_xlabel('n')
+    ax1.set_ylabel('k')
+    ax1.set_zlabel('N')
+    ax1.view_init(azim=240, elev=20)
+    numx = len(set(xs))
+    numy = len(set(ys))
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax1.plot(xs[indices], ys[indices], zs1[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax1.plot(xs[indices], ys[indices], zs1[indices], color='b', alpha=0.5)
+
+    ax2 = fig.add_subplot(122, projection='3d')
+    zs2 = df.x_learning_rate
+    ax2.scatter(xs, ys, zs2)
+    ax2.set_xticks(xs)
+    ax2.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax2.set_yticks(ys)
+    ax2.set_xlabel('n')
+    ax2.set_ylabel('k')
+    ax2.set_zlabel('learning_rate')
+    ax2.view_init(azim=330, elev=20)
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
+    fig.subplots_adjust(hspace=0)
+    fig.savefig('figures/sizes_dependency.pdf')

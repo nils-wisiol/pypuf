@@ -7,7 +7,6 @@ Forward Neural Network architecture called Multilayer Perceptron (MLP). Implemen
 used from Scikit-Learn and Tensorflow, respectively.
 """
 from re import findall
-
 from math import floor
 from matplotlib.pyplot import subplots
 from matplotlib.ticker import FixedLocator
@@ -16,7 +15,6 @@ from numpy.random.mtrand import seed
 from seaborn import stripplot, lineplot, scatterplot
 
 from pypuf.studies.base import Study
-from pypuf.experiments.experiment.mlp_tf import ExperimentMLPTensorflow, Parameters as Parameters_tf
 from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
 
 
@@ -43,27 +41,27 @@ class MLPPUFSizesStudy(Study):
 
     PLOT_ESTIMATORS = []
 
-    SCALES = [0.25, 0.5, 0.8, 1.0, 1.25, 2.0, 4.0]
+    SCALES = [0.5, 1.0, 2.0]
 
     SIZES = {
-        (32, 1): list(map(lambda x: x*8e3, SCALES)),
-        (32, 2): list(map(lambda x: x*9e3, SCALES)),
-        (32, 3): list(map(lambda x: x*11e3, SCALES)),
-        (64, 1): list(map(lambda x: x*8.5e3, SCALES)),
-        (64, 2): list(map(lambda x: x*13e3, SCALES)),
-        (64, 3): list(map(lambda x: x*24e3, SCALES)),
-        (128, 1): list(map(lambda x: x*9.3e3, SCALES)),
-        (128, 2): list(map(lambda x: x*22e3, SCALES)),
-        (128, 3): list(map(lambda x: x*65e3, SCALES)),
-        (256, 1): list(map(lambda x: x*10.7e3, SCALES)),
-        (256, 2): list(map(lambda x: x*40e3, SCALES)),
-        (256, 3): list(map(lambda x: x*210e3, SCALES)),
-        (512, 1): list(map(lambda x: x*13.5e3, SCALES)),
-        (512, 2): list(map(lambda x: x*80e3, SCALES)),
-        (512, 3): list(map(lambda x: x*800e3, SCALES)),
-        (1024, 1): list(map(lambda x: x*20e3, SCALES)),
-        (1024, 2): list(map(lambda x: x*180e3, SCALES)),
-        (1024, 3): list(map(lambda x: x*3600e3, SCALES)),
+        (32, 1): list(map(lambda x: x*40e3, SCALES)),
+        (64, 1): list(map(lambda x: x*50e3, SCALES)),
+        (128, 1): list(map(lambda x: x*64e3, SCALES)),
+        (256, 1): list(map(lambda x: x*84e3, SCALES)),
+        (512, 1): list(map(lambda x: x*113e3, SCALES)),
+        (1024, 1): list(map(lambda x: x*156e3, SCALES)),
+        (32, 2): list(map(lambda x: x*45e3, SCALES)),
+        (64, 2): list(map(lambda x: x*57.5e3, SCALES)),
+        (128, 2): list(map(lambda x: x*75e3, SCALES)),
+        (256, 2): list(map(lambda x: x*102e3, SCALES)),
+        (512, 2): list(map(lambda x: x*155e3, SCALES)),
+        (1024, 2): list(map(lambda x: x*300e3, SCALES)),
+        (32, 3): list(map(lambda x: x*50e3, SCALES)),
+        (64, 3): list(map(lambda x: x*75e3, SCALES)),
+        (128, 3): list(map(lambda x: x*120e3, SCALES)),
+        (256, 3): list(map(lambda x: x*225e3, SCALES)),
+        (512, 3): list(map(lambda x: x*600e3, SCALES)),
+        (1024, 3): list(map(lambda x: x*3000e3, SCALES)),
     }
 
     SAMPLES_PER_POINT = {
@@ -109,24 +107,24 @@ class MLPPUFSizesStudy(Study):
     }
 
     LEARNING_RATES = {
-        (32, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.022, 0.023, 0.024, 0.025, 0.026, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (32, 2): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.03, 0.04, 0.0425, 0.045, 0.0475, 0.05, 0.0525, 0.055, 0.06, 0.08, 0.1, 0.15, 0.2],
-        (32, 3): [0.002, 0.004, 0.008, 0.012, 0.016, 0.0182, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.12, 0.15, 0.18, 0.2],
-        (64, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.08, 0.088, 0.1, 0.12, 0.15, 0.18, 0.2],
-        (64, 2): [0.002, 0.004, 0.008, 0.012, 0.016, 0.019, 0.022, 0.023, 0.024, 0.025, 0.0255, 0.026, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (64, 3): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.022, 0.024, 0.026, 0.028, 0.03, 0.032, 0.034, 0.036, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (128, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (128, 2): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (128, 3): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (256, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (256, 2): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (256, 3): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (512, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.025, 0.03, 0.033, 0.037, 0.04, 0.043, 0.047, 0.05, 0.053, 0.057, 0.06, 0.065, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (512, 2): [0.002, 0.004, 0.005, 0.006, 0.007, 0.008, 0.01, 0.012, 0.016, 0.02, 0.024, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (512, 3): [0.002, 0.004, 0.005, 0.006, 0.007, 0.008, 0.01, 0.012, 0.016, 0.02, 0.024, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (1024, 1): [0.002, 0.004, 0.008, 0.012, 0.016, 0.02, 0.024, 0.026, 0.028, 0.03, 0.031, 0.033, 0.036, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (1024, 2): [0.002, 0.004, 0.005, 0.006, 0.007, 0.008, 0.01, 0.012, 0.016, 0.02, 0.024, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
-        (1024, 3): [0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.01, 0.012, 0.016, 0.02, 0.024, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2],
+        (32, 1): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02],
+        (32, 2): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02],
+        (32, 3): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02],
+        (64, 1): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014],
+        (64, 2): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014],
+        (64, 3): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014],
+        (128, 1): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01],
+        (128, 2): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01],
+        (128, 3): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01],
+        (256, 1): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008],
+        (256, 2): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008],
+        (256, 3): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008],
+        (512, 1): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006],
+        (512, 2): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006],
+        (512, 3): [0.0005, 0.001, 0.0015, 0.002, 0.003, 0.004, 0.005, 0.006],
+        (1024, 1): [0.00025, 0.0005, 0.00075, 0.001, 0.00125, 0.0015, 0.002],
+        (1024, 2): [0.00025, 0.0005, 0.00075, 0.001, 0.00125, 0.0015, 0.002],
+        (1024, 3): [0.00025, 0.0005, 0.00075, 0.001, 0.0015, 0.002],
     }
 
     EXPERIMENTS = []
@@ -181,8 +179,8 @@ class MLPPUFSizesStudy(Study):
         Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
         and the measured time of each experiment, respectively.
         """
-        pass
-        """
+        #pass
+        #"""
         if not self.EXPERIMENTS:
             self.experiments()
         self.plot_helper(
@@ -192,13 +190,13 @@ class MLPPUFSizesStudy(Study):
             param_1='N',
             param_2=None,
         )
+        """
         self.plot_history(
             df=self.experimenter.results
         )
         """
 
     def plot_helper(self, name, df, param_x, param_1, param_2=None):
-        """
         param_y = 'accuracy'
         df['layers'] = df['layers'].apply(str)
         df = df[df['experiment'] == 'ExperimentMLP' + name]
@@ -256,9 +254,8 @@ class MLPPUFSizesStudy(Study):
         fig.subplots_adjust(hspace=.5, wspace=.5)
         title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
         title.set_position([.5, 1.05])
-        fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', pad_inches=.5)
+        fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', dpi=300, pad_inches=.5)
 
-        """
         def pypuf_round(x, p):
             precision = -floor(log10(x)) + p
             return round(x, precision) if precision > 0 else int(round(x, 0))
@@ -350,7 +347,7 @@ class MLPPUFSizesStudy(Study):
         title = fig.suptitle('Overview of Learning Results on XOR Arbiter PUFs of length 64\n'
                              'using Multilayer Perceptron on each 100 PUF simulations per width k', size=16)
         title.set_position([0.5, 1.0])
-        fig.savefig('figures/{}_overview.pdf'.format(self.name()), bbox_inches='tight', pad_inches=.5)
+        fig.savefig('figures/{}_overview.pdf'.format(self.name()), bbox_inches='tight', dpi=300, pad_inches=.5)
 
     def plot_history(self, df):
         ks = list(sorted(set(self.experimenter.results.k)))

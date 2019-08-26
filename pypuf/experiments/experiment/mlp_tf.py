@@ -57,6 +57,7 @@ class Result(NamedTuple):
     measured_time: float
     loss_curve: Iterable[float]
     accuracy_curve: Iterable[float]
+    max_memory: int
 
 
 class ExperimentMLPTensorflow(Experiment):
@@ -69,28 +70,7 @@ class ExperimentMLPTensorflow(Experiment):
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
-            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
-                progress_log_prefix,
-                parameters.seed_model,
-                parameters.seed_simulation,
-                parameters.n,
-                parameters.k,
-                parameters.N,
-                parameters.validation_frac,
-                parameters.layers,
-                parameters.activation,
-                parameters.loss,
-                parameters.domain_in,
-                parameters.domain_out,
-                parameters.learning_rate,
-                parameters.beta_1,
-                parameters.beta_2,
-                parameters.tolerance,
-                parameters.patience,
-                parameters.transformation,
-                parameters.combiner,
-                parameters.preprocessing,
-            )
+            '{}_MLP_tf_{}'.format(progress_log_prefix, parameters.experiment_id)
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.training_set = None
         self.simulation = None
@@ -166,4 +146,5 @@ class ExperimentMLPTensorflow(Experiment):
             measured_time=self.measured_time,
             loss_curve=[round(loss, 3) for loss in self.learner.history.history['val_loss']],
             accuracy_curve=[round(accuracy, 3) for accuracy in self.learner.history.history['val_pypuf_accuracy']],
+            max_memory=self.max_memory(),
         )

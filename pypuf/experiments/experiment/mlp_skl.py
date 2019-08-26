@@ -57,6 +57,7 @@ class Result(NamedTuple):
     accuracy: float
     loss_curve: Iterable[float]
     accuracy_curve: Iterable[float]
+    max_memory: int
 
 
 class ExperimentMLPScikitLearn(Experiment):
@@ -69,26 +70,7 @@ class ExperimentMLPScikitLearn(Experiment):
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
-            '{}_MLP_0x{}_0x{}_0_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
-                progress_log_prefix,
-                parameters.seed_model,
-                parameters.seed_simulation,
-                parameters.n,
-                parameters.k,
-                parameters.N,
-                parameters.validation_frac,
-                parameters.layers,
-                parameters.activation,
-                parameters.domain_in,
-                parameters.learning_rate,
-                parameters.beta_1,
-                parameters.beta_2,
-                parameters.tolerance,
-                parameters.patience,
-                parameters.transformation,
-                parameters.combiner,
-                parameters.preprocessing,
-            )
+            '{}_MLP_skl_{}'.format(progress_log_prefix, parameters.experiment_id)
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.training_set = None
         self.simulation = None
@@ -163,4 +145,5 @@ class ExperimentMLPScikitLearn(Experiment):
             accuracy=accuracy,
             loss_curve=[round(loss, 3) for loss in self.learner.nn.loss_curve_],
             accuracy_curve=[round(accuracy, 3) for accuracy in self.learner.accuracy_curve],
+            max_memory=self.max_memory(),
         )
