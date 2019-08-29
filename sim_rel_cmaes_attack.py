@@ -145,8 +145,8 @@ def main(args):
 
     print("mean accuracy = " + str(np.mean(accuracy)))
     print("mean time = " + str(np.mean(time)))
-    print("% success =" + str(sum(accuracy > .95)/len(accuracy)))
-
+    print("% success = " + str(sum(accuracy >= .95)/len(accuracy)))
+    print("% success >90% = " + str(sum(accuracy >= .90)/len(accuracy)))
 
 if __name__ == '__main__':
     main(argv)
