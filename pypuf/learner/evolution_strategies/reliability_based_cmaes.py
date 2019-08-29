@@ -64,24 +64,6 @@ class ReliabilityBasedCMAES(Learner):
         if 2**n < self.approx_challenge_num:
             self.approx_challenge_num = 2 ** n
 
-    def calc_chain_acc(self, model, i):
-        """Calculate the accuracies of individual chains of the learned model"""
-        transform = self.transform
-        combiner = self.combiner
-        chain_original = LTFArray(self.training_set.instance.weight_array[i, np.newaxis, :], transform, combiner)
-        chain_model = LTFArray(model.weight_array[i, np.newaxis, :], transform, combiner)
-        accuracy = 1 - tools.approx_dist(chain_original, chain_model, min(10000, 2 ** self.n),
-                                         np.random.RandomState(seed=1))
-        if accuracy == 0:
-            pass
-        else:
-            if accuracy < 0.5:
-                # print("intermediate accuracy < 0.5")
-                accuracy = 1.0 - accuracy
-        # if accuracy < 0:      # unneeded? put earlier?
-        #     accuracy += 1
-        return accuracy
-
     def learn(self):
         """Compute a model according to the given LTF Array parameters and training set
         Note that this function can take long to return
@@ -126,66 +108,52 @@ class ReliabilityBasedCMAES(Learner):
             # 'tolupsigma': self.convergence
         }
 
-        # print("tolup_sigma")
         # Learn all individual LTF arrays (chains)
-        # with self.avoid_printing():
-        while self.num_learned < self.k:
-            aborted = False
-            options['seed'] = self.prng.randint(2 ** 32)
-            is_same_solution = self.create_abortion_function(
-                chains_learned=self.chains_learned,
-                num_learned=self.num_learned,
-                transform=self.transform,
-                combiner=self.combiner,
-                threshold=self.THRESHOLD_DIST,
-            )
-            search = cma.CMAEvolutionStrategy(x0=mean_start, sigma0=step_size_start, inopts=options)
-            # print("tolstagnation " + str(search.opts['tolstagnation']))
-            # print("maxiter " + str(search.opts['maxiter']))
-            last_acc = 0
-            last_acc_counter = 0
-            counter = 1
-            # Learn individual LTF array using abortion if evolutionary search approximates previous a solution
-            while not search.stop():
-                curr_points = search.ask()  # Sample new solution points
-                search.tell(curr_points, [fitness(point) for point in curr_points])
-                self.num_iterations += 1
-                if counter % self.FREQ_LOGGING == 0:
-                    log_state(search)
-                counter += 1
-                if counter % self.FREQ_ABORTION_CHECK == 0:
-                    if is_same_solution(search.mean):
-                        self.num_abortions += 1
-                        aborted = True
+        with self.avoid_printing():
+            while self.num_learned < self.k:
+                aborted = False
+                options['seed'] = self.prng.randint(2 ** 32)
+                is_same_solution = self.create_abortion_function(
+                    chains_learned=self.chains_learned,
+                    num_learned=self.num_learned,
+                    transform=self.transform,
+                    combiner=self.combiner,
+                    threshold=self.THRESHOLD_DIST,
+                )
+                search = cma.CMAEvolutionStrategy(x0=mean_start, sigma0=step_size_start, inopts=options)
+                counter = 1
+                # Learn individual LTF array using abortion if evolutionary search approximates previous a solution
+                while not search.stop():
+                    curr_points = search.ask()  # Sample new solution points
+                    search.tell(curr_points, [fitness(point) for point in curr_points])
+                    self.num_iterations += 1
+                    if counter % self.FREQ_LOGGING == 0:
+                        log_state(search)
+                    counter += 1
+                    if counter % self.FREQ_ABORTION_CHECK == 0:
+                        if is_same_solution(search.mean):
+                            self.num_abortions += 1
+                            aborted = True
+                            break
+
+                    # Additional sigma abortion to accommodate cmaes library.
+                    # Make 0.05 smaller to have a high threshold of similar values for the algorithm to stop
+                    # 0.05 is similar to the cmaes library's tolupisgma
+                    # possibly check if self.num_iterations is greater than some magic number
+                    if search.sigma / np.max(search.D) < search.sigma0 * 0.05:
+                        print("iter: " + str(self.num_iterations))
                         break
 
-                # add testing
-                # print(search.result.xmean)  # xfavorite
-                # solution = search.result.xbest
-                # self.chains_learned[self.num_learned] = normalize * solution / norm(solution)
-                # model = LTFArray(self.chains_learned, self.transform, self.combiner)
-                #
-                # acc = self.calc_chain_acc(model, self.num_learned)  # without -1
-                # # acc = self.calc_individual_accs(model, self.num_learned)
-                # # acc = self.calc_individual_accs(model, self.num_learned - 1)
-                # print(acc)
+                solution = search.result.xbest
 
-                # use own sigma abortion here
-                if search.sigma / np.max(search.D) < search.sigma0 * 0.05: # and iteration > magic_num?   # maybe tweak a little. e. 0.05 is tolupsigma
-                    print("iter: " + str(self.num_iterations))
-                    break
+                # Include normalized solution, if it is different from previous ones
+                if not aborted:
+                    self.chains_learned[self.num_learned] = normalize * solution / norm(solution)
+                    self.num_learned += 1
+                    if self.stops != '':
+                        self.stops += ','
+                    self.stops += '_'.join(list(search.stop()))
 
-            solution = search.result.xbest
-
-            # Include normalized solution, if it is different from previous ones
-            if not aborted:
-                self.chains_learned[self.num_learned] = normalize * solution / norm(solution)
-                self.num_learned += 1
-                if self.stops != '':
-                    self.stops += ','
-                self.stops += '_'.join(list(search.stop()))
-
-            # print(counter)
         # Polarize the learned combined LTF array
         majority_responses = self.majority_responses(self.training_set.responses.T)
         self.chains_learned = self.polarize_chains(
