@@ -171,8 +171,9 @@ class ReliabilityBasedCMAES(Learner):
                 # print(acc)
 
                 # use own sigma abortion here
-                # if search.sigma / np.max(search.D) < search.sigma0 * 0.05: # and iteration > magic_num?   # maybe tweak a little. e. 0.05 is tolupsigma
-                #     break
+                if search.sigma / np.max(search.D) < search.sigma0 * 0.05: # and iteration > magic_num?   # maybe tweak a little. e. 0.05 is tolupsigma
+                    print("iter: " + str(self.num_iterations))
+                    break
 
             solution = search.result.xbest
 
