@@ -111,7 +111,7 @@ def main(args):
             )
             experiments.append(experiment)
 
-    experimenter = Experimenter(result_log_name)
+    experimenter = Experimenter(result_log_name, results_file=result_log_name + '.csv')
     for e in experiments:
         experimenter.queue(e)
     # Run the instances
