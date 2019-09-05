@@ -1,10 +1,24 @@
 """
-This module describes a study that defines a set of experiments in order to find good hyperparameters and to examine
-the quality of Deep Learning based modeling attacks on XOR Arbiter PUFs. Furthermore, some plots are defined to
+This module describes a study that defines a set of experiments in order to replicate the results from Aseeri et al. [1]
+of Deep Learning based modeling attacks on (k, 64)-XOR Arbiter PUFs. Furthermore, some plots are defined to
 visualize the experiment's results.
-The Deep Learning technique used here is the Optimization technique Adam for a Stochastic Gradient Descent on a Feed-
-Forward Neural Network architecture called Multilayer Perceptron (MLP). Implementations of the MLP and Adam are
-used from Scikit-Learn and Tensorflow, respectively.
+The Deep Learning technique used here is the Optimization technique Adam [2] for a Stochastic Gradient Descent on a
+Feed-Forward Neural Network architecture called Multilayer Perceptron (MLP) that is an extension to the Perceptron [3].
+Implementations of the MLP and Adam are used each from both Scikit-Learn [4] and Tensorflow [5].
+
+References:
+[1]  A. Aseeri et al.,      "A Machine Learning-based Security Vulnerability Study on XOR PUFs for Resource-Constraint
+                            Internet of Things", IEEE International Congress on Internet of Things (ICIOT),
+                            San Francisco, CA, pp. 49-56, 2018.
+[2]  D. Kingma and J. Ba,   “Adam: A Method for Stochastic Optimization”, arXiv:1412.6980, 2014.
+[3]  F. Rosenblatt,         "The Perceptron: A Probabilistic Model for Information Storage and Organization in the
+                            Brain.", Psychological Review, volume 65, pp. 386-408, 1958.
+[4]  F., Pedregosa et al.,  "Scikit-learn: Machine learning in Python", Journal of Machine Learning Research, volume 12,
+                            pp. 2825-2830, 2011.
+                            https://scikit-learn.org
+[5]  M. Abadi et al.,       "Tensorflow: A System for Large-scale Machine Learning", 12th USENIX Symposium on Operating
+                            Systems Design and Implementation, pp. 265–283, 2016.
+                            http://tensorflow.org/
 """
 from itertools import product
 
@@ -18,7 +32,7 @@ from pypuf.experiments.experiment.mlp_tf import ExperimentMLPTensorflow, Paramet
 from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
 
 
-class MLPAseeriEtAlHyperparameterStudy(Study):
+class ReplicateAseeriEtAlStudy(Study):
     """
     Define a set of experiments by combining several sets of hyperparameters.
     """
@@ -143,7 +157,7 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
     def experiments(self):
         """
         Generate an experiment for every parameter combination corresponding to the definitions above.
-        For each combination of (size, samples_per_point, learning_rate) different random seeds are used.
+        Different random seeds are used for each combination of (size, samples_per_point, learning_rate).
         """
         for c1, (n, k, N) in enumerate(self.SIZES):
             for c2 in range(self.SAMPLES_PER_POINT[k]):
@@ -228,101 +242,113 @@ class MLPAseeriEtAlHyperparameterStudy(Study):
         """
         if not self.EXPERIMENTS:
             self.experiments()
-            seed(42)
-            df = self.experimenter.results
-            ncols = 2
-            nrows = 3
-            fig, axes = subplots(ncols=ncols, nrows=nrows)
-            fig.set_size_inches(7 * ncols, 4 * nrows)
-            axes = axes.reshape((nrows, ncols))
-            distances = 1 - df['accuracy']
-            df['distance'] = distances
-            color_ref = 'black'
-            style_ref = '-'
-            marker = 'o'
+        seed(42)
+        df = self.experimenter.results
+        ncols = 2
+        nrows = 2
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(7 * ncols, 4 * nrows)
+        axes = axes.reshape((nrows, ncols))
+        distances = 1 - df['accuracy']
+        df['distance'] = distances
+        color_ref = 'black'
+        style_ref = '-'
+        marker = 'o'
+        width = 0.5
 
-            for i, experiment in enumerate(sorted(list(set(df['experiment'])))):
-                stripplot(
-                    x='k',
-                    y='accuracy',
-                    data=df[df['experiment'] == experiment],
-                    ax=axes[0][i],
-                    jitter=True,
-                    alpha=0.4,
-                    zorder=1,
-                    marker=marker,
-                )
-                means_accuracy = [df[(df.experiment == experiment) & (df.k == k)]['accuracy'].mean()
-                                  for k in sorted(list(set(df['k'])))]
-                for j, accuracy_ref in enumerate(self.REFERENCE_MEAN_ACCURACY.values()):
-                    axes[0][i].plot((-0.25 + j, 0.235 + j), 2 * (means_accuracy[j],),
-                                    linewidth=2, label=str(round(means_accuracy[j], 4)))
-                    axes[0][i].plot((-0.25 + j, 0.235 + j), 2 * (accuracy_ref,),
-                                    color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
-                lib = 'tensorflow' if 'Tensorflow' in experiment \
-                    else 'scikit-learn' if 'ScikitLearn' in experiment else '?'
-                axes[0][i].set_xlim(left=-0.5, right=4.485)
-                axes[0][i].set_title('Library: {}\n'.format(lib))
-                axes[0][i].set_yscale('linear')
-                axes[0][i].set_ylabel('accuracy')
-                axes[0][i].legend(loc='upper right', bbox_to_anchor=(1.26, 1.02), title='means')
-
-                stripplot(
-                    x='k',
-                    y='distance',
-                    data=df[df['experiment'] == experiment],
-                    ax=axes[1][i],
-                    jitter=True,
-                    alpha=0.4,
-                    zorder=1,
-                    marker=marker,
-                )
-                means_distance = [df[(df.experiment == experiment) & (df.k == k)]['distance'].mean()
-                                  for k in sorted(list(set(df['k'])))]
-                for j, accuracy_ref in enumerate(self.REFERENCE_MEAN_ACCURACY.values()):
-                    axes[1][i].plot((-0.25 + j, 0.235 + j), 2 * (means_distance[j],),
-                                    linewidth=2, label=str(round(means_distance[j], 3)))
-                    axes[1][i].plot((-0.25 + j, 0.235 + j), 2 * (1 - accuracy_ref,),
-                                    color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
-                axes[1][i].set_yscale('log')
-                axes[1][i].invert_yaxis()
-                axes[1][i].set_xlim(left=-0.5, right=4.485)
-                axes[1][i].set_ylim(top=0.005, bottom=0.6)
-                major_ticks = [0.1, 0.2, 0.3, 0.4, 0.5]
-                minor_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
-                axes[1][i].set_yticks(ticks=major_ticks, minor=False)
-                axes[1][i].set_yticks(ticks=minor_ticks, minor=True)
-                axes[1][i].set_yticklabels(ones(shape=5) - major_ticks, minor=False)
-                axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
-                axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
-                axes[1][i].set_ylabel('accuracy')
-
-                stripplot(
-                    x='k',
-                    y='measured_time',
-                    data=df[df['experiment'] == experiment],
-                    ax=axes[2][i],
-                    jitter=True,
-                    alpha=0.4,
-                    zorder=1,
-                    marker=marker,
-                )
-                means_time = [df[(df.experiment == experiment) & (df.k == k)]['measured_time'].mean()
+        for i, experiment in enumerate(sorted(list(set(df['experiment'])))):
+            stripplot(
+                x='k',
+                y='accuracy',
+                data=df[df['experiment'] == experiment],
+                ax=axes[0][i],
+                jitter=True,
+                alpha=0.4,
+                zorder=1,
+                marker=marker,
+            )
+            means_accuracy = [df[(df.experiment == experiment) & (df.k == k)]['accuracy'].mean()
                               for k in sorted(list(set(df['k'])))]
-                for j, ref_time in enumerate(self.REFERENCE_TIMES.values()):
-                    axes[2][i].plot((-0.25 + j, 0.235 + j), (means_time[j], means_time[j]),
-                                    linewidth=2, label=str(round(means_time[j], 0)))
-                    axes[2][i].plot((-0.25 + j, 0.235 + j), 2 * (ref_time,),
-                                    color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
-                    if j > 0:
-                        axes[2][i].plot((j-1, j), (means_time[j-1], means_time[j]),
-                                        color='gray', linestyle='-', linewidth=2, zorder=0)
-                axes[2][i].set_yscale('log')
-                axes[2][i].legend(loc='upper right', bbox_to_anchor=(1.28, 1.02), title='means')
+            for j, accuracy_ref in enumerate(self.REFERENCE_MEAN_ACCURACY.values()):
+                axes[0][i].plot((-0.25 + j, 0.235 + j), 2 * (means_accuracy[j],),
+                                linewidth=2, label=str(round(means_accuracy[j], 4)))
+                axes[0][i].plot((-0.25 + j, 0.235 + j), 2 * (accuracy_ref,),
+                                color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
+            lib = 'Tensorflow' if 'Tensorflow' in experiment \
+                else 'Scikit-learn' if 'ScikitLearn' in experiment else '?'
+            axes[0][i].set_xlim(left=-0.5, right=4.485)
+            axes[0][i].set_title('Library: {}\n'.format(lib))
+            axes[0][i].set_yscale('linear')
+            axes[0][i].set_ylabel('accuracy')
+            axes[0][i].legend(loc='upper right', bbox_to_anchor=(1.26, 1.02), title='means')
 
-            axes[2][0].set_ylabel('runtime in s')
-            fig.subplots_adjust(hspace=0.3, wspace=0.6)
-            title = fig.suptitle('Overview of Learning Results on XOR Arbiter PUFs of length 64\n'
-                                 'using Multilayer Perceptron on each 100 PUF simulations per width k', size=16)
-            title.set_position([0.5, 1.0])
-            fig.savefig('figures/{}_overview.pdf'.format(self.name()), bbox_inches='tight', pad_inches=.5)
+            stripplot(
+                x='k',
+                y='distance',
+                data=df[df['experiment'] == experiment],
+                ax=axes[1][i],
+                jitter=True,
+                alpha=0.4,
+                zorder=1,
+                marker=marker,
+            )
+            means_distance = [df[(df.experiment == experiment) & (df.k == k)]['distance'].mean()
+                              for k in sorted(list(set(df['k'])))]
+            for j, accuracy_ref in enumerate(self.REFERENCE_MEAN_ACCURACY.values()):
+                axes[1][i].plot((-0.25 + j, 0.235 + j), 2 * (means_distance[j],),
+                                linewidth=2, label=str(round(means_distance[j], 3)))
+                axes[1][i].plot((-0.25 + j, 0.235 + j), 2 * (1 - accuracy_ref,),
+                                color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
+            axes[1][i].set_yscale('log')
+            axes[1][i].invert_yaxis()
+            axes[1][i].set_xlim(left=-0.5, right=4.485)
+            axes[1][i].set_ylim(top=0.005, bottom=0.6)
+            major_ticks = [0.1, 0.2, 0.3, 0.4, 0.5]
+            minor_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
+            axes[1][i].set_yticks(ticks=major_ticks, minor=False)
+            axes[1][i].set_yticks(ticks=minor_ticks, minor=True)
+            axes[1][i].set_yticklabels(ones(shape=5) - major_ticks, minor=False)
+            axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
+            axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
+            axes[1][i].set_ylabel('accuracy')
+        fig.subplots_adjust(hspace=0.3, wspace=0.6)
+        title = fig.suptitle('Accuracy Overview', size=20)
+        title.set_position([0.5, 1.05])
+        fig.savefig('figures/{}_overview_accuracy.png'.format(self.name()), bbox_inches='tight', pad_inches=.5)
+
+        fig2, axes2 = subplots(ncols=2, nrows=1)
+        fig2.set_size_inches(14, 4)
+        color_ref = 'black'
+        style_ref = '-'
+        marker = 'o'
+        for i, experiment in enumerate(sorted(list(set(df['experiment'])))):
+            stripplot(
+                x='k',
+                y='measured_time',
+                data=df[df['experiment'] == experiment],
+                ax=axes2[i],
+                jitter=True,
+                alpha=0.4,
+                zorder=1,
+                marker=marker,
+            )
+            means_time = [df[(df.experiment == experiment) & (df.k == k)]['measured_time'].mean()
+                          for k in sorted(list(set(df['k'])))]
+            for j, ref_time in enumerate(self.REFERENCE_TIMES.values()):
+                axes2[i].plot((-0.25 + j, 0.235 + j), (means_time[j], means_time[j]),
+                              linewidth=2, label=str(int(round(means_time[j], 0))))
+                axes2[i].plot((-0.25 + j, 0.235 + j), 2 * (ref_time,),
+                              color=color_ref, linestyle=style_ref, linewidth=2, zorder=2)
+                if j > 0:
+                    axes2[i].plot((j - 1, j), (means_time[j - 1], means_time[j]),
+                                  color='gray', linestyle='-', linewidth=2, zorder=0)
+            axes2[i].set_yscale('log')
+            axes2[i].legend(loc='upper right', bbox_to_anchor=(1.25, 1.02), title='means')
+            axes2[0].set_ylabel('runtime in s')
+            lib = 'Tensorflow' if 'Tensorflow' in experiment \
+                else 'Scikit-learn' if 'ScikitLearn' in experiment else '?'
+            axes2[i].set_title('Library: {}\n'.format(lib))
+        fig2.subplots_adjust(wspace=0.6)
+        title2 = fig2.suptitle('Runtime Overview', size=20)
+        title2.set_position([0.5, 1.2])
+        fig2.savefig('figures/{}_overview_runtime.png'.format(self.name()), bbox_inches='tight', pad_inches=.5)

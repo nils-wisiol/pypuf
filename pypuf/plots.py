@@ -330,20 +330,20 @@ class PermutationIndexPlot:
 
 
 def plot3d_size_dependency(df):
-    fig = plt.figure(figsize=(20, 10))
-    ax1 = fig.add_subplot(121, projection='3d')
+    fig = plt.figure(figsize=(30, 10))
+    ax1 = fig.add_subplot(131, projection='3d')
     xs = log2(df.n)
     ys = df.k
-    zs1 = log10(df.x_N)
+    zs1 = log10(df.N)
     ax1.scatter(xs, ys, zs1)
     ax1.set_xticks(xs)
     ax1.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
     ax1.set_yticks(ys)
-    # ax1.set_zticklabels([rf'${int(round(2**(z-10), 0))} \times 2^{ {10} }$' for z in ax1.get_zticks()[1:]])
     ax1.set_zticklabels([rf'${int(round(10**(z-3), 0))} \times 10^3$' for z in ax1.get_zticks()[1:]])
     ax1.set_xlabel('n')
     ax1.set_ylabel('k')
     ax1.set_zlabel('N')
+    ax1.set_title('Trainingset Sizes')
     ax1.view_init(azim=240, elev=20)
     numx = len(set(xs))
     numy = len(set(ys))
@@ -354,21 +354,44 @@ def plot3d_size_dependency(df):
         indices = list(numx * array(list(range(numy))) + i)
         ax1.plot(xs[indices], ys[indices], zs1[indices], color='b', alpha=0.5)
 
-    ax2 = fig.add_subplot(122, projection='3d')
-    zs2 = df.x_learning_rate
+    ax2 = fig.add_subplot(132, projection='3d')
+    zs2 = log10(df.N_Rührmair)
     ax2.scatter(xs, ys, zs2)
     ax2.set_xticks(xs)
     ax2.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
     ax2.set_yticks(ys)
+    ax2.set_zticklabels([rf'${int(round(10 ** (z - 3), 0))} \times 10^3$' for z in ax1.get_zticks()[1:]])
     ax2.set_xlabel('n')
     ax2.set_ylabel('k')
-    ax2.set_zlabel('learning_rate')
-    ax2.view_init(azim=330, elev=20)
+    ax2.set_zlabel('N')
+    ax2.set_title('Trainingset Sizes (Rührmair)')
+    ax2.view_init(azim=240, elev=20)
+    numx = len(set(xs))
+    numy = len(set(ys))
     for i in range(numy):
         indices = list(i * numx + array(list(range(numx))))
         ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
     for i in range(numx):
         indices = list(numx * array(list(range(numy))) + i)
         ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
+
+    ax3 = fig.add_subplot(133, projection='3d')
+    zs3 = df.learning_rate
+    ax3.scatter(xs, ys, zs3)
+    ax3.set_xticks(xs)
+    ax3.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax3.set_yticks(ys)
+    ax3.set_xlabel('n')
+    ax3.set_ylabel('k')
+    ax3.set_zlabel('learning_rate')
+    ax3.set_title('Learning Rates')
+    ax3.view_init(azim=330, elev=20)
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax3.plot(xs[indices], ys[indices], zs3[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax3.plot(xs[indices], ys[indices], zs3[indices], color='b', alpha=0.5)
+
     fig.subplots_adjust(hspace=0)
     fig.savefig('figures/sizes_dependency.pdf')

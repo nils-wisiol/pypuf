@@ -12,7 +12,7 @@ from matplotlib.pyplot import subplots
 from matplotlib.ticker import FixedLocator
 from numpy.ma import ones, log10
 from numpy.random.mtrand import seed
-from seaborn import stripplot, lineplot, scatterplot
+from seaborn import stripplot, lineplot, scatterplot, color_palette
 
 from pypuf.studies.base import Study
 from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
@@ -205,6 +205,9 @@ class MLPPUFSizesStudy(Study):
         fig, axes = subplots(ncols=ncols, nrows=nrows)
         fig.set_size_inches(9 * ncols, 4 * nrows)
         axes = axes.reshape((nrows, ncols))
+        alpha_scatter = 0.1
+        alpha_lines = 0.7
+        palette = color_palette(palette='plasma')
         for j, (n, k) in enumerate(self.SIZES.keys()):
             data = df[(df['k'] == k) & (df['n'] == n)]
             lineplot(
@@ -217,6 +220,8 @@ class MLPPUFSizesStudy(Study):
                 legend=False,
                 estimator='mean',
                 ci=None,
+                alpha=alpha_lines,
+                #palette=palette,
             )
             scatterplot(
                 x=param_x,
@@ -226,11 +231,12 @@ class MLPPUFSizesStudy(Study):
                 data=data,
                 ax=axes[0][j],
                 legend='full',
+                alpha=alpha_scatter,
+                #palette=palette,
             )
             lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
-            total = sum([e.parameters.k == k and e.parameters.n == n and lib in e.NAME for e in self.EXPERIMENTS])
-            axes[0][j].set_title('n={}, k={}\n\n{} experiments per combination,   {}/{}\n'.format(
-                n, k, self.SAMPLES_PER_POINT[(n, k)], len(data), total))
+            axes[0][j].set_title('n={}, k={}\n\n{} experiments\n'.format(
+                n, k, len(data)))
             axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
             lineplot(
                 x='accuracy',
@@ -242,6 +248,8 @@ class MLPPUFSizesStudy(Study):
                 legend='full',
                 estimator='mean',
                 ci=None,
+                alpha=alpha_lines,
+                #palette=palette,
             )
             axes[1][j].set_xscale('linear')
             axes[1][j].set_yscale('linear')
@@ -256,10 +264,6 @@ class MLPPUFSizesStudy(Study):
         title.set_position([.5, 1.05])
         fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', dpi=300, pad_inches=.5)
 
-        def pypuf_round(x, p):
-            precision = -floor(log10(x)) + p
-            return round(x, precision) if precision > 0 else int(round(x, 0))
-        alpha = 0.1
         width = 0.3
         seed(42)
         df = self.experimenter.results
@@ -279,9 +283,10 @@ class MLPPUFSizesStudy(Study):
                 data=df[df.k == k],
                 ax=axes[0][i],
                 jitter=True,
-                alpha=alpha,
                 zorder=1,
                 marker=marker,
+                alpha=alpha_scatter,
+                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -292,7 +297,6 @@ class MLPPUFSizesStudy(Study):
             axes[0][i].set_title('k={}\n'.format(k))
             axes[0][i].set_yscale('linear')
             axes[0][i].set_ylabel('accuracy')
-            #axes[0][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
 
             stripplot(
                 x='n',
@@ -300,9 +304,10 @@ class MLPPUFSizesStudy(Study):
                 data=df[df.k == k],
                 ax=axes[1][i],
                 jitter=True,
-                alpha=alpha,
                 zorder=1,
                 marker=marker,
+                alpha=alpha_scatter,
+                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -321,7 +326,6 @@ class MLPPUFSizesStudy(Study):
             axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
             axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
             axes[1][i].set_ylabel('accuracy')
-            #axes[1][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
 
             stripplot(
                 x='n',
@@ -329,9 +333,10 @@ class MLPPUFSizesStudy(Study):
                 data=df[df.k == k],
                 ax=axes[2][i],
                 jitter=True,
-                alpha=alpha,
                 zorder=1,
                 marker=marker,
+                alpha=alpha_scatter,
+                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -340,7 +345,6 @@ class MLPPUFSizesStudy(Study):
                     axes[2][i].plot([j - width / 2, j + width / 2], [mean, mean],
                                     color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
             axes[2][i].set_yscale('log')
-            #axes[2][i].legend(loc='upper right', bbox_to_anchor=(1.2, 1.02), title='means')
 
         axes[2][0].set_ylabel('runtime in s')
         fig.subplots_adjust(hspace=0.3, wspace=0.3)
@@ -360,7 +364,6 @@ class MLPPUFSizesStudy(Study):
         axes = axes.reshape((nrows, ncols))
         for j, (k, n) in enumerate(sizes):
             data = df[(df.k == k) & (df.n == n)]
-            #total = sum([e.parameters.k == k and lib in e.NAME for e in self.EXPERIMENTS])
             axes[0][j].set_title('k={}, n={}\n'.format(k, n))
             for i, (low, high) in enumerate(intervals):
                 curves = data[(data.accuracy >= low) & (data.accuracy < high)].accuracy_curve
