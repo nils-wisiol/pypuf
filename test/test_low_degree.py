@@ -4,7 +4,7 @@ This module tests the low degree learner.
 import unittest
 from numpy.random import RandomState
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.learner.pac.low_degree import LowDegreeAlgorithm
+from pypuf.learner.pac.fourier_approximation import LowDegreeAlgorithm
 from pypuf.tools import TrainingSet
 
 
