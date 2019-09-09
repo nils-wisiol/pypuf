@@ -6,13 +6,16 @@ helper module.
 import itertools
 from importlib import import_module
 from inspect import getmembers, isclass
+from math import ceil, log
 
-from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8
+from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
+    multiply, empty, average
 from numpy import sum as np_sum
 from numpy import abs as np_abs
 from numpy.random import RandomState
 from random import sample
 
+from pypuf.simulation.base import Simulation
 from pypuf.studies.base import Study
 
 BIT_TYPE = int8
@@ -142,8 +145,6 @@ def approx_fourier_coefficient(s, training_set):
     :return: float
              The approximated value of the coefficient
     """
-    assert_result_type(s)
-    assert_result_type(training_set.challenges)
     return mean(training_set.responses * chi_vectorized(s, training_set.challenges))
 
 
@@ -157,8 +158,6 @@ def chi_vectorized(s, inputs):
     :return: array of int8 shape(N)
              chi_s(x) = prod_(i in s) x_i for all x in inputs (`latex formula`)
     """
-    assert_result_type(s)
-    assert_result_type(inputs)
     assert len(s) == len(inputs[0])
     result = inputs[:, s > 0]
     if result.size == 0:
@@ -409,6 +408,85 @@ class TrainingSet(ChallengeResponseSet):
             challenges=challenges,
             responses=instance.eval(challenges)
         )
+
+
+class GoldreichLevin:
+    """
+    Probabilistic algorithm that with probability 1 - `delta` returns a list of sets for the `instance` Boolean function
+    using query access.
+    If the magnitude of a coefficient is greater or equal than `tau` its set is guaranteed to be in the output list.
+    On the other hand all sets in the output list are guaranteed to have Fourier coefficient magnitude greater or equal
+    than 1/2 `tau`.
+    """
+
+    def __init__(self, instance: Simulation, tau, delta):
+        self.instance = instance
+        self.tau = tau
+        epsilon = tau ** 2 / 4
+        self.delta = tau ** 2 / (8 * self.instance.challenge_length() * (1 - delta))
+        self.sample_size = int(ceil(12 * log(2.0 / self.delta) / (epsilon ** 2)))
+
+    def find_heavy_monomials(self, logger=None):
+        """
+        Returns a list of monomials on which the Fourier weight is concentrated.
+        If the Fourier weight is not concentrated on a small set, this will have
+        LONG runtime.
+        :param logger: if given, used to log status messages
+        """
+        return self._recursive_find((0, zeros(self.instance.challenge_length())), logger)
+
+    def _recursive_find(self, bucket, logger=None):
+        k = bucket[0]
+        s = bucket[1]
+        if k == self.instance.challenge_length():
+            return [s]
+
+        extended_s = copy(s)
+        extended_s[k] = 1
+        next_buckets = [(k + 1, s), (k + 1, extended_s)]
+
+        return_sets = []
+        for new_bucket in next_buckets:
+            weight = self._sample_weight(new_bucket)
+            if weight > self.tau ** 2 / 2:
+                if logger:
+                    logger.debug(f'disecting bucket with weight {weight} > {self.tau ** 2 / 2}')
+                    logger.debug(f'bucket: {new_bucket[1]}')
+                return_sets += self._recursive_find(new_bucket, logger)
+
+        return return_sets
+
+    def _sample_weight(self, bucket):
+        k = bucket[0]
+        s = bucket[1]
+        j = array([1 if i < k else 0 for i in range(self.instance.challenge_length())])
+
+        z = random_inputs(self.instance.challenge_length() - k, self.sample_size)
+        x1 = append(random_inputs(k, self.sample_size), z, axis=1)
+        x2 = append(random_inputs(k, self.sample_size), z, axis=1)
+        mask = multiply(s, j)
+        estimate = average(
+            self.instance.eval(x1) * self.chi(mask, x1) *
+            self.instance.eval(x2) * self.chi(mask, x2)
+        )
+
+        return estimate
+
+    @staticmethod
+    def chi(s, x):
+        """
+        For each y in x, returns chi_s(y) = prod_(i ∈ s) y_i.
+
+        >>> GoldreichLevin.chi(array([0,1,1]), array([[-1,-1,-1]]))
+        array([1.])
+
+        >>> GoldreichLevin.chi(array([0, 1]), array([[1,1],[-1,-1],[-1,1],[1,-1]]))
+        array([ 1., -1.,  1., -1.])
+        """
+        masked_values = empty(shape=x.shape)
+        for i, bit in enumerate(s):
+            masked_values[:, i] = x[:, i] if bit == 1 else ones(x.shape[0])
+        return prod(masked_values, axis=1)
 
 
 def find_study_class(name):
