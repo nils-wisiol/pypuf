@@ -92,8 +92,8 @@ class UnknownTransformStudy(Study):
                     delta=delta,
                 )
             )
-            for n in [16, 32, 48]
-            for k in [1]
+            for n in [64]
+            for k in [1, 2]
             for transform in ['id', 'atf', 'lightweight_secure', 'fixed_permutation']
             for N in [10000]
             for tau in [.2, .3, .4]
