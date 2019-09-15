@@ -862,15 +862,15 @@ class LTFArray(Simulation):
                              f'k={self.k} and n={self.n}, but challenges given had shape {efba_sub_challenges.shape}.')
 
     @classmethod
-    def preprocess(cls, transformation, kind='no'):
+    def preprocess(cls, transformation, kind='full'):
         if kind == 'no':
             def id(challenges, k):
                 return cls.transform_id(challenges, 1)[:, 0, :]
             return id
         if kind == 'short':
-            def simple_transformation(challenges, k):
+            def short_transformation(challenges, k):
                 return transformation(challenges, k)[:, 0, :]
-            return simple_transformation
+            return short_transformation
         if kind == 'full':
             return transformation
         else:

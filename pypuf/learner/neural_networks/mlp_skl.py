@@ -5,7 +5,7 @@ for Resource-Constraint Internet of Things", 2018 IEEE International Congress on
 San Francisco, CA, 2018, pp. 49-56.
 """
 
-from numpy import reshape, mean, abs, sign
+from numpy import reshape, mean, sign, shape
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from numpy.random import RandomState
@@ -72,20 +72,8 @@ class MultiLayerPerceptronScikitLearn(Learner):
 
     def prepare(self):
         """
-        Preprocess training data and initialize the Multilayer Perceptron.
+        Initialize the Multilayer Perceptron.
         """
-        in_shape = self.n
-        preprocess = LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing)
-        if self.preprocessing != 'no':
-            self.training_set = ChallengeResponseSet(
-                challenges=preprocess(challenges=self.training_set.challenges, k=self.k),
-                responses=self.training_set.responses
-            )
-            if self.preprocessing == 'full':
-                in_shape = self.k * self.n
-            self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
-        if self.domain_in == 0:
-            self.training_set.challenges = (self.training_set.challenges + 1) / 2
         self.nn = MLPClassifier(
             solver='adam',
             alpha=self.penalty,
@@ -105,6 +93,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             """
             This defines a wrapper for the learning model to fit in with the Learner framework.
             """
+
             def __init__(self, nn, n, k, preprocess, domain_in):
                 self.nn = nn
                 self.n = n
@@ -113,9 +102,12 @@ class MultiLayerPerceptronScikitLearn(Learner):
                 self.domain_in = domain_in
 
             def eval(self, cs):
-                cs_preprocessed = self.preprocess(challenges=cs, k=self.k)
-                challenges = cs_preprocessed if self.domain_in == -1 else (cs_preprocessed + 1) / 2
-                predictions = self.nn.predict(X=challenges)
+                cs = self.preprocess(challenges=cs, k=self.k)
+                cs = cs if self.domain_in == -1 else (cs + 1) / 2
+                cs_shape = shape(cs)
+                if len(cs_shape) == 3:
+                    cs = reshape(cs, (cs_shape[0], cs_shape[1] * cs_shape[2]))
+                predictions = self.nn.predict(X=cs)
                 predictions_1_1 = predictions * 2 - 1
                 return sign(predictions_1_1).flatten()
 
@@ -123,7 +115,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             nn=self.nn,
             n=self.n,
             k=self.k,
-            preprocess=preprocess,
+            preprocess=LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing),
             domain_in=self.domain_in
         )
 
@@ -131,8 +123,6 @@ class MultiLayerPerceptronScikitLearn(Learner):
         """
         Train the model with early stopping.
         """
-        def accuracy(y_true, y_pred):
-            return (1 + mean(y_true * y_pred)) / 2
         x, x_val, y, y_val = train_test_split(
             self.training_set.challenges,
             self.training_set.responses,
@@ -140,13 +130,23 @@ class MultiLayerPerceptronScikitLearn(Learner):
             test_size=self.validation_frac,
             stratify=self.training_set.responses,
         )
+        preprocess = LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing)
+        if self.preprocessing != 'no':
+            x = preprocess(challenges=x, k=self.k)
+            if self.preprocessing == 'full':
+                x = reshape(x, (len(x), self.k * self.n))
+        if self.domain_in == 0:
+            x = (x + 1) / 2
+
+        def accuracy(y_true, y_pred):
+            return (1 + mean(y_true * y_pred)) / 2
         counter = 0
         threshold = 0
         best = 0
         for epoch in range(self.iteration_limit):
             self.nn = self.nn.partial_fit(
-                X=self.training_set.challenges,
-                y=self.training_set.responses,
+                X=x,
+                y=y,
                 classes=[-1, 1],
             )
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))

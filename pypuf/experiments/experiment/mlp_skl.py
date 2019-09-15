@@ -10,6 +10,7 @@ from uuid import UUID
 from numpy.random import RandomState
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.neural_networks.mlp_skl import MultiLayerPerceptronScikitLearn
+from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf import tools
 
@@ -81,27 +82,46 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         Prepare learning: initialize learner, prepare training set, etc.
         """
-        self.simulation = LTFArray(
-            weight_array=LTFArray.normal_weights(
-                n=self.parameters.n,
-                k=self.parameters.k,
-                random_instance=RandomState(seed=self.parameters.seed_simulation),
-            ),
-            transform=self.parameters.transformation,
-            combiner=self.parameters.combiner,
-        )
+        if not self.parameters.transformation.startswith('interpose'):
+            self.simulation = LTFArray(
+                weight_array=LTFArray.normal_weights(
+                    n=self.parameters.n,
+                    k=self.parameters.k,
+                    random_instance=RandomState(seed=self.parameters.seed_simulation),
+                ),
+                transform=self.parameters.transformation,
+                combiner=self.parameters.combiner,
+            )
+        else:
+            params = self.parameters.transformation.split(sep='_')
+            params_dict = {}
+            if len(params) > 1:
+                for p in params:
+                    p = p.split('=')
+                    params_dict[p[0]] = p[1]
+            self.simulation = InterposePUF(
+                n=params_dict['n'] if 'n' in params_dict.keys() else self.parameters.n,
+                k_down=params_dict['k_down'] if 'k_down' in params_dict.keys() else self.parameters.k,
+                k_up=params_dict['k_up'] if 'k_up' in params_dict.keys() else self.parameters.k,
+                interpose_pos=params_dict['interpose_pos'] if 'interpose_pos' in params_dict.keys() else None,
+                seed=params_dict['seed'] if 'seed' in params_dict.keys() else self.parameters.seed_simulation,
+                transform=params_dict['transform'] if 'transform' in params_dict.keys() else None,
+                noisiness=params_dict['noisiness'] if 'noisiness' in params_dict.keys() else 0,
+                noise_seed=params_dict['noise_seed'] if 'noise_seed' in params_dict.keys() else None,
+            )
         prng_challenges = RandomState(seed=self.parameters.seed_challenges)
         self.training_set = tools.TrainingSet(
             instance=self.simulation,
             N=self.parameters.N,
-            random_instance=prng_challenges
+            random_instance=prng_challenges,
         )
         self.learner = MultiLayerPerceptronScikitLearn(
             n=self.parameters.n,
             k=self.parameters.k,
             training_set=self.training_set,
             validation_frac=self.parameters.validation_frac,
-            transformation=self.simulation.transform,
+            transformation=self.simulation.down.transform if self.parameters.transformation.startswith('interpose')
+            else self.simulation.transform,
             preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             learning_rate=self.parameters.learning_rate,
