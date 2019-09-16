@@ -107,9 +107,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
                 cs_shape = shape(cs)
                 if len(cs_shape) == 3:
                     cs = reshape(cs, (cs_shape[0], cs_shape[1] * cs_shape[2]))
-                predictions = self.nn.predict(X=cs)
-                predictions_1_1 = predictions * 2 - 1
-                return sign(predictions_1_1).flatten()
+                return sign(self.nn.predict(X=cs) * 2 - 1).flatten()
 
         self.model = Model(
             nn=self.nn,

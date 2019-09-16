@@ -7,7 +7,7 @@ San Francisco, CA, 2018, pp. 49-56.
 
 from os import environ
 
-from numpy import reshape, sign
+from numpy import reshape, sign, shape
 from numpy.random import seed
 from numpy.random.mtrand import RandomState
 from tensorflow import set_random_seed, ConfigProto, get_default_graph, Session, multiply
@@ -92,40 +92,19 @@ class MultiLayerPerceptronTensorflow(Learner):
 
     def prepare(self):
         """
-        Preprocess training data and initialize the Multilayer Perceptron.
+        Initialize the Multilayer Perceptron.
         """
         seed(self.seed_model)
         set_random_seed(self.seed_model)
         session_conf = ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
         set_session(Session(graph=get_default_graph(), config=session_conf))
-        in_shape = self.n
-        preprocess = LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing)
-        if self.preprocessing != 'no':
-            self.training_set = ChallengeResponseSet(
-                challenges=preprocess(self.training_set.challenges, self.k),
-                responses=self.training_set.responses,
-            )
-            self.validation_set = ChallengeResponseSet(
-                challenges=preprocess(self.validation_set.challenges, self.k),
-                responses=self.validation_set.responses
-            )
-            if self.preprocessing == 'full':
-                in_shape = self.k * self.n
-            self.training_set.challenges = reshape(self.training_set.challenges, (self.training_set.N, in_shape))
-            self.validation_set.challenges = reshape(self.validation_set.challenges, (self.validation_set.N, in_shape))
-        if self.domain_in == 0:
-            self.training_set.challenges = (self.training_set.challenges + 1) / 2
-            self.validation_set.challenges = (self.validation_set.challenges + 1) / 2
-        if self.domain_out == 0:
-            self.validation_set.responses = (self.validation_set.responses + 1) / 2
-            self.training_set.responses = (self.training_set.responses + 1) / 2
 
         l2_loss = l2(self.penalty) if self.penalty != 0 else None
         self.nn = Sequential()
         self.nn.add(Dense(
             units=self.layers[0],
             activation=self.activation,
-            input_dim=in_shape,
+            input_dim=self.k * self.n if self.preprocessing == 'full' else self.n,
             use_bias=True,
         ))
         if len(self.layers) > 1:
@@ -189,17 +168,19 @@ class MultiLayerPerceptronTensorflow(Learner):
                 self.domain_out = domain_out
 
             def eval(self, cs):
-                cs_preprocessed = self.preprocess(challenges=cs, k=self.k)
-                challenges = cs_preprocessed if self.domain_in == -1 else (cs_preprocessed + 1) / 2
-                predictions = self.nn.predict(x=challenges)
-                predictions_1_1 = predictions if self.domain_out == -1 else predictions * 2 - 1
-                return sign(predictions_1_1).flatten()
+                cs = self.preprocess(challenges=cs, k=self.k)
+                cs = cs if self.domain_in == -1 else (cs + 1) / 2
+                cs_shape = shape(cs)
+                if len(cs_shape) == 3:
+                    cs = reshape(cs, (cs_shape[0], cs_shape[1] * cs_shape[2]))
+                return sign(self.nn.predict(x=cs)).flatten() if self.domain_out == -1 \
+                    else sign(self.nn.predict(x=cs) * 2 - 1).flatten()
 
         self.model = Model(
             nn=self.nn,
             n=self.n,
             k=self.k,
-            preprocess=preprocess,
+            preprocess=LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing),
             domain_in=self.domain_in,
             domain_out=self.domain_out,
         )
@@ -232,6 +213,20 @@ class MultiLayerPerceptronTensorflow(Learner):
                     if self.counter >= self.patience:
                         self.model.stop_training = True
 
+        x, y = self.training_set.challenges, self.training_set.responses
+        x_val, y_val = self.validation_set.challenges, self.validation_set.responses
+        preprocess = LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing)
+        if self.preprocessing != 'no':
+            x = preprocess(challenges=x, k=self.k)
+            x_val = preprocess(challenges=x_val, k=self.k)
+            if self.preprocessing == 'full':
+                x = reshape(x, (len(x), self.k * self.n))
+                x_val = reshape(x_val, (len(x_val), self.k * self.n))
+        if self.domain_in == 0:
+            x = (x + 1) / 2
+            x_val = (x_val + 1) / 2
+        if self.domain_out == 0:
+            y_val = (y_val + 1) / 2
         converged = DelayedEarlyStopping(
             delay=self.DELAY,
             tolerance=self.tolerance,
@@ -241,12 +236,12 @@ class MultiLayerPerceptronTensorflow(Learner):
         )
         callbacks = [converged]
         self.history = self.nn.fit(
-            x=self.training_set.challenges,
-            y=self.training_set.responses,
+            x=x,
+            y=y,
             batch_size=self.batch_size,
             epochs=self.iteration_limit,
             callbacks=callbacks,
-            validation_data=(self.validation_set.challenges, self.validation_set.responses),
+            validation_data=(x_val, y_val),
             shuffle=True,
             verbose=self.print_learning,
         )
