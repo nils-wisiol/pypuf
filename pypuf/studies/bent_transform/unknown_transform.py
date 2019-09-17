@@ -19,6 +19,7 @@ class Parameters(NamedTuple):
     N: int
     tau: float
     delta: float
+    sample_size_override: int
 
 
 class Result(NamedTuple):
@@ -50,7 +51,12 @@ class UnknownTransformAttackExperiment(Experiment):
         self.progress_logger.debug('Training set generated')
 
     def run(self):
-        gl = GoldreichLevin(self.instance, self.parameters.tau, self.parameters.delta)
+        gl = GoldreichLevin(
+            self.instance,
+            self.parameters.tau,
+            self.parameters.delta,
+            self.parameters.sample_size_override,
+        )
         self.weight_sample_size = gl.sample_size
         self.progress_logger.debug(f'Using {gl.sample_size} challenges for weight sampling')
         self.coefficients = gl.find_heavy_monomials(self.progress_logger)
@@ -90,6 +96,7 @@ class UnknownTransformStudy(Study):
                     N=N,
                     tau=tau,
                     delta=delta,
+                    sample_size_override=10**5,
                 )
             )
             for n in [64]

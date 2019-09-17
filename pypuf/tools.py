@@ -442,12 +442,12 @@ class GoldreichLevin:
     than 1/2 `tau`.
     """
 
-    def __init__(self, instance: Simulation, tau, delta):
+    def __init__(self, instance: Simulation, tau, delta, sample_size=None):
         self.instance = instance
         self.tau = tau
         epsilon = tau ** 2 / 4
         self.delta = tau ** 2 / (8 * self.instance.challenge_length() * (1 - delta))
-        self.sample_size = int(ceil(12 * log(2.0 / self.delta) / (epsilon ** 2)))
+        self.sample_size = sample_size or int(ceil(12 * log(2.0 / self.delta) / (epsilon ** 2)))
 
     def find_heavy_monomials(self, logger=None):
         """
