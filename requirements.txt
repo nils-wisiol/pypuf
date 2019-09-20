@@ -1,3 +1,4 @@
+sp80022suite==0.0.8
 numpy~=1.16.0
 pycodestyle~=2.4.0
 polymath==0.1.18
