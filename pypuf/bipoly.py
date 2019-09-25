@@ -2,7 +2,7 @@
 This module provides a data type that represents polynomials over {-1, 1}: BiPoly
 It also provides functions for the generation of commonly used BiPoly instances.
 """
-from numpy import bincount, array
+from numpy import bincount, array, zeros
 
 
 def to_dict_notation(mon):
@@ -298,6 +298,41 @@ class BiPoly(object):
         [[], [1], [2], [3], [5, 6]]
         """
         return [list(s) for s, _ in self]
+
+    def to_vector_notation(self, n=None):
+        """
+        Returns a list of vectors of length n and values in {0,1}. The value will be
+        zero if and only if the variable corresponding to the index is not present in the
+        monomial, and otherwise one.
+
+        Note that coefficient information is not included in the notation.
+
+        >>> atf = BiPoly.arbiter_puf(n=4)
+        >>> atf.to_vector_notation()
+        array([[1., 1., 1., 1.],
+               [0., 1., 1., 1.],
+               [0., 0., 1., 1.],
+               [0., 0., 0., 1.]])
+
+        >>> BiPoly.xor_arbiter_puf(n=64, k=2).to_vector_notation(n=64).shape[1]
+        64
+
+        >>> BiPoly.xor_arbiter_puf(3, 2).to_vector_notation(n=3)
+        array([[0., 0., 0.],
+               [1., 0., 0.],
+               [1., 1., 0.],
+               [0., 1., 0.]])
+
+        :return:
+        """
+        if n is None:
+            n = 0
+
+        n = max(max([max(list(m)) for m, _ in self if m]) + 1, n)
+        chi_set = zeros(shape=(len(self), n))
+        for i, (m, _) in enumerate(self):
+            chi_set[i, list(m)] = 1
+        return chi_set
 
     def substitute(self, mapping):
         """
