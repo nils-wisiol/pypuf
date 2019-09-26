@@ -2,6 +2,9 @@
 This module provides a data type that represents polynomials over {-1, 1}: BiPoly
 It also provides functions for the generation of commonly used BiPoly instances.
 """
+from functools import reduce
+from operator import mul
+
 from numpy import bincount, array, zeros
 
 
@@ -346,6 +349,12 @@ class BiPoly(object):
         >>> str(ltf)
         '  1x₁ +   2x₂ +   3x₃ +   4x₄'
 
+        >>> BiPoly.arbiter_puf(4).substitute([[2], [3], [0], [1]])
+          1x₀x₁x₂x₃ +   1x₀x₁x₃ +   1x₀x₁ +   1x₁
+
+        >>> BiPoly.arbiter_puf(4).substitute([[0, 1], [2, 3], [0], [1, 2]])
+          1x₃ +   1x₀x₁x₃ +   1x₀x₁x₂ +   1x₁x₂
+
         >>> ltf = BiPoly({frozenset({0}): 0, frozenset({1}): 1, frozenset({2}): 2, frozenset({3}): 3})
         >>> atf = ltf.substitute(([[0, 1, 2, 3], [1, 2, 3], [2, 3], [3]]))
         >>> str(atf)
@@ -403,6 +412,47 @@ class BiPoly(object):
         '  3 +   2x₀ +   2x₀x₁ +   2x₁'
         """
         return cls.arbiter_puf(n)**k
+
+    @classmethod
+    def lightweight_secure_puf(cls, n, k):
+        """
+        Returns the polynomial of the PTF representation of the Lightweight Secure PUF with
+        n bit and k arbiter chains.
+
+        Originally defined by Majzoobi et al. 2008 "Lightweight Secure PUFs"
+        :param n: int
+                Length of the arbiter chains.
+        :param k:
+                Number of arbiter chains.
+
+        >>> BiPoly.lightweight_secure_puf(4, 1)
+          1x₃ +   1x₀x₁x₃ +   1x₀x₁x₂ +   1x₁x₂
+
+        #>>> str(BiPoly.lightweight_secure_puf(4, 2))
+        '  2x₀x₁x₂x₃ +   2x₀ +   2x₀x₂ +   4 +   2x₁x₂x₃ +   2x₁x₃ +   2x₂'
+
+        #>>> str(BiPoly.lightweight_secure_puf(8, 1))
+        '  1x₀x₁ +   1x₂x₃ +   1x₄x₅ +   1x₆x₇ +   1x₁ +   1x₁x₂ +   1x₃x₄ +   1x₅x₆'
+
+        """
+        arbiter_pufs = [cls.arbiter_puf(n) for _ in range(k)]
+
+        # pairwise XOR
+        # for definition of the mapping, see Wisiol et al. "Breaking Lightweight Secure [...]",
+        # ia.cr/2019/799.pdf, p. 5; note that our indices here are 0-based
+        mapping = (
+            [[i, i + 1] for i in range(0, n, 2)] +    # [0, 1], [2, 3], ..., [n-2, n-1]
+            [[0]] +                                   # [0]
+            [[i, i + 1] for i in range(1, n - 2, 2)]  # [1, 2], [3, 4], ..., [n-3, n-2]
+        )
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute(mapping)
+
+        # rotate
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute([[(i + l) % n] for i in range(n)])
+
+        return reduce(mul, arbiter_pufs)
 
     @classmethod
     def interpose_puf_approximation(cls, n, k_up, k_down, p_up=None):
