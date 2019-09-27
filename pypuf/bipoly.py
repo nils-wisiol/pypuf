@@ -6,6 +6,9 @@ from functools import reduce
 from operator import mul
 
 from numpy import bincount, array, zeros
+from numpy.random.mtrand import RandomState
+
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
 def to_dict_notation(mon):
@@ -451,6 +454,28 @@ class BiPoly(object):
         # rotate
         for l in range(k):
             arbiter_pufs[l] = arbiter_pufs[l].substitute([[(i + l) % n] for i in range(n)])
+
+        return reduce(mul, arbiter_pufs)
+
+    @classmethod
+    def permutation_puf(cls, n, k):
+        """
+        Returns the polynomial of the PTF representation of the Permutation-Based XOR Arbiter PUF with
+        n bit and k arbiter chains.
+
+        Originally defined by Wisiol et al. 2019 "Breaking Lightweight Secure"
+        """
+        assert n in LTFArray.FIXED_PERMUTATION_SEEDS.keys() and k <= len(LTFArray.FIXED_PERMUTATION_SEEDS[n]), \
+            f'Permutation PUF with {n}-bit challenges and {k} XORs is currently not supported.'
+
+        arbiter_pufs = [cls.arbiter_puf(n) for _ in range(k)]
+
+        # generate permutations
+        permutations = [RandomState(seed).permutation(n) for seed in LTFArray.FIXED_PERMUTATION_SEEDS[n]]
+
+        # apply permutation
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute([[idx] for idx in permutations[l]])
 
         return reduce(mul, arbiter_pufs)
 

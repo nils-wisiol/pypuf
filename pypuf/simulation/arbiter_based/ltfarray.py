@@ -317,6 +317,11 @@ class LTFArray(Simulation):
         assert result.shape == (N, k, n), 'The resulting challenges have not the desired shape.'
         return result
 
+    FIXED_PERMUTATION_SEEDS = {
+        64: [2989, 2992, 3038, 3084, 3457, 6200, 7089, 18369, 21540, 44106],
+        128: [2989, 3006, 3009, 3031, 3437, 4174, 6045, 7906, 11554, 29544],
+    }
+
     @classmethod
     def transform_fixed_permutation(cls, challenges, k):
         """
@@ -332,21 +337,17 @@ class LTFArray(Simulation):
         :return:  array of shape(N,k,n)
                   Array of transformed challenges.
         """
-        FIXED_PERMUTATION_SEEDS = {
-            # For performance reasons, we do not call self._find_fixed_permutations here.
-            64: [2989, 2992, 3038, 3084, 3457, 6200, 7089, 18369, 21540, 44106],
-            128: [2989, 3006, 3009, 3031, 3437, 4174, 6045, 7906, 11554, 29544],
-        }
 
         # check parameter n
+        # For performance reasons, we do not call self._find_fixed_permutations here.
         n = len(challenges[0])
-        assert n in FIXED_PERMUTATION_SEEDS.keys(), 'Fixed permutation currently not supported for n=%i, but only ' \
-                                                    'for n in %s. To add support, please use ' \
-                                                    'LTFArray._find_fixed_permutations(n, k).' % \
-                                                    (n, FIXED_PERMUTATION_SEEDS.keys())
+        assert n in cls.FIXED_PERMUTATION_SEEDS.keys(), \
+            'Fixed permutation currently not supported for n=%i, but only for n in %s. ' \
+            'To add support, please use LTFArray._find_fixed_permutations(n, k).' % \
+            (n, cls.FIXED_PERMUTATION_SEEDS.keys())
 
         # check parameter k
-        seeds = FIXED_PERMUTATION_SEEDS[n]
+        seeds = cls.FIXED_PERMUTATION_SEEDS[n]
         assert k <= len(seeds), 'Fixed permutation for n=%i currently only supports k<=%i.' % (n, len(seeds))
 
         # generate permutations

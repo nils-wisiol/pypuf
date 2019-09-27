@@ -13,4 +13,4 @@ script:
   # command to run python code check
   - python linter.py
   # run doc tests
-  - python -m doctest pypuf/bipoly.py
+  - PYPUF_CPU_LIMIT=1 python -m doctest pypuf/bipoly.py
