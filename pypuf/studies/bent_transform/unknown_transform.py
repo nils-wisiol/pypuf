@@ -83,12 +83,11 @@ class UnknownTransformAttackExperiment(Experiment):
 
 class UnknownTransformStudy(Study):
 
-    SHUFFLE = True
-
     def experiments(self):
         return [
             UnknownTransformAttackExperiment(
-                progress_log_name=f'unknown_transform_n={n}_k={k}_transform={transform}_N={N}_tau={tau}_delta={delta}',
+                progress_log_name=f'unknown_transform_n={n}_k={k}_transform={transform}_N={N}_tau={tau}_delta={delta}_'
+                                  f'sample_size_override={sample_size_override}',
                 parameters=Parameters(
                     n=n,
                     k=k,
@@ -96,13 +95,21 @@ class UnknownTransformStudy(Study):
                     N=N,
                     tau=tau,
                     delta=delta,
-                    sample_size_override=10**5,
+                    sample_size_override=sample_size_override,
                 )
             )
             for n in [64]
-            for k in [1, 2]
-            for transform in ['id', 'atf', 'lightweight_secure', 'fixed_permutation']
+            for k, tau, sample_size_override in [
+                #(1, .2, 10**5),
+                #(2, .01, 10**5),
+                #(2, .005, 10**5),
+                (2, .0010, 5 * 10 ** 5),
+                (3, .0010, 5 * 10 ** 5),
+                (3, .0010, 1 * 10 ** 6),
+                (3, .0010, 5 * 10 ** 6),
+                (3, .0005, 5 * 10 ** 5),
+            ]
+            for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
             for N in [10000]
-            for tau in [.2, .3, .4]
-            for delta in [.9, .8, .5, .3, .1]
+            for delta in [.9]
         ]
