@@ -16,6 +16,7 @@ class Parameters(NamedTuple):
     n: int
     k: int
     transform: str
+    seed: int
     N: int
     tau: float
     delta: float
@@ -44,7 +45,7 @@ class UnknownTransformAttackExperiment(Experiment):
         self.instance = XORArbiterPUF(
             n=self.parameters.n,
             k=self.parameters.k,
-            seed=1,
+            seed=self.parameters.seed,
             transform=self.parameters.transform,
         )
         self.training_set = TrainingSet(self.instance, self.parameters.N, RandomState(2))
@@ -92,6 +93,7 @@ class UnknownTransformStudy(Study):
                     n=n,
                     k=k,
                     transform=transform,
+                    seed=seed,
                     N=N,
                     tau=tau,
                     delta=delta,
@@ -100,9 +102,9 @@ class UnknownTransformStudy(Study):
             )
             for n in [64]
             for k, tau, sample_size_override in [
-                #(1, .2, 10**5),
-                #(2, .01, 10**5),
-                #(2, .005, 10**5),
+                (1, .1, 10 ** 5),
+                (2, .01, 10 ** 5),
+                (2, .005, 10 ** 5),
                 (2, .0010, 5 * 10 ** 5),
                 (3, .0010, 5 * 10 ** 5),
                 (3, .0010, 1 * 10 ** 6),
@@ -112,4 +114,5 @@ class UnknownTransformStudy(Study):
             for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
             for N in [10000]
             for delta in [.9]
+            for seed in range(10)
         ]
