@@ -17,14 +17,17 @@ experimenter = Experimenter('experimenter_log_path', experiments)
 experimenter.run()
 """
 import logging
+import multiprocessing
 import os
 import random
 import signal
+import socket
 import sys
+import time
 import traceback
-import multiprocessing
-from multiprocessing.managers import SyncManager
+from _sha256 import sha256
 from datetime import datetime, timedelta
+from multiprocessing.managers import SyncManager
 from threading import Timer, Lock
 from time import sleep
 
@@ -73,7 +76,12 @@ class Experimenter(object):
         self.results = DataFrame()
         self.exceptions = []
         self.results_file = results_file
-        self.load_results()
+        if results_file:
+            try:
+                open('results/' + self.results_file).close()
+            except FileNotFoundError:
+                self.results.to_csv('results/' + self.results_file)
+            self.load_results()
 
         # Disable automatic multiprocessing
         if not auto_multiprocessing:
@@ -243,11 +251,8 @@ class Experimenter(object):
                 # check for experiments with results that we don't know
                 unknown_experiments = self.results.loc[~self.results['experiment_hash'].isin(known_hashes)]
                 if not unknown_experiments.empty:
-                    print('@' * 80)
-                    print('Results file %s contains %i results that are not in the study\'s' %
+                    print('Results file %s contains %i results to unknown experiments.' %
                           (self.results_file, len(unknown_experiments)))
-                    print('experiment definition. Did you delete experiments from your study?')
-                    print('@' * 80)
 
             # experiment execution
             for experiment in experiments:
@@ -326,25 +331,146 @@ class Experimenter(object):
         for key, val in desired_environment.items():
             os.environ[key] = val
 
+    @staticmethod
+    def _merge_results(results, other_results):
+        """
+        Returns a DataFrame containing all results of both arguments. If a result appears in
+        both `results` and `other_results`, the result of `results` has precedence.
+        """
+        if len(other_results):
+            merge = results.copy()
+            return merge.append(other_results[~other_results.experiment_hash.isin(results.experiment_hash)])
+        else:
+            return results
+
+    @property
+    def _lock_file(self):
+        return f'results/{self.results_file}.lock'
+
+    @staticmethod
+    def _lock_digest(my_id):
+        return sha256(my_id.encode()).hexdigest()[:6]
+
+    @property
+    def _lock_id(self):
+        my_id = f'{socket.getfqdn()}#{os.getpid()}'
+        return f'{my_id}#{self._lock_digest(my_id)}'
+
+    @property
+    def _lock_owner_valid(self):
+        owner = self._result_lock_owner
+        if owner is None:
+            return True
+        parts = owner.split('#')
+        if len(parts) != 3:
+            return False
+        owner_id = '#'.join(parts[0:2])
+        digest = self._lock_digest(owner_id)
+        return digest == parts[2]
+
+    @property
+    def _has_foreign_result_file_lock(self):
+        owner = self._result_lock_owner
+        return owner and owner != self._lock_id
+
+    @property
+    def _result_lock_owner(self):
+        try:
+            with open(self._lock_file) as f:
+                return f.read()
+        except OSError:
+            return None
+
+    def _acquire_result_file_lock(self, check_interval_s=.2, lock_timeout_s=900):
+        try:
+            while True:
+                # wait for foreign process to give up the lock
+                print(f'{time.time()} waiting for lock file for {self._lock_id} ...')
+                while self._has_foreign_result_file_lock:
+                    try:
+                        wait_time = time.time() - os.path.getctime(self._lock_file)
+                        if wait_time > lock_timeout_s:
+                            # lock timeout, we forcibly take the lock to prevent data loss
+                            self._release_result_file_lock(force=True)
+                            print(f'{time.time()} Warning: Removing stuck lock file for owner '
+                                  f'{self._has_foreign_result_file_lock} after timeout.')
+                            break
+                    except OSError:
+                        pass
+
+                    # wait and try again
+                    sleep(abs(random.gauss(check_interval_s, .1)))
+
+                # try to acquire the lock
+                print(f'{time.time()} acquire lock file for {self._lock_id} ...')
+                with open(self._lock_file, 'w') as f:
+                    f.write(self._lock_id)
+
+                # wait to see if someone else also tries to acquire the lock,
+                # then check again if it is us now
+                sleep(random.choice(range(4)))
+
+                # break if we can confirm we have the lock
+                if self._result_lock_owner == self._lock_id:
+                    print(f'{time.time()} successfully acquired lock for {self._lock_file}')
+                    break
+                else:
+                    if self._lock_owner_valid:
+                        print(f'{time.time()} failed to acquire, lock owner is now {self._result_lock_owner}')
+                    else:
+                        print(f'{time.time()} failed to acquire, lock invalid: {self._result_lock_owner}')
+                        self._release_result_file_lock(force=True)
+
+            return True
+        except OSError as e:
+            print(f'{time.time()} Could not acquire result file lock: {e}')
+            return False
+
+    def _release_result_file_lock(self, force=False):
+        if not self._has_foreign_result_file_lock or force:
+            print(f'{time.time()} removing lock file')
+            try:
+                os.remove(self._lock_file)
+            except OSError as e:
+                print(f'{time.time()} error removing lock file: {e}')
+                pass
+        else:
+            print(f'{time.time()} not removing foreign lock file, as force=False')
+
     def save_results(self):
         """
         Save current results to `results_file`.
         """
         if not self.results_file:
             return
-        self.results.to_csv('results/' + self.results_file, index=False)
+
+        try:
+            self._acquire_result_file_lock()
+
+            from pandas import read_csv
+            other_results = read_csv('results/' + self.results_file)
+
+            self._merge_results(
+                self.results,
+                other_results,
+            ).to_csv('results/' + self.results_file, index=False)
+        finally:
+            self._release_result_file_lock()
 
     def load_results(self):
         """
         Try to read results from `results_file`. Does nothing if that file does not exist.
         """
         from pandas.errors import EmptyDataError
-        try:
-            if self.results_file:
+        if self.results_file:
+            try:
+                self._acquire_result_file_lock()
                 from pandas import read_csv
                 self.results = read_csv('results/' + self.results_file)
-        except (FileNotFoundError, EmptyDataError):
-            pass
+            except (FileNotFoundError, EmptyDataError):
+                pass
+            finally:
+                self._release_result_file_lock()
 
 
 def setup_result_logger(result_log_name):
