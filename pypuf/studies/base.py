@@ -35,6 +35,7 @@ class Study:
         Initialize the study.
         """
         self.results = None
+        self.full_run = True
 
         # Callback method
         def callback(experiment_id):
@@ -70,7 +71,7 @@ class Study:
         Generates this study's output. (Full or partial) results are available via `self.experimenter.results`.
         """
 
-    def run(self):
+    def run(self, part=0, total=1):
         """
         runs the study, that is, create the experiments, run them through an experimenter,
         collect the results and plot the output
@@ -78,19 +79,27 @@ class Study:
         # Queue experiments
         experiments = self.experiments()
         assert experiments, 'Study {} did not define any experiments.'.format(self.name())
-        for e in experiments:
+        partition_size = len(experiments) // total
+        self.full_run = partition_size == len(experiments)
+        start = part * partition_size
+        end = (part + 1) * partition_size
+        for e in experiments[start:end]:
             self.experimenter.queue(e)
 
         # Run experiments
-        self.experimenter.run(shuffle=self.SHUFFLE)
+        if experiments[start:end]:
+            self.experimenter.run(shuffle=self.SHUFFLE)
 
-        # Plot results
-        self.plot()
+            # Plot results
+            self.plot()
+        else:
+            print(f'Part {part} of {total} parts did not have any experiments, study defines a total of '
+                  f'{len(experiments)} experiments.')
 
     def _callback(self, _experiment_id=None):
         """
         will be called by the experimenter after every finished experiment,
         but at most every EXPERIMENTER_CALLBACK_MIN_PAUSE seconds.
         """
-        if not self.experimenter.results.empty:
+        if not self.experimenter.results.empty and self.full_run:
             self.plot()
