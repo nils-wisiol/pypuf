@@ -1,3 +1,5 @@
+from seaborn import catplot
+
 from pypuf.experiments.experiment.reliability_based_cmaes import ExperimentReliabilityBasedCMAES, Parameters
 from pypuf.studies.base import Study
 
@@ -35,3 +37,16 @@ class ReliabilityAttackStudy(Study):
             for pop_size in [20, 50, 90]
             for seed in range(10)
         ]
+
+    def plot(self):
+        data = self.experimenter.results.copy()
+        data['col'] = data.apply(lambda row: f'{row["transform"]}-{row["k"]}', axis=1)
+        catplot(
+            x='num',
+            y='accuracy',
+            hue='pop_size',
+            col='col',
+            row='noisiness',
+            data=data,
+            kind='boxen',
+        ).savefig(f'figures/{self.name()}.pdf')
