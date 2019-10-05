@@ -22,8 +22,8 @@ class ReliabilityAttackStudy(Study):
                     num=N,
                     reps=R,
                     pop_size=pop_size,
-                    limit_stag=500,
-                    limit_iter=20,
+                    limit_stag=20,
+                    limit_iter=500,
                 )
             )
             for n in [64]
