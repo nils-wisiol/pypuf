@@ -6,6 +6,7 @@ N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 import sys
 import contextlib
 import numpy as np
+from numpy.random.mtrand import RandomState
 from scipy.special import gamma
 from scipy.linalg import norm
 import cma
@@ -110,7 +111,7 @@ class ReliabilityBasedCMAES(Learner):
 
         # Learn all individual LTF arrays (chains)
         with self.avoid_printing():
-            while self.num_learned < self.k:
+            while self.num_learned < self.k and self.num_abortions < 10 * self.k:
                 aborted = False
                 options['seed'] = self.prng.randint(2 ** 32)
                 is_same_solution = self.create_abortion_function(
@@ -154,16 +155,21 @@ class ReliabilityBasedCMAES(Learner):
                         self.stops += ','
                     self.stops += '_'.join(list(search.stop()))
 
-        # Polarize the learned combined LTF array
-        majority_responses = self.majority_responses(self.training_set.responses.T)
-        self.chains_learned = self.polarize_chains(
-            chains_learned=self.chains_learned,
-            challenges=self.training_set.challenges,
-            majority_responses=majority_responses,
-            transform=self.transform,
-            combiner=self.combiner,
-        )
-        return LTFArray(self.chains_learned, self.transform, self.combiner)
+        if self.num_learned > 0:
+            # Polarize the learned combined LTF array
+            majority_responses = self.majority_responses(self.training_set.responses.T)
+            self.chains_learned = self.polarize_chains(
+                chains_learned=self.chains_learned,
+                challenges=self.training_set.challenges,
+                majority_responses=majority_responses,
+                transform=self.transform,
+                combiner=self.combiner,
+            )
+            return LTFArray(self.chains_learned, self.transform, self.combiner)
+        else:
+            # no result, we gave up, return random model
+            return LTFArray(LTFArray.normal_weights(self.n, self.k, random_instance=RandomState(seed=0)),
+                            transform='id', combiner='xor')
 
     @staticmethod
     @contextlib.contextmanager
