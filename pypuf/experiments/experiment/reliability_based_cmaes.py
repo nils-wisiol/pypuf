@@ -37,6 +37,10 @@ class Result(NamedTuple):
     measured_time: float
     pid: int
     accuracy: float
+    iterations: int
+    abortions: int
+    individual_accuracies: str
+    stops: str
     
 
 class ExperimentReliabilityBasedCMAES(Experiment):
@@ -96,35 +100,16 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         self.model = self.learner.learn()
 
     def analyze(self):
-        # TODO: CHECK THAT FILE IS WRITTEN HERE
-        """Analyze the learned model"""
-        assert self.model is not None
-        self.result_logger.info(
-            '0x%x\t0x%x\t0x%x\t%i\t%i\t%i\t%f\t%i\t%i\t%f\t%s\t%f\t%s\t%i\t%i\t%s',
-            self.parameters.seed_instance,
-            self.parameters.seed_challenges,
-            self.parameters.seed_model,
-            self.parameters.n,
-            self.parameters.k,
-            self.parameters.num,
-            self.parameters.noisiness,
-            self.parameters.reps,
-            self.parameters.pop_size,
-            1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.parameters.n), self.prng_c),
-            ','.join(map(str, self.calc_individual_accs())),
-            self.measured_time,
-            self.learner.stops,
-            self.learner.num_abortions,
-            self.learner.num_iterations,
-            ','.join(map(str, self.model.weight_array.flatten() / np.linalg.norm(self.model.weight_array.flatten()))),
-        )
         return Result(
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=1.0 - tools.approx_dist(self.instance, self.model, min(10000, 2 ** self.parameters.n), self.prng_c),
+            accuracy=1.0 - tools.approx_dist(self.instance, self.model, 10000, self.prng_c),
+            iterations=self.learner.num_iterations,
+            abortions=self.learner.num_abortions,
+            individual_accuracies=','.join(map(str, self.calc_individual_accs())),
+            stops=self.learner.stops,
         )
-
 
     def calc_individual_accs(self):
         """Calculate the accuracies of individual chains of the learned model"""
@@ -136,7 +121,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             chain_original = LTFArray(self.instance.weight_array[i, np.newaxis, :], transform, combiner)
             for j in range(self.parameters.k):
                 chain_model = LTFArray(self.model.weight_array[j, np.newaxis, :], transform, combiner)
-                accuracy = tools.approx_dist(chain_original, chain_model, min(10000, 2 ** self.parameters.n), self.prng_c)
+                accuracy = tools.approx_dist(chain_original, chain_model, 10000, self.prng_c)
                 pole = 1
                 if accuracy < 0.5:
                     accuracy = 1.0 - accuracy
