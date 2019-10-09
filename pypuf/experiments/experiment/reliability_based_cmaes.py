@@ -118,9 +118,9 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         accuracies = np.zeros(self.parameters.k)
         poles = np.zeros(self.parameters.k)
         for i in range(self.parameters.k):
-            chain_original = LTFArray(self.instance.weight_array[i, np.newaxis, :], transform, combiner)
+            chain_original = LTFArray(self.instance.weight_array[i, np.newaxis, :self.parameters.n], transform, combiner)
             for j in range(self.parameters.k):
-                chain_model = LTFArray(self.model.weight_array[j, np.newaxis, :], transform, combiner)
+                chain_model = LTFArray(self.model.weight_array[j, np.newaxis, :self.parameters.n], transform, combiner)
                 accuracy = tools.approx_dist(chain_original, chain_model, 10000, self.prng_c)
                 pole = 1
                 if accuracy < 0.5:
