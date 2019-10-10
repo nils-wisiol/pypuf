@@ -193,7 +193,7 @@ class XORArbiterPUF(Model_keras):
                 units=1,
                 activation=None,
                 kernel_regularizer=l2(penalty) if penalty != 0 else None,
-                use_bias=True
+                use_bias=True,
             )
         self.xor = Multiply()
         self.activation = tanh

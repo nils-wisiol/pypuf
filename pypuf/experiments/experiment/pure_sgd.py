@@ -46,7 +46,7 @@ class Result(NamedTuple):
 
 class ExperimentPureStochasticGradientDescent(Experiment):
     """
-    This Experiment uses the MLP learner on an LTFArray PUF simulation.
+    This Experiment uses a learner that implements an XOR Arbiter PUF-Model to apply a stochastic gradient descent.
     """
 
     NAME = 'Pure Stochastic Gradient Descent'

@@ -16,7 +16,7 @@ from pypuf import tools
 
 class Parameters(NamedTuple):
     """
-    Define all parameters to be documented within the result file that are not included in the input parameters.
+    Define all input parameters for this experiment. They are also documented within the result file.
     """
     seed_simulation: int
     seed_challenges: int
@@ -47,7 +47,7 @@ class Parameters(NamedTuple):
 
 class Result(NamedTuple):
     """
-    This Experiment uses the Scikit-learn implementation of the Multilayer Perceptron Learner.
+    Define all parameters to be documented within the result file that are not included in the input parameters.
     """
     name: str
     experiment_id: UUID

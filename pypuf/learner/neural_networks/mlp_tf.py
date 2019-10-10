@@ -22,7 +22,6 @@ from tensorflow.python.keras.optimizers import Adam
 
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import ChallengeResponseSet
 
 
 environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -103,6 +102,7 @@ class MultiLayerPerceptronTensorflow(Learner):
         self.nn = Sequential()
         self.nn.add(Dense(
             units=self.layers[0],
+            kernel_initializer='random_uniform',
             activation=self.activation,
             input_dim=self.k * self.n if self.preprocessing == 'full' else self.n,
             use_bias=True,
@@ -111,14 +111,16 @@ class MultiLayerPerceptronTensorflow(Learner):
             for nodes in self.layers[1:]:
                 self.nn.add(Dense(
                     units=nodes,
-                    activation=self.activation,
+                    kernel_initializer='random_uniform',
                     kernel_regularizer=l2_loss,
+                    activation=self.activation,
                     use_bias=True
                 ))
         self.nn.add(Dense(
             units=1,
-            activation='sigmoid' if self.domain_out == 0 else 'tanh',
+            kernel_initializer='random_uniform',
             kernel_regularizer=l2_loss,
+            activation='sigmoid' if self.domain_out == 0 else 'tanh',
             use_bias=True
         ))
 
