@@ -40,13 +40,16 @@ class ReliabilityAttackStudy(Study):
 
     def plot(self):
         data = self.experimenter.results.copy()
-        data['col'] = data.apply(lambda row: f'{row["transform"]}-{row["k"]}', axis=1)
-        catplot(
-            x='num',
-            y='accuracy',
-            hue='pop_size',
-            col='col',
-            row='noisiness',
-            data=data,
-            kind='boxen',
-        ).savefig(f'figures/{self.name()}.pdf')
+        data['pop_size__reps__noisiness'] = data.apply(
+            lambda row: f'{row["pop_size"]}__{row["reps"]}__{row["noisiness"]}', axis=1)
+        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'], 1 - row['accuracy']), axis=1)
+        for hue in ['', 'pop_size', 'reps', 'noisiness']:
+            catplot(
+                x='num',
+                y='accuracy1',
+                hue=hue or 'pop_size__reps__noisiness',
+                col='k',
+                row='transform',
+                data=data,
+                kind='boxen',
+            ).savefig(f'figures/{self.name()}{"." if hue else ""}{hue}.pdf')
