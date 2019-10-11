@@ -7,6 +7,7 @@ from pypuf.studies.base import Study
 class ReliabilityAttackStudy(Study):
 
     SHUFFLE = True
+    EXPERIMENTER_CALLBACK_MIN_PAUSE = 60
 
     def experiments(self):
         return [
