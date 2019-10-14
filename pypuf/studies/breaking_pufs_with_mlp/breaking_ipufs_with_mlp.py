@@ -33,7 +33,7 @@ class InterposeMLPStudy(Study):
 
     EXPERIMENTS = []
 
-    SCALES = [0.2, 1.0, 5.0]
+    SCALES = [1.0]
 
     SIZES = {
         (64, 2, 2): list(map(lambda x: x*200e3, SCALES)),
@@ -52,19 +52,27 @@ class InterposeMLPStudy(Study):
     }
 
     LEARNING_RATES = {
-        (64, 2, 2): [0.00005, 0.0002, 0.001],
-        (64, 3, 3): [0.00005, 0.0002, 0.001],
-        (64, 4, 4): [0.00005, 0.0002, 0.001],
-        (64, 5, 5): [0.00005, 0.0002, 0.001],
-        (64, 6, 6): [0.00005, 0.0002, 0.001],
+        (64, 2, 2): [0.0002],
+        (64, 3, 3): [0.0002],
+        (64, 4, 4): [0.0002],
+        (64, 5, 5): [0.0002],
+        (64, 6, 6): [0.0002],
     }
 
     BATCH_SIZES = {
-        (64, 2, 2): [2**6, 2**10, 2**14],
-        (64, 3, 3): [2**6, 2**10, 2**14],
-        (64, 4, 4): [2**6, 2**10, 2**14],
-        (64, 5, 5): [2**6, 2**10, 2**14],
-        (64, 6, 6): [2**6, 2**10, 2**14],
+        (64, 2, 2): [2**14],
+        (64, 3, 3): [2**14],
+        (64, 4, 4): [2**14],
+        (64, 5, 5): [2**14],
+        (64, 6, 6): [2**14],
+    }
+
+    TRANSFORMATIONS = {
+        (64, 2, 2): ['atf', 'lightweight_secure', 'fixed_permutation'],
+        (64, 3, 3): ['atf', 'lightweight_secure', 'fixed_permutation'],
+        (64, 4, 4): ['atf', 'lightweight_secure', 'fixed_permutation'],
+        (64, 5, 5): ['atf', 'lightweight_secure', 'fixed_permutation'],
+        (64, 6, 6): ['atf', 'lightweight_secure', 'fixed_permutation'],
     }
 
     PREPROCESSINGS = {
@@ -97,64 +105,66 @@ class InterposeMLPStudy(Study):
                                       * len(self.LEARNING_RATES[(n, k_up, k_down)])) \
                                 + c2 * len(self.LEARNING_RATES[(n, k_up, k_down)]) + c3
                         for batch_size in self.BATCH_SIZES[(n, k_up, k_down)]:
-                            for preprocessing in self.PREPROCESSINGS[(n, k_up, k_down)]:
-                                for layers in self.LAYERS[(n, k_up, k_down)]:
-                                    """
-                                    self.EXPERIMENTS.append(
-                                        ExperimentInterposeMLPTensorflow(
-                                            progress_log_prefix=None,
-                                            parameters=Parameters(
-                                                seed_simulation=0x3 + cycle,
-                                                seed_challenges=0x1415 + cycle,
-                                                seed_model=0x9265 + cycle,
-                                                seed_distance=0x3589 + cycle,
-                                                n=n,
-                                                k_up=k_up,
-                                                k_down=k_down,
-                                                pos=n//2,
-                                                N=int(N),
-                                                validation_frac=validation_frac,
-                                                learning_rate=learning_rate,
-                                                penalty=self.PENALTY,
-                                                tolerance=self.TOLERANCE,
-                                                patience=self.PATIENCE,
-                                                iteration_limit=self.ITERATION_LIMIT,
-                                                batch_size=batch_size,
-                                                print_learning=self.PRINT_LEARNING,
+                            for transformation in self.TRANSFORMATIONS[(n, k_up, k_down)]:
+                                for preprocessing in self.PREPROCESSINGS[(n, k_up, k_down)]:
+                                    for layers in self.LAYERS[(n, k_up, k_down)]:
+                                        """
+                                        self.EXPERIMENTS.append(
+                                            ExperimentInterposeMLPTensorflow(
+                                                progress_log_prefix=None,
+                                                parameters=Parameters(
+                                                    seed_simulation=0x3 + cycle,
+                                                    seed_challenges=0x1415 + cycle,
+                                                    seed_model=0x9265 + cycle,
+                                                    seed_distance=0x3589 + cycle,
+                                                    n=n,
+                                                    k_up=k_up,
+                                                    k_down=k_down,
+                                                    pos=n//2,
+                                                    N=int(N),
+                                                    validation_frac=validation_frac,
+                                                    learning_rate=learning_rate,
+                                                    penalty=self.PENALTY,
+                                                    tolerance=self.TOLERANCE,
+                                                    patience=self.PATIENCE,
+                                                    iteration_limit=self.ITERATION_LIMIT,
+                                                    batch_size=batch_size,
+                                                    print_learning=self.PRINT_LEARNING,
+                                                )
                                             )
                                         )
-                                    )
-                                    """
-                                    self.EXPERIMENTS.append(
-                                        ExperimentMLPScikitLearn(
-                                            progress_log_prefix=None,
-                                            parameters=Parameters_skl(
-                                                seed_simulation=0x3 + cycle,
-                                                seed_challenges=0x1415 + cycle,
-                                                seed_model=0x9265 + cycle,
-                                                seed_distance=0x3589 + cycle,
-                                                n=n,
-                                                k=k_down,
-                                                N=int(N),
-                                                validation_frac=validation_frac,
-                                                transformation='interpose k_down={} k_up={}'.format(k_down, k_up),
-                                                combiner='xor',
-                                                preprocessing=preprocessing,
-                                                layers=layers,
-                                                activation='relu',
-                                                domain_in=-1,
-                                                learning_rate=learning_rate,
-                                                penalty=self.PENALTY,
-                                                beta_1=0.9,
-                                                beta_2=0.999,
-                                                tolerance=self.TOLERANCE,
-                                                patience=self.PATIENCE,
-                                                iteration_limit=self.ITERATION_LIMIT,
-                                                batch_size=batch_size,
-                                                print_learning=self.PRINT_LEARNING,
+                                        """
+                                        self.EXPERIMENTS.append(
+                                            ExperimentMLPScikitLearn(
+                                                progress_log_prefix=None,
+                                                parameters=Parameters_skl(
+                                                    seed_simulation=0x3 + cycle,
+                                                    seed_challenges=0x1415 + cycle,
+                                                    seed_model=0x9265 + cycle,
+                                                    seed_distance=0x3589 + cycle,
+                                                    n=n,
+                                                    k=k_down,
+                                                    N=int(N),
+                                                    validation_frac=validation_frac,
+                                                    transformation='interpose k_down={} k_up={} transform={}'.format(
+                                                        k_down, k_up, transformation),
+                                                    combiner='xor',
+                                                    preprocessing=preprocessing,
+                                                    layers=layers,
+                                                    activation='relu',
+                                                    domain_in=-1,
+                                                    learning_rate=learning_rate,
+                                                    penalty=self.PENALTY,
+                                                    beta_1=0.9,
+                                                    beta_2=0.999,
+                                                    tolerance=self.TOLERANCE,
+                                                    patience=self.PATIENCE,
+                                                    iteration_limit=self.ITERATION_LIMIT,
+                                                    batch_size=batch_size,
+                                                    print_learning=self.PRINT_LEARNING,
+                                                )
                                             )
                                         )
-                                    )
         return self.EXPERIMENTS
 
     def plot(self):
