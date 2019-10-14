@@ -1,3 +1,4 @@
+from matplotlib.pyplot import close
 from seaborn import catplot
 
 from pypuf.experiments.experiment.reliability_based_cmaes import ExperimentReliabilityBasedCMAES, Parameters
@@ -45,7 +46,7 @@ class ReliabilityAttackStudy(Study):
             lambda row: f'{row["pop_size"]}__{row["reps"]}__{row["noisiness"]}', axis=1)
         data['accuracy1'] = data.apply(lambda row: max(row['accuracy'], 1 - row['accuracy']), axis=1)
         for hue in ['', 'pop_size', 'reps', 'noisiness']:
-            catplot(
+            grid = catplot(
                 x='num',
                 y='accuracy1',
                 hue=hue or 'pop_size__reps__noisiness',
@@ -53,4 +54,6 @@ class ReliabilityAttackStudy(Study):
                 row='transform',
                 data=data,
                 kind='boxen',
-            ).savefig(f'figures/{self.name()}{"." if hue else ""}{hue}.pdf')
+            )
+            grid.savefig(f'figures/{self.name()}{"." if hue else ""}{hue}.pdf')
+            close(grid.fig)
