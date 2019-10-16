@@ -344,7 +344,7 @@ class ReplicateAseeriEtAlStudy(Study):
                                   color='gray', linestyle='-', linewidth=2, zorder=0)
             axes2[i].set_yscale('log')
             axes2[i].legend(loc='upper right', bbox_to_anchor=(1.25, 1.02), title='means')
-            axes2[0].set_ylabel('runtime in s')
+            axes2[i].set_ylabel('runtime in s')
             lib = 'Tensorflow' if 'Tensorflow' in experiment \
                 else 'Scikit-learn' if 'ScikitLearn' in experiment else '?'
             axes2[i].set_title('Library: {}\n'.format(lib))

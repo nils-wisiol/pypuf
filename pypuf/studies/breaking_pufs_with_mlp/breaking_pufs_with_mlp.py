@@ -38,18 +38,18 @@ class MLPDiversePUFsStudy(Study):
 
     EXPERIMENTS = []
 
-    TRANSFORMATIONS = ['id', 'atf', 'lightweight_secure', 'fixed_permutation', 'interpose']
+    TRANSFORMATIONS = ['atf', 'lightweight_secure', 'fixed_permutation']
 
     PREPROCESSINGS = ['no', 'short', 'full']
 
-    SCALES = [0.2, 1, 5]
+    SCALES = [0.25, 1, 4]
 
     SIZES = {
         (64, 4): list(map(lambda x: x*125e3, SCALES)),
-        (64, 5): list(map(lambda x: x*0.3e6, SCALES)),
-        (64, 6): list(map(lambda x: x*1e6, SCALES)),
-        (64, 7): list(map(lambda x: x*5e6, SCALES)),
-        (64, 8): list(map(lambda x: x*30e6, SCALES)),
+        # (64, 5): list(map(lambda x: x*300e3, SCALES)),
+        # (64, 6): list(map(lambda x: x*1e6, SCALES)),
+        # (64, 7): list(map(lambda x: x*5e6, SCALES)),
+        # (64, 8): list(map(lambda x: x*30e6, SCALES)),
     }
 
     SAMPLES_PER_POINT = {
@@ -69,7 +69,7 @@ class MLPDiversePUFsStudy(Study):
     }
 
     LAYERS = {
-        (64, 4): [[2**4, 2**4, 2**4]],
+        (64, 4): [[2**4, 2**4, 2**4], [2**4, 2**4], [2**6, 2**6, 2**6]],
         (64, 5): [[2**5, 2**5, 2**5]],
         (64, 6): [[2**6, 2**6, 2**6]],
         (64, 7): [[2**7, 2**7, 2**7]],
@@ -137,16 +137,14 @@ class MLPDiversePUFsStudy(Study):
         Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
         and the measured time of each experiment, respectively.
         """
-        #pass
-        #"""
         if not self.EXPERIMENTS:
             self.experiments()
         self.plot_helper(
             name='ScikitLearn',
             df=self.experimenter.results,
             param_x='learning_rate',
-            param_1='N',
-            param_2=None,
+            param_1='batch_size',
+            param_2='N',
         )
         """
         self.plot_history(
@@ -158,65 +156,69 @@ class MLPDiversePUFsStudy(Study):
         param_y = 'accuracy'
         df['layers'] = df['layers'].apply(str)
         df = df[df['experiment'] == 'ExperimentMLP' + name]
-        ncols = len(self.SIZES.keys())
-        nrows = 2
+        ncols = len(self.TRANSFORMATIONS) * len(self.PREPROCESSINGS)
+        nrows = 4
         fig, axes = subplots(ncols=ncols, nrows=nrows)
-        fig.set_size_inches(9 * ncols, 4 * nrows)
+        fig.set_size_inches(10 * ncols, 5 * nrows)
         axes = axes.reshape((nrows, ncols))
-        alpha_scatter = 0.1
-        alpha_lines = 0.7
+        alpha_scatter = 0.4
+        alpha_lines = 0.8
         palette = color_palette(palette='plasma')
-        for j, (n, k) in enumerate(self.SIZES.keys()):
-            data = df[(df['k'] == k) & (df['n'] == n)]
-            lineplot(
-                x=param_x,
-                y=param_y,
-                hue=param_1,
-                style=param_2,
-                data=data,
-                ax=axes[0][j],
-                legend=False,
-                estimator='mean',
-                ci=None,
-                alpha=alpha_lines,
-                #palette=palette,
-            )
-            scatterplot(
-                x=param_x,
-                y=param_y,
-                hue=param_1,
-                style=param_2,
-                data=data,
-                ax=axes[0][j],
-                legend='full',
-                alpha=alpha_scatter,
-                #palette=palette,
-            )
-            lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
-            axes[0][j].set_title('n={}, k={}\n\n{} experiments\n'.format(
-                n, k, len(data)))
-            axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
-            lineplot(
-                x='accuracy',
-                y='measured_time',
-                hue=param_1,
-                style=param_2,
-                data=data,
-                ax=axes[1][j],
-                legend='full',
-                estimator='mean',
-                ci=None,
-                alpha=alpha_lines,
-                #palette=palette,
-            )
-            axes[1][j].set_xscale('linear')
-            axes[1][j].set_yscale('linear')
-            axes[1][j].set_xlabel(param_y)
-            axes[1][j].set_ylabel('runtime in s')
-            axes[1][j].set_ylim(bottom=0)
-            axes[1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-            axes[1][j].grid(b=True, which='minor', color='gray', linestyle=':')
-            axes[1][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
+        for j, transform in enumerate(self.TRANSFORMATIONS):
+            for k, preprocessing in enumerate(self.PREPROCESSINGS):
+                a = j * len(self.TRANSFORMATIONS) + k
+                data = df[(df['transformation'] == transform) & (df['preprocessing'] == preprocessing)]
+                for l, layer in enumerate(['[16, 16, 16]', '[16, 16]', '[64, 64, 64]']):
+                    data_layer = data[(data['layers'] == layer)]
+                    lineplot(
+                        x=param_x,
+                        y=param_y,
+                        hue=param_1,
+                        style=param_2,
+                        data=data_layer,
+                        ax=axes[l][a],
+                        legend=False,
+                        estimator='mean',
+                        ci=None,
+                        alpha=alpha_lines,
+                        #palette=palette,
+                    )
+                    scatterplot(
+                        x=param_x,
+                        y=param_y,
+                        hue=param_1,
+                        style=param_2,
+                        data=data_layer,
+                        ax=axes[l][a],
+                        legend='full',
+                        alpha=alpha_scatter,
+                        #palette=palette,
+                    )
+                    lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
+                    axes[l][a].set_title('transform={}\npreprocessing={}\nlayers={}'.format(
+                        transform, preprocessing, layer))
+                    axes[l][a].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
+                lineplot(
+                    x='accuracy',
+                    y='measured_time',
+                    hue=param_1,
+                    style=param_2,
+                    data=data,
+                    ax=axes[-1][a],
+                    legend='full',
+                    estimator='mean',
+                    ci=None,
+                    alpha=alpha_lines,
+                    #palette=palette,
+                )
+                axes[-1][j].set_xscale('linear')
+                axes[-1][j].set_yscale('linear')
+                axes[-1][j].set_xlabel(param_y)
+                axes[-1][j].set_ylabel('runtime in s')
+                axes[-1][j].set_ylim(bottom=0)
+                axes[-1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
+                axes[-1][j].grid(b=True, which='minor', color='gray', linestyle=':')
+                axes[-1][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
         fig.subplots_adjust(hspace=.5, wspace=.5)
         title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
         title.set_position([.5, 1.05])
