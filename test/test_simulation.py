@@ -3,12 +3,16 @@ This module is used to test the different simulation models.
 """
 
 import unittest
-from test.utility import get_functions_with_prefix
-from numpy.testing import assert_array_equal
-from numpy import shape, dot, array, around, array_equal, reshape, zeros
+
+from numpy import shape, dot, array, around, array_equal, reshape, zeros, absolute
 from numpy.random import RandomState
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from numpy.testing import assert_array_equal
+
 from pypuf import tools
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from pypuf.studies.sponge import Sponge
+from pypuf.tools import random_inputs
+from test.utility import get_functions_with_prefix
 
 
 class TestCombiner(unittest.TestCase):
@@ -883,3 +887,17 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
         self.assertFalse(array_equal(biased_responses, responses))
+
+
+class SpongeTestCase(unittest.TestCase):
+
+    def test(self):
+        sponge = Sponge(n=16, r=4, c=12, p=4, seed=1, noisiness=0)
+        challenges = random_inputs(16, 4)
+        assert_array_equal(
+            sponge.eval(challenges),
+            sponge.eval(challenges),
+        )
+        responses = sponge.eval(challenges)
+        self.assertEqual(absolute(responses).max(), 1)
+        self.assertEqual(absolute(responses).min(), 1)
