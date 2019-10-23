@@ -22,8 +22,8 @@ class InterposeMLPStudy(Study):
     Define a set of experiments by combining several sets of hyperparameters.
     """
 
-    ITERATION_LIMIT = 80
-    PATIENCE = 10
+    ITERATION_LIMIT = 300
+    PATIENCE = ITERATION_LIMIT
     TOLERANCE = 0.0025
     PENALTY = 0.0002
     MAX_NUM_VAL = 10000
@@ -32,42 +32,42 @@ class InterposeMLPStudy(Study):
 
     EXPERIMENTS = []
 
-    SCALES = [0.25, 1.0, 4.0]
+    SCALES = [0.5, 1.0, 2.0]
 
     SIZES = {
-        (64, 2, 2): list(map(lambda x: x*230e3, SCALES)),
-        (64, 3, 3): list(map(lambda x: x*300e3, SCALES)),
-        (64, 4, 4): list(map(lambda x: x*500e3, SCALES)),
-        (64, 5, 5): list(map(lambda x: x*1.2e6, SCALES)),
-        # (64, 6, 6): list(map(lambda x: x*4e6, SCALES)),
-        # (64, 7, 7): list(map(lambda x: x*20e6, SCALES)),
+        (64, 2, 2): list(map(lambda x: x*920e3, SCALES)),
+        (64, 3, 3): list(map(lambda x: x*1.2e6, SCALES)),
+        (64, 4, 4): list(map(lambda x: x*2e6, SCALES)),
+        (64, 5, 5): list(map(lambda x: x*4.8e6, SCALES)),
+        # (64, 6, 6): list(map(lambda x: x*16e6, SCALES)),
+        # (64, 7, 7): list(map(lambda x: x*80e6, SCALES)),
     }
 
     SAMPLES_PER_POINT = {
         (64, 2, 2): 10,
         (64, 3, 3): 10,
         (64, 4, 4): 10,
-        (64, 5, 5): 3,
+        (64, 5, 5): 10,
         (64, 6, 6): 5,
         (64, 7, 7): 5,
     }
 
     LEARNING_RATES = {
-        (64, 2, 2): [0.0008, 0.002, 0.005, 0.015],
-        (64, 3, 3): [0.0008, 0.002, 0.005, 0.015],
-        (64, 4, 4): [0.0008, 0.002, 0.005, 0.015],
-        (64, 5, 5): [0.0008, 0.002, 0.005, 0.015],
-        (64, 6, 6): [0.0008, 0.002, 0.005, 0.015],
-        (64, 7, 7): [0.0008, 0.002, 0.005, 0.015],
+        (64, 2, 2): [0.002, 0.003, 0.004, 0.006, 0.008],
+        (64, 3, 3): [0.002, 0.003, 0.004, 0.006, 0.008],
+        (64, 4, 4): [0.0012, 0.0016, 0.002, 0.0024, 0.0028],
+        (64, 5, 5): [0.0003, 0.0006, 0.0009, 0.0012, 0.0015],
+        (64, 6, 6): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+        (64, 7, 7): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
     }
 
     BATCH_SIZES = {
-        (64, 2, 2): [2**7, 2**8, 2**9],
-        (64, 3, 3): [2**8, 2**9, 2**10],
-        (64, 4, 4): [2**9, 2**10, 2**11],
-        (64, 5, 5): [2**10, 2**11, 2**12],
-        (64, 6, 6): [2**11, 2**12, 2**13],
-        (64, 7, 7): [2**12, 2**13, 2**14],
+        (64, 2, 2): [10**3, 10**4],
+        (64, 3, 3): [10**3, 10**4],
+        (64, 4, 4): [10**3, 10**4, 10**5],
+        (64, 5, 5): [10**3, 10**4, 10**5],
+        (64, 6, 6): [10**4, 10**5],
+        (64, 7, 7): [10**4, 10**5],
     }
 
     TRANSFORMATIONS = {
@@ -89,12 +89,12 @@ class InterposeMLPStudy(Study):
     }
 
     LAYERS = {
-         (64, 2, 2): [[2**4]*3, [2**5]*3],
-         (64, 3, 3): [[2**5]*3, [2**6]*3],
-         (64, 4, 4): [[2**6]*3, [2**7]*3],
-         (64, 5, 5): [[2**7]*3, [2**8]*3],
-         (64, 6, 6): [[2**8]*3, [2**9]*3],
-         (64, 7, 7): [[2**9]*3, [2**10]*3],
+         (64, 2, 2): [[2**2]*3, [2**3]*3, [2**4]*3],
+         (64, 3, 3): [[2**3]*3, [2**4]*3, [2**5]*3],
+         (64, 4, 4): [[2**4]*3, [2**5]*3, [2**6]*3],
+         (64, 5, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
+         (64, 6, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
+         (64, 7, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
     }
 
     def experiments(self):
@@ -155,25 +155,25 @@ class InterposeMLPStudy(Study):
         if not self.EXPERIMENTS:
             self.experiments()
         """
-        self.plot_helper(
+        self.plot_param_dependency(
             name='IPUF',
             df=self.experimenter.results,
-            param_x='batch_size',
-            param_1='layers',
-            param_2=None,
+            param_x='learning_rate',
+            param_1='N',
+            param_2='batch_size',
         )
         self.plot_history(
             df=self.experimenter.results
         )
-        self.plot_overview(df=self.experimenter.results)
         """
+        self.plot_overview(df=self.experimenter.results)
 
-    def plot_helper(self, name, df, param_x, param_1, param_2=None):
+    def plot_param_dependency(self, name, df, param_x, param_1, param_2=None):
         param_y = 'accuracy'
         #df['layers'] = df['layers'].apply(str)
         #df = df[df['experiment'] == 'ExperimentMLP' + name]
         ncols = len(self.SIZES.keys())
-        nrows = 2
+        nrows = 3
         fig, axes = subplots(ncols=ncols, nrows=nrows)
         fig.set_size_inches(9 * ncols, 4 * nrows)
         axes = axes.reshape((nrows, ncols))
@@ -193,7 +193,6 @@ class InterposeMLPStudy(Study):
                 estimator='mean',
                 ci=None,
                 alpha=alpha_lines,
-                #palette=palette,
             )
             scatterplot(
                 x=param_x,
@@ -204,9 +203,7 @@ class InterposeMLPStudy(Study):
                 ax=axes[0][j],
                 legend='full',
                 alpha=alpha_scatter,
-                #palette=palette,
             )
-            lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
             axes[0][j].set_title('n={}, k_down={}\n\n{} experiments\n'.format(
                 n, k_down, len(data)))
             axes[0][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
@@ -221,7 +218,6 @@ class InterposeMLPStudy(Study):
                 estimator='mean',
                 ci=None,
                 alpha=alpha_lines,
-                #palette=palette,
             )
             axes[1][j].set_xscale('linear')
             axes[1][j].set_yscale('linear')
@@ -231,6 +227,27 @@ class InterposeMLPStudy(Study):
             axes[1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
             axes[1][j].grid(b=True, which='minor', color='gray', linestyle=':')
             axes[1][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
+
+            lineplot(
+                x='accuracy',
+                y='max_memory',
+                hue=param_1,
+                style=param_2,
+                data=data,
+                ax=axes[2][j],
+                legend='full',
+                estimator='mean',
+                ci=None,
+                alpha=alpha_lines,
+            )
+            axes[2][j].set_xscale('linear')
+            axes[2][j].set_yscale('linear')
+            axes[2][j].set_xlabel(param_y)
+            axes[2][j].set_ylabel('memory consumption')
+            axes[2][j].set_ylim(bottom=0)
+            axes[2][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
+            axes[2][j].grid(b=True, which='minor', color='gray', linestyle=':')
+            axes[2][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
         fig.subplots_adjust(hspace=.5, wspace=.5)
         title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
         title.set_position([.5, 1.05])
@@ -258,7 +275,6 @@ class InterposeMLPStudy(Study):
                 zorder=1,
                 marker=marker,
                 alpha=alpha_scatter,
-                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -279,7 +295,6 @@ class InterposeMLPStudy(Study):
                 zorder=1,
                 marker=marker,
                 alpha=alpha_scatter,
-                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -308,7 +323,6 @@ class InterposeMLPStudy(Study):
                 zorder=1,
                 marker=marker,
                 alpha=alpha_scatter,
-                #palette=palette,
             )
             for j, n in enumerate(list(sorted(set(df.n)))):
                 Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
@@ -395,7 +409,7 @@ class InterposeMLPStudy(Study):
                                 linewidth=2, label=str(int(round(means_runtime[j], 0))))
             axes[1][i].set_yscale('log')
             axes[1][i].set_ylabel('runtime in s')
-            axes[1][i].legend(loc='upper right', bbox_to_anchor=(1.193, 1.02), title='means')
+            axes[1][i].legend(loc='upper right', bbox_to_anchor=(1.18, 1.02), title='means')
         fig.subplots_adjust(hspace=0.3, wspace=0.6)
         title = fig.suptitle('Overview of Learning Results\non 64-Bit (k,k)-IPUFs with MLP', size=20)
         title.set_position([0.5, 1.0])
