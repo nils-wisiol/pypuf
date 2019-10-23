@@ -35,12 +35,16 @@ class InterposeMLPStudy(Study):
     SCALES = [0.5, 1.0, 2.0]
 
     SIZES = {
-        (64, 2, 2): list(map(lambda x: x*920e3, SCALES)),
-        (64, 3, 3): list(map(lambda x: x*1.2e6, SCALES)),
-        (64, 4, 4): list(map(lambda x: x*2e6, SCALES)),
-        (64, 5, 5): list(map(lambda x: x*4.8e6, SCALES)),
+        # (64, 2, 2): list(map(lambda x: x*920e3, SCALES)),
+        # (64, 3, 3): list(map(lambda x: x*1.2e6, SCALES)),
+        # (64, 4, 4): list(map(lambda x: x*2e6, SCALES)),
+        # (64, 5, 5): list(map(lambda x: x*4.8e6, SCALES)),
         # (64, 6, 6): list(map(lambda x: x*16e6, SCALES)),
         # (64, 7, 7): list(map(lambda x: x*80e6, SCALES)),
+        (64, 1, 5): list(map(lambda x: x*600e3, SCALES)),
+        (64, 1, 6): list(map(lambda x: x*2e6, SCALES)),
+        (64, 1, 7): list(map(lambda x: x*10e6, SCALES)),
+        (64, 1, 8): list(map(lambda x: x*10e6, SCALES)),
     }
 
     SAMPLES_PER_POINT = {
@@ -50,6 +54,10 @@ class InterposeMLPStudy(Study):
         (64, 5, 5): 10,
         (64, 6, 6): 5,
         (64, 7, 7): 5,
+        (64, 1, 5): 10,
+        (64, 1, 6): 10,
+        (64, 1, 7): 10,
+        (64, 1, 8): 10,
     }
 
     LEARNING_RATES = {
@@ -59,6 +67,10 @@ class InterposeMLPStudy(Study):
         (64, 5, 5): [0.0003, 0.0006, 0.0009, 0.0012, 0.0015],
         (64, 6, 6): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
         (64, 7, 7): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+        (64, 1, 5): [0.0005, 0.002, 0.008],
+        (64, 1, 6): [0.0003, 0.0015, 0.006],
+        (64, 1, 7): [0.0002, 0.001, 0.005],
+        (64, 1, 8): [0.0001, 0.0008, 0.004],
     }
 
     BATCH_SIZES = {
@@ -68,33 +80,27 @@ class InterposeMLPStudy(Study):
         (64, 5, 5): [10**3, 10**4, 10**5],
         (64, 6, 6): [10**4, 10**5],
         (64, 7, 7): [10**4, 10**5],
+        (64, 1, 5): [10**3, 10**4],
+        (64, 1, 6): [10**3, 10**4],
+        (64, 1, 7): [10**3, 10**4, 10**5],
+        (64, 1, 8): [10**3, 10**4, 10**5],
     }
 
-    TRANSFORMATIONS = {
-        (64, 2, 2): ['atf'],
-        (64, 3, 3): ['atf'],
-        (64, 4, 4): ['atf'],
-        (64, 5, 5): ['atf'],
-        (64, 6, 6): ['atf'],
-        (64, 7, 7): ['atf'],
-    }
+    TRANSFORMATIONS = ['atf']
 
-    PREPROCESSINGS = {
-        (64, 2, 2): ['short'],
-        (64, 3, 3): ['short'],
-        (64, 4, 4): ['short'],
-        (64, 5, 5): ['short'],
-        (64, 6, 6): ['short'],
-        (64, 7, 7): ['short'],
-    }
+    PREPROCESSINGS = ['short']
 
     LAYERS = {
-         (64, 2, 2): [[2**2]*3, [2**3]*3, [2**4]*3],
-         (64, 3, 3): [[2**3]*3, [2**4]*3, [2**5]*3],
-         (64, 4, 4): [[2**4]*3, [2**5]*3, [2**6]*3],
-         (64, 5, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
-         (64, 6, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
-         (64, 7, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
+        (64, 2, 2): [[2**2]*3, [2**3]*3, [2**4]*3],
+        (64, 3, 3): [[2**3]*3, [2**4]*3, [2**5]*3],
+        (64, 4, 4): [[2**4]*3, [2**5]*3, [2**6]*3],
+        (64, 5, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
+        (64, 6, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
+        (64, 7, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
+        (64, 1, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
+        (64, 1, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
+        (64, 1, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
+        (64, 1, 8): [[2**8]*3, [2**9]*3, [2**10]*3],
     }
 
     def experiments(self):
@@ -111,8 +117,8 @@ class InterposeMLPStudy(Study):
                                       * len(self.LEARNING_RATES[(n, k_up, k_down)])) \
                                 + c2 * len(self.LEARNING_RATES[(n, k_up, k_down)]) + c3
                         for batch_size in self.BATCH_SIZES[(n, k_up, k_down)]:
-                            for transformation in self.TRANSFORMATIONS[(n, k_up, k_down)]:
-                                for preprocessing in self.PREPROCESSINGS[(n, k_up, k_down)]:
+                            for transformation in self.TRANSFORMATIONS:
+                                for preprocessing in self.PREPROCESSINGS:
                                     for layers in self.LAYERS[(n, k_up, k_down)]:
                                         self.EXPERIMENTS.append(
                                             ExperimentMLPScikitLearn(
@@ -154,7 +160,7 @@ class InterposeMLPStudy(Study):
         """
         if not self.EXPERIMENTS:
             self.experiments()
-        """
+        #"""
         self.plot_param_dependency(
             name='IPUF',
             df=self.experimenter.results,
@@ -162,6 +168,7 @@ class InterposeMLPStudy(Study):
             param_1='N',
             param_2='batch_size',
         )
+        """
         self.plot_history(
             df=self.experimenter.results
         )
@@ -170,8 +177,6 @@ class InterposeMLPStudy(Study):
 
     def plot_param_dependency(self, name, df, param_x, param_1, param_2=None):
         param_y = 'accuracy'
-        #df['layers'] = df['layers'].apply(str)
-        #df = df[df['experiment'] == 'ExperimentMLP' + name]
         ncols = len(self.SIZES.keys())
         nrows = 3
         fig, axes = subplots(ncols=ncols, nrows=nrows)
