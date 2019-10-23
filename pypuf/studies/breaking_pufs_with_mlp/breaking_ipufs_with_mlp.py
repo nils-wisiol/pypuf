@@ -21,6 +21,7 @@ class InterposeMLPStudy(Study):
     """
     Define a set of experiments by combining several sets of hyperparameters.
     """
+    SHUFFLE = True
 
     ITERATION_LIMIT = 300
     PATIENCE = ITERATION_LIMIT
