@@ -69,7 +69,7 @@ class ExperimentMLPScikitLearn(Experiment):
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
-            '{}_{}'.format(progress_log_prefix, parameters.experiment_id)
+            '{}_{}'.format(progress_log_prefix, self.id)
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.training_set = None
         self.simulation = None
