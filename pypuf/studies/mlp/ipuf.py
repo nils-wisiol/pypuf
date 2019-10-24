@@ -35,7 +35,7 @@ class InterposeMLPStudy(Study):
     def experiments(self):
         return [
             ExperimentMLPScikitLearn(
-                progress_log_prefix=None,
+                progress_log_prefix=self.name(),
                 parameters=Parameters_skl(
                     seed_simulation=0x3 + seed,
                     seed_challenges=0x1415 + seed,
