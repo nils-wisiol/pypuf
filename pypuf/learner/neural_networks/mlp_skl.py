@@ -25,7 +25,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
     def __init__(self, n, k, training_set, validation_frac, transformation, preprocessing, layers=(10, 10),
                  activation='relu', domain_in=-1, learning_rate=0.001, penalty=0.0002, beta_1=0.9, beta_2=0.999,
                  tolerance=0.0025, patience=4, print_learning=False, iteration_limit=40, batch_size=1000,
-                 seed_model=0xc0ffee):
+                 seed_model=0xc0ffee, logger=None):
         """
         :param n:               int; positive, length of PUF (typically power of 2)
         :param k:               int; positive, width of PUF (typically between 1 and 8)
@@ -69,6 +69,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         self.accuracy_curve = []
         self.nn = None
         self.model = None
+        self.log = logger
 
     def prepare(self):
         """
@@ -121,6 +122,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         """
         Train the model with early stopping.
         """
+        self.log(f'learner tarted, splitting training set')
         x, x_val, y, y_val = train_test_split(
             self.training_set.challenges,
             self.training_set.responses,
@@ -130,6 +132,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         )
         preprocess = LTFArray.preprocess(transformation=self.transformation, kind=self.preprocessing)
         if self.preprocessing != 'no':
+            self.log(f'preprocessing training set')
             x = preprocess(challenges=x, k=self.k)
             if self.preprocessing == 'full':
                 x = reshape(x, (len(x), self.k * self.n))
@@ -141,6 +144,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         counter = 0
         threshold = 0
         best = 0
+        self.log(f'starting learning loop with at most {self.iteration_limit} iterations')
         for epoch in range(self.iteration_limit):
             self.nn = self.nn.partial_fit(
                 X=x,
@@ -149,6 +153,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             )
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(tmp)
+            self.log(f'epoch {epoch} accuracy {tmp}')
             if tmp >= 0.95:
                 break
             if epoch < self.DELAY:

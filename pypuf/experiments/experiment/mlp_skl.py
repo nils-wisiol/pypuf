@@ -81,6 +81,7 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         Prepare learning: initialize learner, prepare training set, etc.
         """
+        self.progress_logger.debug('Setting up simulation')
         self.simulation = InterposePUF(
             n=self.parameters.n,
             k_down=self.parameters.k_down,
@@ -88,14 +89,16 @@ class ExperimentMLPScikitLearn(Experiment):
             seed=self.parameters.seed_simulation,
             transform='atf',
         )
+        self.progress_logger.debug(f'Gathering training set with {self.parameters.N} examples')
         self.training_set = tools.TrainingSet(
             instance=self.simulation,
             N=self.parameters.N,
             random_instance=RandomState(seed=self.parameters.seed_challenges),
         )
+        self.progress_logger.debug('Setting up learner')
         self.learner = MultiLayerPerceptronScikitLearn(
             n=self.parameters.n,
-            k=self.parameters.k,
+            k=self.parameters.k_down,
             training_set=self.training_set,
             validation_frac=self.parameters.validation_frac,
             transformation=self.simulation.down.transform,
@@ -111,6 +114,7 @@ class ExperimentMLPScikitLearn(Experiment):
             batch_size=self.parameters.batch_size,
             seed_model=self.parameters.seed_model,
             print_learning=self.parameters.print_learning,
+            logger=self.progress_logger.debug,
         )
         self.learner.prepare()
 
@@ -118,12 +122,14 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         Execute the learning process.
         """
+        self.progress_logger.debug('Starting learner')
         self.model = self.learner.learn()
 
     def analyze(self):
         """
         Calculate statistics of the trained model and write them into a result log file.
         """
+        self.progress_logger.debug('Analyzing result')
         assert self.model is not None
         accuracy = 1.0 - tools.approx_dist(
             instance1=self.simulation,
