@@ -310,14 +310,16 @@ class Experimenter(object):
         already imported and the environment was not yet set accordingly, an
         Exception will be raised.
         """
-        if os.environ.get('PYPUF_CPU_LIMIT', None) == '1':
-            return
-
         desired_environment = {
             'OMP_NUM_THREADS': '1',
             'NUMEXPR_NUM_THREADS': '1',
             'MKL_NUM_THREADS': '1',
         }
+
+        if os.environ.get('PYPUF_CPU_LIMIT', None) == '1' or \
+                any([os.environ.get(key, None) is not None for key in desired_environment]):
+            return
+
         if 'numpy' in sys.modules:
             for key, val in desired_environment.items():
                 if key not in os.environ or os.environ[key] != val:
