@@ -7,12 +7,12 @@ from os import getpid
 from typing import NamedTuple, Iterable
 from uuid import UUID
 
-from numpy.random import RandomState
+from numpy.random.mtrand import RandomState
+
+from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.neural_networks.mlp_skl import MultiLayerPerceptronScikitLearn
 from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf import tools
 
 
 class Parameters(NamedTuple):
@@ -24,10 +24,10 @@ class Parameters(NamedTuple):
     seed_model: int
     seed_distance: int
     n: int
-    k: int
+    k_up: int
+    k_down: int
     N: int
     validation_frac: float
-    transformation: str
     combiner: str
     preprocessing: str
     layers: Iterable[int]
@@ -52,7 +52,6 @@ class Result(NamedTuple):
     experiment_id: UUID
     pid: int
     domain_out: int
-    loss: str
     measured_time: float
     iterations: int
     accuracy: float
@@ -67,8 +66,6 @@ class ExperimentMLPScikitLearn(Experiment):
     """
 
     NAME = 'Multilayer Perceptron (scikit-learn)'
-    NUM_ACCURACY = 10000
-    INTERPOSE = False
 
     def __init__(self, progress_log_prefix, parameters):
         progress_log_name = None if not progress_log_prefix else \
@@ -83,58 +80,24 @@ class ExperimentMLPScikitLearn(Experiment):
         """
         Prepare learning: initialize learner, prepare training set, etc.
         """
-        self.INTERPOSE = self.parameters.transformation.startswith('interpose')
-        if not self.INTERPOSE:
-            self.simulation = LTFArray(
-                weight_array=LTFArray.normal_weights(
-                    n=self.parameters.n,
-                    k=self.parameters.k,
-                    random_instance=RandomState(seed=self.parameters.seed_simulation),
-                ),
-                transform=self.parameters.transformation,
-                combiner=self.parameters.combiner,
-            )
-        else:
-            params = self.parameters.transformation.split(sep=' ')
-            params_dict = {}
-            if len(params) > 1:
-                for p in params[1:]:
-                    p = p.split('=')
-                    params_dict[p[0]] = p[1]
-            n = int(params_dict['n']) if 'n' in params_dict.keys() else self.parameters.n
-            k_down = int(params_dict['k_down']) if 'k_down' in params_dict.keys() else self.parameters.k
-            k_up = int(params_dict['k_up']) if 'k_up' in params_dict.keys() else self.parameters.k
-            interpose_pos = int(params_dict['interpose_pos']) if 'interpose_pos' in params_dict.keys() \
-                                                                 and params_dict['interpose_pos'] != 'None' else None
-            seed = params_dict['seed'] if 'seed' in params_dict.keys() else self.parameters.seed_simulation
-            seed = int(seed) if seed != 'None' else None
-            transform = params_dict['transform'] if 'transform' in params_dict.keys() else None
-            noisiness = float(params_dict['noisiness']) if 'noisiness' in params_dict.keys() else 0
-            noise_seed = params_dict['noise_seed'] if 'noise_seed' in params_dict.keys() \
-                else self.parameters.seed_simulation
-            noise_seed = int(noise_seed) if noise_seed != 'None' else None
-            self.simulation = InterposePUF(
-                n=n,
-                k_down=k_down,
-                k_up=k_up,
-                interpose_pos=interpose_pos,
-                seed=seed,
-                transform=transform,
-                noisiness=noisiness,
-                noise_seed=noise_seed,
-            )
-        prng_challenges = RandomState(seed=self.parameters.seed_challenges)
+        self.simulation = InterposePUF(
+            n=self.parameters.n,
+            k_down=self.parameters.k_down,
+            k_up=self.parameters.k_up,
+            seed=self.parameters.seed_simulation,
+            transform='atf',
+        )
         self.training_set = tools.TrainingSet(
             instance=self.simulation,
             N=self.parameters.N,
-            random_instance=prng_challenges,
+            random_instance=RandomState(seed=self.parameters.seed_challenges),
         )
         self.learner = MultiLayerPerceptronScikitLearn(
             n=self.parameters.n,
             k=self.parameters.k,
             training_set=self.training_set,
             validation_frac=self.parameters.validation_frac,
-            transformation=self.simulation.down.transform if self.INTERPOSE else self.simulation.transform,
+            transformation=self.simulation.down.transform,
             preprocessing=self.parameters.preprocessing,
             layers=self.parameters.layers,
             learning_rate=self.parameters.learning_rate,
@@ -164,7 +127,7 @@ class ExperimentMLPScikitLearn(Experiment):
         accuracy = 1.0 - tools.approx_dist(
             instance1=self.simulation,
             instance2=self.model,
-            num=min(self.NUM_ACCURACY, 2 ** self.parameters.n),
+            num=10**4,
             random_instance=RandomState(seed=self.parameters.seed_distance),
         )
         return Result(
@@ -172,7 +135,6 @@ class ExperimentMLPScikitLearn(Experiment):
             experiment_id=self.id,
             pid=getpid(),
             domain_out=0,
-            loss='log_loss',
             measured_time=self.measured_time,
             iterations=self.learner.nn.n_iter_,
             accuracy=accuracy,

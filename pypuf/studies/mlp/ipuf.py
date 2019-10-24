@@ -7,14 +7,15 @@ Forward Neural Network architecture called Multilayer Perceptron (MLP). Implemen
 used from Scikit-Learn and Tensorflow, respectively.
 """
 from re import findall
+
 from matplotlib.pyplot import subplots
 from matplotlib.ticker import FixedLocator
 from numpy.ma import ones
 from numpy.random.mtrand import seed
 from seaborn import stripplot, lineplot, scatterplot, color_palette
 
-from pypuf.studies.base import Study
 from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
+from pypuf.studies.base import Study
 
 
 class InterposeMLPStudy(Study):
@@ -23,7 +24,7 @@ class InterposeMLPStudy(Study):
     """
     SHUFFLE = True
 
-    ITERATION_LIMIT = 300
+    ITERATION_LIMIT = 50
     PATIENCE = ITERATION_LIMIT
     TOLERANCE = 0.0025
     PENALTY = 0.0002
@@ -31,137 +32,75 @@ class InterposeMLPStudy(Study):
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
 
-    EXPERIMENTS = []
-
-    SCALES = [0.5, 1.0, 2.0]
-
-    SIZES = {
-        # (64, 2, 2): list(map(lambda x: x*920e3, SCALES)),
-        # (64, 3, 3): list(map(lambda x: x*1.2e6, SCALES)),
-        # (64, 4, 4): list(map(lambda x: x*2e6, SCALES)),
-        # (64, 5, 5): list(map(lambda x: x*4.8e6, SCALES)),
-        # (64, 6, 6): list(map(lambda x: x*16e6, SCALES)),
-        # (64, 7, 7): list(map(lambda x: x*80e6, SCALES)),
-        (64, 1, 5): list(map(lambda x: x*600e3, SCALES)),
-        (64, 1, 6): list(map(lambda x: x*2e6, SCALES)),
-        (64, 1, 7): list(map(lambda x: x*10e6, SCALES)),
-        (64, 1, 8): list(map(lambda x: x*10e6, SCALES)),
-    }
-
-    SAMPLES_PER_POINT = {
-        (64, 2, 2): 10,
-        (64, 3, 3): 10,
-        (64, 4, 4): 10,
-        (64, 5, 5): 10,
-        (64, 6, 6): 5,
-        (64, 7, 7): 5,
-        (64, 1, 5): 10,
-        (64, 1, 6): 10,
-        (64, 1, 7): 10,
-        (64, 1, 8): 10,
-    }
-
-    LEARNING_RATES = {
-        (64, 2, 2): [0.002, 0.003, 0.004, 0.006, 0.008],
-        (64, 3, 3): [0.002, 0.003, 0.004, 0.006, 0.008],
-        (64, 4, 4): [0.0012, 0.0016, 0.002, 0.0024, 0.0028],
-        (64, 5, 5): [0.0003, 0.0006, 0.0009, 0.0012, 0.0015],
-        (64, 6, 6): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
-        (64, 7, 7): [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
-        (64, 1, 5): [0.0005, 0.002, 0.008],
-        (64, 1, 6): [0.0003, 0.0015, 0.006],
-        (64, 1, 7): [0.0002, 0.001, 0.005],
-        (64, 1, 8): [0.0001, 0.0008, 0.004],
-    }
-
-    BATCH_SIZES = {
-        (64, 2, 2): [10**3, 10**4],
-        (64, 3, 3): [10**3, 10**4],
-        (64, 4, 4): [10**3, 10**4, 10**5],
-        (64, 5, 5): [10**3, 10**4, 10**5],
-        (64, 6, 6): [10**4, 10**5],
-        (64, 7, 7): [10**4, 10**5],
-        (64, 1, 5): [10**3, 10**4],
-        (64, 1, 6): [10**3, 10**4],
-        (64, 1, 7): [10**3, 10**4, 10**5],
-        (64, 1, 8): [10**3, 10**4, 10**5],
-    }
-
-    TRANSFORMATIONS = ['atf']
-
-    PREPROCESSINGS = ['short']
-
-    LAYERS = {
-        (64, 2, 2): [[2**2]*3, [2**3]*3, [2**4]*3],
-        (64, 3, 3): [[2**3]*3, [2**4]*3, [2**5]*3],
-        (64, 4, 4): [[2**4]*3, [2**5]*3, [2**6]*3],
-        (64, 5, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
-        (64, 6, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
-        (64, 7, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
-        (64, 1, 5): [[2**5]*3, [2**6]*3, [2**7]*3],
-        (64, 1, 6): [[2**6]*3, [2**7]*3, [2**8]*3],
-        (64, 1, 7): [[2**7]*3, [2**8]*3, [2**9]*3],
-        (64, 1, 8): [[2**8]*3, [2**9]*3, [2**10]*3],
-    }
-
     def experiments(self):
-        """
-        Generate an experiment for every parameter combination corresponding to the definitions above.
-        For each combination of (size, samples_per_point, learning_rate) different random seeds are used.
-        """
-        for c1, (n, k_up, k_down) in enumerate(self.SIZES.keys()):
-            for N in self.SIZES[(n, k_up, k_down)]:
-                validation_frac = max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N
-                for c2 in range(self.SAMPLES_PER_POINT[(n, k_up, k_down)]):
-                    for c3, learning_rate in enumerate(self.LEARNING_RATES[(n, k_up, k_down)]):
-                        cycle = c1 * (self.SAMPLES_PER_POINT[(n, k_up, k_down)]
-                                      * len(self.LEARNING_RATES[(n, k_up, k_down)])) \
-                                + c2 * len(self.LEARNING_RATES[(n, k_up, k_down)]) + c3
-                        for batch_size in self.BATCH_SIZES[(n, k_up, k_down)]:
-                            for transformation in self.TRANSFORMATIONS:
-                                for preprocessing in self.PREPROCESSINGS:
-                                    for layers in self.LAYERS[(n, k_up, k_down)]:
-                                        self.EXPERIMENTS.append(
-                                            ExperimentMLPScikitLearn(
-                                                progress_log_prefix=None,
-                                                parameters=Parameters_skl(
-                                                    seed_simulation=0x3 + cycle,
-                                                    seed_challenges=0x1415 + cycle,
-                                                    seed_model=0x9265 + cycle,
-                                                    seed_distance=0x3589 + cycle,
-                                                    n=n,
-                                                    k=k_down,
-                                                    N=int(N),
-                                                    validation_frac=validation_frac,
-                                                    transformation='interpose k_down={} k_up={} transform={}'.format(
-                                                        k_down, k_up, transformation),
-                                                    combiner='xor',
-                                                    preprocessing=preprocessing,
-                                                    layers=layers,
-                                                    activation='relu',
-                                                    domain_in=-1,
-                                                    learning_rate=learning_rate,
-                                                    penalty=self.PENALTY,
-                                                    beta_1=0.9,
-                                                    beta_2=0.999,
-                                                    tolerance=self.TOLERANCE,
-                                                    patience=self.PATIENCE,
-                                                    iteration_limit=self.ITERATION_LIMIT,
-                                                    batch_size=batch_size,
-                                                    print_learning=self.PRINT_LEARNING,
-                                                )
-                                            )
-                                        )
-        return self.EXPERIMENTS
+        return [
+            ExperimentMLPScikitLearn(
+                progress_log_prefix=None,
+                parameters=Parameters_skl(
+                    seed_simulation=0x3 + seed,
+                    seed_challenges=0x1415 + seed,
+                    seed_model=0x9265 + seed,
+                    seed_distance=0x3589 + seed,
+                    n=n,
+                    k_up=k_up,
+                    k_down=k_down,
+                    N=N,
+                    validation_frac=max(min(N // 20, self.MAX_NUM_VAL), self.MIN_NUM_VAL) / N,
+                    combiner='xor',
+                    preprocessing='short',
+                    layers=[layer_size, layer_size, layer_size],
+                    activation='relu',
+                    domain_in=-1,
+                    learning_rate=learning_rate,
+                    penalty=self.PENALTY,
+                    beta_1=0.9,
+                    beta_2=0.999,
+                    tolerance=self.TOLERANCE,
+                    patience=self.PATIENCE,
+                    iteration_limit=self.ITERATION_LIMIT,
+                    batch_size=batch_size,
+                    print_learning=self.PRINT_LEARNING,
+                )
+            )
+            for seed in range(10)
+            for batch_size in [10**5]
+            for layer_size in [128, 192, 256, 386, 512]
+            for n in [64]
+            for (k_up, k_down), (N_set, LR_set) in {
+                (6, 6): (
+                    [8 * 10**6, 16 * 10**6, 32 * 10**6, 64 * 10**6],  # up to 40GB
+                    [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+                ),
+                (7, 7): (
+                    [40 * 10**6, 80 * 10**6, 103 * 10**6],  # up to 62.5GB
+                    [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+                ),
+                (8, 8): (
+                    [40 * 10**6, 80 * 10**6, 103 * 10**6],  # up to 62.5GB
+                    [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+                ),
+                (9, 9): (
+                    [40 * 10**6, 80 * 10**6, 103 * 10**6],  # up to 62.5GB
+                    [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
+                ),
+                (1, 8): (
+                    [20 * 10**6, 40 * 10**6, 80 * 10**6, 103 * 10**6],  # up to 62.5GB
+                    [0.0001, 0.0008, 0.004],
+                ),
+                (1, 9): (
+                    [40 * 10**6, 80 * 10**6, 103 * 10**6],  # up to 62.5GB
+                    [0.00005, 0.0001, 0.0008, 0.004],
+                ),
+            }.items()
+            for N in N_set
+            for learning_rate in LR_set
+        ]
 
     def plot(self):
         """
         Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
         and the measured time of each experiment, respectively.
         """
-        if not self.EXPERIMENTS:
-            self.experiments()
-        #"""
         self.plot_param_dependency(
             name='IPUF',
             df=self.experimenter.results,
