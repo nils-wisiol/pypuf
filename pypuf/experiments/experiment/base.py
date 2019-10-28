@@ -91,7 +91,7 @@ class Experiment(object):
         :param progress_log_name: A unique name, used for log path.
         :param parameters: NamedTuple object holding all experiment parameters
         """
-        self.id = uuid4()
+        self.id = getattr(self, 'id', uuid4())
         self.progress_log_name = progress_log_name
         self.parameters = parameters
         self.hash = sha256((self.__class__.__name__ + ': ' + str(parameters)).encode()).hexdigest()
