@@ -110,7 +110,7 @@ class InterposeMLPStudy(Study):
             elif row.get('transformation', None):
                 try:
                     s = re.search('interpose k_down=([0-9]+) k_up=([0-9]+) transform=atf', row['transformation'])
-                    return '(%i,%i)' % (int(s.group(1)), int(s.group(2)))
+                    return '(%i,%i)' % (int(s.group(2)), int(s.group(1)))
                 except TypeError:
                     pass
             return float('nan')
