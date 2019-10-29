@@ -213,7 +213,8 @@ def approx_dist_nonrandom(instance, test_set):
     :return: float
              Ratio of correctly to incorrectly predicted responses
     """
-    return (test_set.N - count_nonzero(instance.eval(test_set.challenges) == test_set.responses)) / test_set.N
+    eval_f = instance.eval if isinstance(instance, Simulation) else instance
+    return (test_set.N - count_nonzero(eval_f(test_set.challenges) == test_set.responses)) / test_set.N
 
 
 def approx_fourier_coefficient(s, training_set):
