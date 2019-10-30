@@ -164,7 +164,7 @@ class Experiment(object):
                                       datefmt='%Y-%m-%d %H:%M:%S')
                 )
                 self.progress_logger.logger.addHandler(file_handler)
-                self.progress_logger.propagate = False
+                logging.getLogger(self.progress_log_name).propagate = False
 
             # set up the result logger
             self.result_logger = LogMemoryUsageLoggerAdapter(logging.getLogger(result_log_name), {})
@@ -173,6 +173,7 @@ class Experiment(object):
                 queue_handler = logging.handlers.QueueHandler(result_log_queue)
                 queue_handler.setLevel(logging.DEBUG)
                 logging.getLogger(result_log_name).addHandler(queue_handler)
+                logging.getLogger(result_log_name).propagate = False
 
             # run preparations (not timed)
             self.prepare()

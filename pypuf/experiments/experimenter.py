@@ -476,13 +476,16 @@ def setup_result_logger(result_log_name):
     :param result_log_name: string
                         Path to or name to the log file
     """
-    root = logging.getLogger(result_log_name)
+    logger = logging.getLogger(result_log_name)
 
-    # Setup logging to both file and console
+    # Setup logging to file only
+    logger.propagate = False
+    for hdlr in logger.handlers:
+        logger.removeHandler(hdlr)
     file_handler = logging.FileHandler(filename='logs/%s.log' % result_log_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
-    root.addHandler(file_handler)
+    logger.addHandler(file_handler)
     return file_handler
 
 
