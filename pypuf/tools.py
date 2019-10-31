@@ -4,12 +4,14 @@ or polynomial division. The spectrum is rich and the functions are used in many 
 helper module.
 """
 import itertools
+from functools import reduce
 from importlib import import_module
 from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
+from unittest import mock
 
-from numpy import abs as np_abs, absolute
+from numpy import abs as np_abs, absolute, bincount, ndarray, float32
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
 from numpy import sum as np_sum
@@ -549,3 +551,247 @@ def find_study_class(name):
         exit(1)
 
     return studies[0]
+
+
+class MonomialFactory:
+    """
+        Collection of functions to build monomials.
+        Currently only k-XOR Arbiter PUF monomials are supported.
+        In this class we use a internal representation of monomials:
+        {set(indices) : coefficients}
+        This means that {set(1,2,3) : 2, set(0) : 5} is interpreted as:
+        2*X1*X2*X3 + 5*X0
+        Each variable X is in {-1, 1}, this means that X**2 = 1, hence we can eliminate
+        these terms and shorten the monomials.
+    """
+
+    @staticmethod
+    def to_index_notation(mon):
+        """
+        Converts the internal representation of a monomial (with coefficients and bias)
+        to a list of lists containing indices.
+        """
+        return [list(s) for s in mon if s]
+
+    @staticmethod
+    def monomials_id(n):
+        return {frozenset([i]): 1 for i in range(n)}
+
+    @staticmethod
+    def monomials_atf(n, start=0, end=None):
+        """
+        Generates a dict of set(indices) : coefficient according to the internal
+        representation of a linearized Arbiter PUF.
+        """
+        return {frozenset(range(i, n)): 1 for i in range(start, end or n)}
+
+    @classmethod
+    def monomials_ipuf(cls, n, k_up, k_down, m_up=None):
+        m_up = m_up or cls.monomials_exp(cls.monomials_atf(n), k_up)
+
+        group_1 = {}
+        for i in range(n//2):
+            group_1 = cls.add(group_1, cls.multiply_sums(s1={frozenset(range(i, n)): 1}, s2=m_up))
+
+        group_2 = m_up.copy()
+
+        group_3 = {frozenset(range(i-1, n)): 1 for i in range(n//2+2, n+1)}
+
+        m_down = cls.add(cls.add(group_1, group_2), group_3)
+
+        return cls.monomials_exp(m_down, k_down)
+
+    @staticmethod
+    def add(s1, s2):
+        s = s1.copy()
+        for m, c in s2.items():
+            s[m] = s.get(m) or 0 + c
+        return s
+
+    @staticmethod
+    def multiply_sums(s1, s2):
+        """
+        Interprets two dicts of set(indices) : coefficients as sums of monomials and
+        multiplies these two big sums.
+        """
+        monomials = {}
+        for m1, c1 in s1.items():
+            for m2, c2 in s2.items():
+                m = m1.symmetric_difference(m2)
+                c = (monomials.get(m) or 0) + c1 * c2
+                monomials[m] = c
+        return monomials
+
+    @classmethod
+    def monomials_exp(cls, mono, k):
+        """
+        Interprets a dict of set(indices) : coefficients as a sum of monomials
+        and raises this sum to the power of k.
+        This is done is a recursive manner, minimizing the number of multiplications.
+        """
+        # Return monomials for k=1 and update DB if necessary
+        if k == 1:
+            return mono
+
+        # k is not computed yet -> split in two halves
+        k_star = k // 2
+        A = cls.monomials_exp(mono, k_star)
+        res = cls.multiply_sums(A, A)
+
+        # If k was uneven, we need to multiply with the base monomial again
+        if k % 2 == 1:
+            res = cls.multiply_sums(res, mono)
+        return res
+
+    @classmethod
+    def get_xor_arbiter_monomials(cls, n, k):
+        """
+        Returns the linearized monomial representation of n-bit k-XOR Arbiter PUF.
+        """
+        mono = cls.monomials_atf(n)
+        res = cls.monomials_exp(mono, k)
+        return cls.to_index_notation(res)
+
+    @staticmethod
+    def chain_monomials(m1, m2):
+        """
+        Returns monomials representation that corresponds to transforming X to X'
+        according to m1 and after that transform X' to X'' according to m2.
+        params : m1 needs to be a ordered list with Xi at index i.
+        params : m2 is in the form of dict (see above for internal representation)
+        """
+        # For each monomial in m2, substitute the entry i with monomial i of m1
+        new_mon = {}
+        for mon, coeff in m2.items():
+            new_vars = frozenset()
+            for index in mon:
+                new_vars = new_vars.symmetric_difference(frozenset(m1[index]))
+            new_mon[new_vars] = coeff
+        return new_mon
+
+    @staticmethod
+    def monomials_to_str(monomials):
+        return ' + '.join(
+            [
+                f'{val:3}' +
+                ''.join(['x' + ''.join([chr(0x2080 + int(cc)) for cc in str(c)]) for c in coeff])
+                for coeff, val in monomials.items()
+            ]
+        )
+
+    @staticmethod
+    def degrees(monomials):
+        return bincount(array(list(map(len, list(monomials.keys())))))
+
+    @staticmethod
+    def dist(monomials):
+        return bincount(array(list(monomials.values())))
+
+    @staticmethod
+    def monomials_to_vector(monomials, n):
+        chi_set = []
+        for m in monomials.keys():
+            s = zeros(n, dtype=BIT_TYPE)
+            s[list(m)] = 1
+            chi_set.append(s)
+        return chi_set
+
+    @classmethod
+    def monomials_low_degree(cls, up_to_degree, n):
+        m = {}
+        for d in range(up_to_degree):
+            m = cls.add(m, cls.monomials_degree(d, n))
+        return m
+
+    @classmethod
+    def monomials_degree(cls, degree, n):
+        return {
+            indices: 1 for indices in itertools.combinations(range(n), degree)
+        }
+
+
+class LinearizationModel():
+    """
+    Helper class to linearize challenges of a k-XOR PUF.
+    Instantiate using 'monomials' - a list of lists containing indices,
+    which defines how to compute linearized variables from a challenge.
+    Example: [[1,2,4],[1,6]] => X1 = C1*C2*C4; X2 = C1*C6
+    These monomials can be generated from the MonomialFactory class above.
+    """
+
+    def __init__(self, monomials):
+        """
+        :param monomials: list of lists containing indices to compute x's
+                          from challenge
+        """
+        # Monomials, defining how to build Xs from a challenge
+        self.monomials = monomials
+        # Multiply all values in the iterable
+        self.multiply = lambda values: reduce(lambda x, y: x * y, values)
+
+    def chal_to_xs(self, chal):
+        """
+        Convert challenge to Xs according to self.monomials
+        """
+
+        def mono_to_chalbits(mono, chal):
+            """
+            Map indices in monomial to challenge-bits
+            """
+            return map(lambda i: chal[i], mono)
+
+        Xs = [self.multiply(mono_to_chalbits(mono, chal))
+              for mono in self.monomials]
+        return Xs
+
+    def linearize(self, inputs, logger=None, block_size_bytes=1024**2):
+        if not logger:
+            logger = mock.Mock()
+            logger.debug = lambda _: None
+
+        N, n = inputs.shape
+        logger.debug(f'Allocating result matrix for {N} challenges of length {len(self.monomials)}')
+        try:
+            linearized_challenges = empty(shape=(N, len(self.monomials)), dtype=int8)
+        except MemoryError:
+            logger.debug('Memory error when allocating space for linearized challenges.')
+            raise
+        logger.debug(f'Allocated result matrix uses {linearized_challenges.nbytes / 1024**3:.4f} GiB of memory.')
+
+        logger.debug(f'Computing monomial matrix for {len(self.monomials)} monomials and {n}-bit challenges')
+        monomial_matrix = zeros(shape=(len(self.monomials), n), dtype=float32)
+        logger.debug(f'Monomial matrix uses {monomial_matrix.nbytes / 1024**3:.4f} GiB of memory.')
+        for idx, m in enumerate(self.monomials):
+            monomial_matrix[idx, list(m)] = 1
+
+        bytes_per_challenge = inputs.nbytes // len(inputs)
+        block_size = block_size_bytes // bytes_per_challenge
+        logger.debug(f'Linearizing {N} inputs in blocks of size {block_size} ≈ '
+                     f'{block_size_bytes * bytes_per_challenge / 1024**3}GiB')
+        for start in range(0, len(inputs), block_size):
+            logger.debug(f'Linearizing block [{start}:{start + block_size}]')
+            inputs01 = .5 - .5 * inputs[start:start+block_size]
+            linearized_challenges[start:start+block_size] = 1 - 2 * ((inputs01 @ monomial_matrix.T).astype(int8) % 2)
+
+        return linearized_challenges
+
+
+class ModelFromLinearization(Simulation):
+
+    def __init__(self, monomials, inner_model: Simulation, challenge_length: int) -> None:
+        assert len(monomials) == inner_model.challenge_length(), 'Number of given monomials was %i,' \
+                                                                 'but must match challenge length of' \
+                                                                 'inner model (was %i)' % \
+                                                                 (len(monomials), inner_model.challenge_length())
+        self._challenge_length = challenge_length
+        self.linearizer = LinearizationModel(monomials)
+        self.inner_model = inner_model
+
+    def challenge_length(self) -> int:
+        return self._challenge_length
+
+    def response_length(self) -> int:
+        return self.inner_model.response_length()
+
+    def eval(self, challenges: ndarray) -> ndarray:
+        return self.inner_model.eval(self.linearizer.linearize(challenges))
