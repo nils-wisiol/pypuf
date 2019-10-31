@@ -9,9 +9,11 @@ from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
 
-from numpy import abs as np_abs, absolute
+from numpy import abs as np_abs
+from numpy import absolute
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
+from numpy import squeeze
 from numpy import sum as np_sum
 from numpy.random import RandomState
 
@@ -416,20 +418,33 @@ class TrainingSet(ChallengeResponseSet):
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState()):
+    def __init__(self, instance, N, random_instance=RandomState(), reps=1):
         """
-        :param instance: pypuf.simulation.base.Simulation
-                         Instance which is used to generate responses for random challenges.
-        :param N: int
-                  Number of desired challenges
+        :param instance:        pypuf.simulation.base.Simulation
+                                Instance which is used to generate responses for random challenges
+        :param N:               int
+                                Number of desired challenges
         :param random_instance: numpy.random.RandomState
-                                PRNG which is used to draft challenges.
+                                PRNG instance for pseudo random sampling challenges
+        :param reps:            int
+                                Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
+<<<<<<< HEAD
         challenges = sample_inputs(instance.n, N, random_instance=random_instance)
+=======
+        self.N = min(N, 2 ** instance.n)
+        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
+        responses = zeros((self.N, reps))
+        for i in range(reps):
+            responses[:, i] = instance.eval(challenges[:, :]).T
+        if reps == 1:
+            responses = squeeze(responses, axis=0)
+        self.reps = reps
+>>>>>>> 03e3107... all in one commit
         super().__init__(
             challenges=challenges,
-            responses=instance.eval(challenges)
+            responses=responses,
         )
 
 
