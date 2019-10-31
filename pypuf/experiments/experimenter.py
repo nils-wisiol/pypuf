@@ -344,6 +344,27 @@ class Experimenter(object):
         else:
             return results
 
+    @classmethod
+    def merge_result_files(cls, source_files, dest_file):
+        """
+        Reads results from all source files, combines them into a single database and writes the result in the
+        destination file. Results appearing multiple times are given precedence in order of the source files given.
+        The behavior for duplicates results in a single source file is undefined.
+        :param source_files: List[str]
+        :param dest_file: str
+        """
+        from pandas import read_csv, DataFrame
+        sources = [read_csv(f) for f in source_files]
+        results = DataFrame(columns=['experiment_hash'])
+        for idx, source in enumerate(sources):
+            length_before = len(results)
+            results = cls._merge_results(results, source)
+            added = len(results) - length_before
+            print(f'{source_files[idx]}: total {len(source)}, added {added}, already known {len(source) - added} '
+                  f'results')
+        print(f'Merge contains a total of {len(results)} results from {len(source_files)} sources.')
+        results.to_csv(dest_file, index=False)
+
     @property
     def _lock_file(self):
         return f'results/{self.results_file}.lock'
