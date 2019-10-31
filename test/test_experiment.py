@@ -136,7 +136,6 @@ class TestExperimentLogisticRegression(TestBase):
         self.assertEqual(experiment.result.epoch_count, 274, error)
         self.assertEqual(experiment.result.gradient_step_count, 274, error)
         self.assertEqual(experiment.result.accuracy, 0.98828125, error)
-        print(experiment.result.model)
         assert_array_equal(
             around(experiment.result.model, decimals=8),
             around([
