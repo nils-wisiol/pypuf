@@ -5,7 +5,7 @@ This module provides an Experiment that generates a PUF with corresponding train
 
 from os import getpid
 from typing import NamedTuple, Iterable
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from numpy.random.mtrand import RandomState
 
@@ -68,6 +68,7 @@ class ExperimentMLPScikitLearn(Experiment):
     NAME = 'Multilayer Perceptron (scikit-learn)'
 
     def __init__(self, progress_log_prefix, parameters):
+        self.id = uuid4()
         progress_log_name = None if not progress_log_prefix else \
             '{}_{}'.format(progress_log_prefix, self.id)
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)

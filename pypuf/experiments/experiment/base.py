@@ -9,7 +9,7 @@ import sys
 from _sha256 import sha256
 from os import getpid
 from time import time, clock
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 PROC_STATUS_MEMORY_INFO = ['VmPeak', 'VmSize', 'VmLck', 'VmPin', 'VmHWM', 'VmRSS', 'RssAnon', 'RssFile', 'RssShmem',
                            'VmData', 'VmStk', 'VmExe', 'VmLib', 'VmPTE', 'VmSwap', 'HugetlbPages']
