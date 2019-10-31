@@ -23,6 +23,12 @@ class FourierCoefficient:
         self.s = s
         self.val = val
 
+    def __repr__(self):
+        return '<%f on {%s}>' % (
+            self.val,
+            ', '.join([str(idx) for idx, bit in enumerate(self.s) if bit])
+        )
+
 
 class FourierExpansion(Simulation):
     """
