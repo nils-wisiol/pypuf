@@ -37,7 +37,7 @@ class ReliabilityAttackStudy(Study):
             for N in [10**4]
             for R in [11]
             for pop_size in [20]
-            for seed in [0]
+            for seed in [1]
         ]
 
     """
