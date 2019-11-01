@@ -9,6 +9,7 @@ import numpy as np
 
 from scipy.stats import pearsonr
 
+from pypuf.bipoly import BiPoly
 from pypuf.learner.base import Learner
 from pypuf.tools import transform_challenge_11_to_01
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -43,10 +44,6 @@ class ReliabilityBasedCMAES(Learner):
         If a response bit is unstable for a given challenge, it is likely that the delay
         difference is is close to zero: delta_diff < CONST_EPSILON
     """
-    # Constants
-    CONST_FREQ_ABORTION_CHECK = 50
-    CONST_FREQ_LOGGING = 1
-    CONST_THRESHOLD_DIST = 0.25
 
     def __init__(self, training_set, k, n, transform, combiner,
                  pop_size, limit_stag, limit_iter, random_seed, logger):
@@ -87,18 +84,33 @@ class ReliabilityBasedCMAES(Learner):
         self.num_learned = 0
         self.logger = logger
 
-        #TODO linearize challenges to use them in id transform for LTF model
-
+        # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
 
-    def objective(self, weights):
+        # Linearize challenges for faster LTF computation
+        if self.transform == 'id':
+            poly = BiPoly.linear(self.n)
+        elif self.transform == 'atf':
+            poly = BiPoly.xor_arbiter_puf(self.n, self.k)
+        elif self.transform == 'fixed_permutation':
+            poly = BiPoly.permutation_puf(self.n, self.k)
+        elif self.transform == 'lightweight_secure':
+            poly = BiPoly.lightweight_secure_puf(self.n, self.k)
+        else:
+            raise Exception("Unknown transformation in CMA-ES Learner.")
+
+        self.lin_chals =
+
+    def objective(self, state):
         """
             Objective to be minimized. Therefore we use the 'Pearson Correlation
             Coefficient' of the model reliabilities and puf reliabilities.
         """
+        weights = state[:self.n]
+        epsilon = state[-1]
         model = LTFArray(weights[np.newaxis, :], self.transform, self.combiner)
         delay_diffs = model.val(self.training_set.challenges)
-        model_reliabilities = reliabilities_MODEL(delay_diffs)
+        model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
         corr = pearsonr(model_reliabilities, self.puf_reliabilities)
         return np.abs(1 - corr[0])
 
@@ -110,9 +122,10 @@ class ReliabilityBasedCMAES(Learner):
             'maxiter': self.limit_i,
             #'tolstagnation': self.limit_s,
         }
-        es = cma.CMAEvolutionStrategy(np.zeros(self.n), 1, inopts=options)
+        init_state = np.array([0]*self.n + [2]) # Initialze weights = 0; epsilon = 2
+        es = cma.CMAEvolutionStrategy(init_state, 1, inopts=options)
         es.optimize(self.objective)
-        w = es.best.x
+        w = es.best.x[:self.n]
         model = LTFArray(w[np.newaxis, :], self.transform, self.combiner)
         return model
 
