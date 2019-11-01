@@ -430,9 +430,6 @@ class TrainingSet(ChallengeResponseSet):
                                 Number of repeated evaluations of every challenge on instance (None equals 1)
         """
         self.instance = instance
-<<<<<<< HEAD
-        challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-=======
         self.N = min(N, 2 ** instance.n)
         challenges = sample_inputs(instance.n, N, random_instance=random_instance)
         responses = zeros((self.N, reps))
@@ -441,7 +438,6 @@ class TrainingSet(ChallengeResponseSet):
         if reps == 1:
             responses = squeeze(responses, axis=0)
         self.reps = reps
->>>>>>> 03e3107... all in one commit
         super().__init__(
             challenges=challenges,
             responses=responses,
