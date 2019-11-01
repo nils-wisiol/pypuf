@@ -12,7 +12,8 @@ from numpy.random.mtrand import RandomState
 
 from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
-from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
+#from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
+from pypuf.learner.evolution_strategies.cmaes_new import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
@@ -41,7 +42,7 @@ class Result(NamedTuple):
     abortions: int
     individual_accuracies: str
     stops: str
-    
+
 
 class ExperimentReliabilityBasedCMAES(Experiment):
     """This class implements an experiment for executing the reliability based CMAES learner for XOR LTF arrays.
@@ -100,11 +101,31 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         self.model = self.learner.learn()
 
     def analyze(self):
+        n = self.parameters.n
+
+        a = [[
+                1 - tools.approx_dist(
+                LTFArray(v[:n].reshape(1,n), self.parameters.transform,self.parameters.combiner),
+                LTFArray(w[:n].reshape(1,n) ,self.parameters.transform,self.parameters.combiner),
+                10000,
+                RandomState(12345)
+                )
+                for w in self.model.weight_array] for v in self.training_set.instance.weight_array]
+        print(np.array(a))
+
+        print("HERE", 1-tools.approx_dist(self.instance,
+            LTFArray(
+                weight_array=self.instance.weight_array[:, :n],
+                transform=self.parameters.transform,
+                combiner=self.parameters.combiner
+            ),
+            10000, RandomState(12346)))
+
         return Result(
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=1.0 - tools.approx_dist(self.instance, self.model, 10000, self.prng_c),
+            accuracy=1.0 - tools.approx_dist(self.instance, self.model, 10000, RandomState(1902380)),
             iterations=self.learner.num_iterations,
             abortions=self.learner.num_abortions,
             individual_accuracies=','.join(map(str, self.calc_individual_accs())),

@@ -11,8 +11,12 @@ from scipy.stats import pearsonr
 
 from pypuf.bipoly import BiPoly
 from pypuf.learner.base import Learner
+import pypuf.tools as tools
 from pypuf.tools import transform_challenge_11_to_01
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+
+
+
 
 # ==================== Reliability for PUF and MODEL ==================== #
 
@@ -87,19 +91,32 @@ class ReliabilityBasedCMAES(Learner):
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
 
-        # Linearize challenges for faster LTF computation
-        if self.transform == 'id':
-            poly = BiPoly.linear(self.n)
-        elif self.transform == 'atf':
-            poly = BiPoly.xor_arbiter_puf(self.n, self.k)
-        elif self.transform == 'fixed_permutation':
-            poly = BiPoly.permutation_puf(self.n, self.k)
-        elif self.transform == 'lightweight_secure':
-            poly = BiPoly.lightweight_secure_puf(self.n, self.k)
-        else:
-            raise Exception("Unknown transformation in CMA-ES Learner.")
+        # Linearize challenges for faster LTF computation (shape=(N,k,n))
+        self.linearized_challenges = self.transform(self.training_set.challenges,
+                                                    k=self.k)
 
-        self.lin_chals =
+
+    def print_accs(self, es):
+        w = es.best.x[:-1]
+        #print(es.fit.hist)
+        a = [
+            1 - tools.approx_dist(
+                LTFArray(v[:self.n].reshape(1,self.n), self.transform, self.combiner),
+                LTFArray(w[:self.n].reshape(1,self.n) ,self.transform, self.combiner),
+                10000,
+                np.random.RandomState(12345)
+            )
+            for v in self.training_set.instance.weight_array
+            ]
+        print(np.array(a), self.objective(es.best.x))
+
+    def is_iteration_stagnated(self, es):
+        fun_history = es.fit.hist[-5:]
+        if (len(es.fit.hist) < 50):
+            return False
+        if (np.abs(max(fun_history) - min(fun_history)) < 0.01):
+            return True
+        return False
 
     def objective(self, state):
         """
@@ -108,24 +125,50 @@ class ReliabilityBasedCMAES(Learner):
         """
         weights = state[:self.n]
         epsilon = state[-1]
-        model = LTFArray(weights[np.newaxis, :], self.transform, self.combiner)
-        delay_diffs = model.val(self.training_set.challenges)
+        model = LTFArray(weights[np.newaxis, :], 'id', self.combiner)
+        delay_diffs = model.val(self.current_challenges)
         model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
         corr = pearsonr(model_reliabilities, self.puf_reliabilities)
         return np.abs(1 - corr[0])
 
 
     def learn(self):
-        options = {
-            'seed': self.prng.randint(2 ** 32),
-            #'timeout': "2.5 * 60**2"
-            'maxiter': self.limit_i,
-            #'tolstagnation': self.limit_s,
-        }
-        init_state = np.array([0]*self.n + [2]) # Initialze weights = 0; epsilon = 2
-        es = cma.CMAEvolutionStrategy(init_state, 1, inopts=options)
-        es.optimize(self.objective)
-        w = es.best.x[:self.n]
-        model = LTFArray(w[np.newaxis, :], self.transform, self.combiner)
+        pool = []
+        # For k chains, learn a model and add to pool if "it is new"
+        n_chain = 0
+        while n_chain < self.k:
+            print("Attempting to learn chain", n_chain)
+            self.current_challenges = self.linearized_challenges[:, n_chain, :]
+
+            cma_options = {
+                'seed': self.prng.randint(2 ** 32),
+                #'maxiter': self.limit_i,
+                #'tolstagnation': self.limit_s,
+                #'tolstagnation': 10,
+                'termination_callback': self.is_iteration_stagnated
+            }
+            init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
+            init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
+            es = cma.CMAEvolutionStrategy(init_state, 1, inopts=cma_options)
+            es.optimize(self.objective, callback=self.print_accs)
+            w = es.best.x[:self.n]
+            # Flip chain for comparison; invariant of reliability
+            w = -w if w[0] < 0 else w
+
+            # Check if learned model (w) is a 'new' chain (not correlated to other chains)
+            for v in pool:
+                if (np.abs(pearsonr(w, v)[0]) > 0.5):
+                    break
+            else:
+                pool.append(w)
+                n_chain += 1
+
+        model = LTFArray(np.array(pool), self.transform, self.combiner)
+        # TODO: migrate to result object
+        a = [[pearsonr(v[:self.n],w)[0] for w in pool] for v in self.training_set.instance.weight_array]
+        print(np.array(a))
+
+
+
         return model
 
