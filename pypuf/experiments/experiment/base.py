@@ -91,7 +91,7 @@ class Experiment(object):
         :param progress_log_name: A unique name, used for log path.
         :param parameters: NamedTuple object holding all experiment parameters
         """
-        self.id = uuid4()
+        self.id = getattr(self, 'id', uuid4())
         self.progress_log_name = progress_log_name
         self.parameters = parameters
         self.hash = sha256((self.__class__.__name__ + ': ' + str(parameters)).encode()).hexdigest()
@@ -164,15 +164,16 @@ class Experiment(object):
                                       datefmt='%Y-%m-%d %H:%M:%S')
                 )
                 self.progress_logger.logger.addHandler(file_handler)
-                self.progress_logger.propagate = False
+                logging.getLogger(self.progress_log_name).propagate = False
 
             # set up the result logger
-            self.result_logger = logging.getLogger(result_log_name)
+            self.result_logger = LogMemoryUsageLoggerAdapter(logging.getLogger(result_log_name), {})
             self.result_logger.setLevel(logging.DEBUG)
             if result_log_queue:
                 queue_handler = logging.handlers.QueueHandler(result_log_queue)
                 queue_handler.setLevel(logging.DEBUG)
-                self.result_logger.addHandler(queue_handler)
+                logging.getLogger(result_log_name).addHandler(queue_handler)
+                logging.getLogger(result_log_name).propagate = False
 
             # run preparations (not timed)
             self.prepare()
@@ -208,7 +209,7 @@ class Experiment(object):
                 self.progress_logger.logger.removeHandler(file_handler)
                 file_handler.close()
             if self.result_logger and queue_handler:
-                self.result_logger.removeHandler(queue_handler)
+                logging.getLogger(result_log_name).removeHandler(queue_handler)
                 queue_handler.close()
 
     @staticmethod

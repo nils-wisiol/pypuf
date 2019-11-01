@@ -2,7 +2,13 @@
 This module provides a data type that represents polynomials over {-1, 1}: BiPoly
 It also provides functions for the generation of commonly used BiPoly instances.
 """
-from numpy import bincount, array
+from functools import reduce
+from operator import mul
+
+from numpy import bincount, array, zeros
+from numpy.random.mtrand import RandomState
+
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
 def to_dict_notation(mon):
@@ -257,6 +263,24 @@ class BiPoly(object):
         """
         return array(list(map(len, list(self.monomials.keys()))))
 
+    def weight(self):
+        """
+        Returns the sum of squares of all coefficients.
+
+        >>> BiPoly.linear(1337).weight()
+        1337
+
+        >>> BiPoly({frozenset({1, 2}): .5, frozenset(): .25}).weight()
+        0.3125
+
+        This is useful in combination with the filtering for low degrees, e.g.
+        >>> BiPoly.arbiter_puf(64).low_degrees(2).weight()
+        1
+
+        :return:
+        """
+        return sum([v**2 for v in self.monomials.values()])
+
     def degrees_count(self):
         """
         Returns an array of degree-occurances, where value v of index i means
@@ -299,6 +323,41 @@ class BiPoly(object):
         """
         return [list(s) for s, _ in self]
 
+    def to_vector_notation(self, n=None):
+        """
+        Returns a list of vectors of length n and values in {0,1}. The value will be
+        zero if and only if the variable corresponding to the index is not present in the
+        monomial, and otherwise one.
+
+        Note that coefficient information is not included in the notation.
+
+        >>> atf = BiPoly.arbiter_puf(n=4)
+        >>> atf.to_vector_notation()
+        array([[1., 1., 1., 1.],
+               [0., 1., 1., 1.],
+               [0., 0., 1., 1.],
+               [0., 0., 0., 1.]])
+
+        >>> BiPoly.xor_arbiter_puf(n=64, k=2).to_vector_notation(n=64).shape[1]
+        64
+
+        >>> BiPoly.xor_arbiter_puf(3, 2).to_vector_notation(n=3)
+        array([[0., 0., 0.],
+               [1., 0., 0.],
+               [1., 1., 0.],
+               [0., 1., 0.]])
+
+        :return:
+        """
+        if n is None:
+            n = 0
+
+        n = max(max([max(list(m)) for m, _ in self if m]) + 1, n)
+        chi_set = zeros(shape=(len(self), n))
+        for i, (m, _) in enumerate(self):
+            chi_set[i, list(m)] = 1
+        return chi_set
+
     def substitute(self, mapping):
         """
         Returns BiPoly that corresponds to substituting each variable by a monomial
@@ -310,6 +369,12 @@ class BiPoly(object):
         >>> ltf = atf.substitute([[0], [1, 2], [2, 3], [3, 4], [4]])
         >>> str(ltf)
         '  1x₁ +   2x₂ +   3x₃ +   4x₄'
+
+        >>> BiPoly.arbiter_puf(4).substitute([[2], [3], [0], [1]])
+          1x₀x₁x₂x₃ +   1x₀x₁x₃ +   1x₀x₁ +   1x₁
+
+        >>> BiPoly.arbiter_puf(4).substitute([[0, 1], [2, 3], [0], [1, 2]])
+          1x₃ +   1x₀x₁x₃ +   1x₀x₁x₂ +   1x₁x₂
 
         >>> ltf = BiPoly({frozenset({0}): 0, frozenset({1}): 1, frozenset({2}): 2, frozenset({3}): 3})
         >>> atf = ltf.substitute(([[0, 1, 2, 3], [1, 2, 3], [2, 3], [3]]))
@@ -368,6 +433,69 @@ class BiPoly(object):
         '  3 +   2x₀ +   2x₀x₁ +   2x₁'
         """
         return cls.arbiter_puf(n)**k
+
+    @classmethod
+    def lightweight_secure_puf(cls, n, k):
+        """
+        Returns the polynomial of the PTF representation of the Lightweight Secure PUF with
+        n bit and k arbiter chains.
+
+        Originally defined by Majzoobi et al. 2008 "Lightweight Secure PUFs"
+        :param n: int
+                Length of the arbiter chains.
+        :param k:
+                Number of arbiter chains.
+
+        >>> BiPoly.lightweight_secure_puf(4, 1)
+          1x₃ +   1x₀x₁x₃ +   1x₀x₁x₂ +   1x₁x₂
+
+        #>>> str(BiPoly.lightweight_secure_puf(4, 2))
+        '  2x₀x₁x₂x₃ +   2x₀ +   2x₀x₂ +   4 +   2x₁x₂x₃ +   2x₁x₃ +   2x₂'
+
+        #>>> str(BiPoly.lightweight_secure_puf(8, 1))
+        '  1x₀x₁ +   1x₂x₃ +   1x₄x₅ +   1x₆x₇ +   1x₁ +   1x₁x₂ +   1x₃x₄ +   1x₅x₆'
+
+        """
+        arbiter_pufs = [cls.arbiter_puf(n) for _ in range(k)]
+
+        # pairwise XOR
+        # for definition of the mapping, see Wisiol et al. "Breaking Lightweight Secure [...]",
+        # ia.cr/2019/799.pdf, p. 5; note that our indices here are 0-based
+        mapping = (
+            [[i, i + 1] for i in range(0, n, 2)] +    # [0, 1], [2, 3], ..., [n-2, n-1]
+            [[0]] +                                   # [0]
+            [[i, i + 1] for i in range(1, n - 2, 2)]  # [1, 2], [3, 4], ..., [n-3, n-2]
+        )
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute(mapping)
+
+        # rotate
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute([[(i + l) % n] for i in range(n)])
+
+        return reduce(mul, arbiter_pufs)
+
+    @classmethod
+    def permutation_puf(cls, n, k):
+        """
+        Returns the polynomial of the PTF representation of the Permutation-Based XOR Arbiter PUF with
+        n bit and k arbiter chains.
+
+        Originally defined by Wisiol et al. 2019 "Breaking Lightweight Secure"
+        """
+        assert n in LTFArray.FIXED_PERMUTATION_SEEDS.keys() and k <= len(LTFArray.FIXED_PERMUTATION_SEEDS[n]), \
+            f'Permutation PUF with {n}-bit challenges and {k} XORs is currently not supported.'
+
+        arbiter_pufs = [cls.arbiter_puf(n) for _ in range(k)]
+
+        # generate permutations
+        permutations = [RandomState(seed).permutation(n) for seed in LTFArray.FIXED_PERMUTATION_SEEDS[n]]
+
+        # apply permutation
+        for l in range(k):
+            arbiter_pufs[l] = arbiter_pufs[l].substitute([[idx] for idx in permutations[l]])
+
+        return reduce(mul, arbiter_pufs)
 
     @classmethod
     def interpose_puf_approximation(cls, n, k_up, k_down, p_up=None):

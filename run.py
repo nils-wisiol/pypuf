@@ -12,8 +12,7 @@ if 'PYPUF_CPU_LIMIT' in os.environ and os.environ['PYPUF_CPU_LIMIT'] != '1':
     raise ValueError('PYPUF_CPU_LIMIT must be unset or 1.')
 else:
     os.environ['PYPUF_CPU_LIMIT'] = '1'
-
-from pypuf.tools import find_study_class
+    from pypuf.tools import find_study_class
 
 
 def main(args):

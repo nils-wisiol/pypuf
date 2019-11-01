@@ -17,7 +17,6 @@ experimenter = Experimenter('experimenter_log_path', experiments)
 experimenter.run()
 """
 import logging
-import multiprocessing
 import os
 import random
 import signal
@@ -27,9 +26,9 @@ import time
 import traceback
 from _sha256 import sha256
 from datetime import datetime, timedelta
+from multiprocessing import cpu_count, Pool, Process
 from multiprocessing.managers import SyncManager
 from threading import Timer, Lock
-from time import sleep
 
 from pypuf.experiments.experiment.base import ExperimentCanceledException
 
@@ -61,7 +60,7 @@ class Experimenter(object):
         self.result_log_name = result_log_name
 
         # Setup parallel execution limit
-        self.cpu_limit = min(cpu_limit, multiprocessing.cpu_count()) if cpu_limit else multiprocessing.cpu_count()
+        self.cpu_limit = min(cpu_limit, cpu_count()) if cpu_limit else cpu_count()
         self.cpu_limit = int(os.environ.get('PYPUF_CPU_LIMIT', self.cpu_limit))
         self.semaphore = None
 
@@ -116,6 +115,12 @@ class Experimenter(object):
         """
         Runs all experiments. Blocks until all experiment are finished.
         """
+        # determine cpu type
+        from numpy.distutils import cpuinfo
+        try:
+            cpu = cpuinfo.cpu.info[0]['model name']
+        except Exception:  # pylint: disable=W
+            pass
 
         # Setup multiprocessing logging
         manager = SyncManager()
@@ -123,8 +128,8 @@ class Experimenter(object):
         result_log_queue = manager.Queue()
         self.cancel_experiments = manager.Value('b', 0)
         self.interrupt_condition = manager.Condition()
-        listener = multiprocessing.Process(target=result_log_listener,
-                                           args=(result_log_queue, setup_result_logger, self.result_log_name,))
+        listener = Process(target=result_log_listener,
+                           args=(result_log_queue, setup_result_logger, self.result_log_name,))
         listener.start()
 
         # Setup callback throttling
@@ -163,7 +168,7 @@ class Experimenter(object):
         print("Using up to %i CPUs %s" %
               (self.cpu_limit,
                'with numpy multi-threading disabled' if os.environ.get('OMP_NUM_THREADS', None) == '1' else ''))
-        with multiprocessing.Pool(self.cpu_limit) as pool:
+        with Pool(self.cpu_limit) as pool:
 
             # print status function
             def output_status(prefix='F'):
@@ -199,14 +204,22 @@ class Experimenter(object):
                         'experiment_id': result.experiment_id,
                         'experiment_hash': experiment.hash,
                         'experiment': experiment.__class__.__name__,
+                        'cpu': cpu,
                     })
+                    for env_var in [
+                            'PYPUF_CPU_LIMIT',
+                            'OMP_NUM_THREADS',
+                            'NUMEXPR_NUM_THREADS',
+                            'MKL_NUM_THREADS',
+                    ]:
+                        row.update({env_var: os.environ.get(env_var, None)})
                     row.update(experiment.parameters._asdict())
                     row.update(result._asdict())
                     self.results = self.results.append(DataFrame([row]), sort=True)
 
                 # If there is already a callback waiting, we will replace it and therefore cancel it
                 if self.next_callback and self.next_callback.is_alive():
-                    sleep(0)  # let other threads run first
+                    time.sleep(0)  # let other threads run first
                     if callback_lock.acquire(blocking=False):
                         self.next_callback.cancel()
                         callback_lock.release()
@@ -311,14 +324,16 @@ class Experimenter(object):
         already imported and the environment was not yet set accordingly, an
         Exception will be raised.
         """
-        if os.environ.get('PYPUF_CPU_LIMIT', None) == '1':
-            return
-
         desired_environment = {
             'OMP_NUM_THREADS': '1',
             'NUMEXPR_NUM_THREADS': '1',
             'MKL_NUM_THREADS': '1',
         }
+
+        if os.environ.get('PYPUF_CPU_LIMIT', None) == '1' or \
+                any([os.environ.get(key, None) is not None for key in desired_environment]):
+            return
+
         if 'numpy' in sys.modules:
             for key, val in desired_environment.items():
                 if key not in os.environ or os.environ[key] != val:
@@ -337,11 +352,32 @@ class Experimenter(object):
         Returns a DataFrame containing all results of both arguments. If a result appears in
         both `results` and `other_results`, the result of `results` has precedence.
         """
-        if len(other_results):
+        if not other_results.empty:
             merge = results.copy()
             return merge.append(other_results[~other_results.experiment_hash.isin(results.experiment_hash)])
         else:
             return results
+
+    @classmethod
+    def merge_result_files(cls, source_files, dest_file):
+        """
+        Reads results from all source files, combines them into a single database and writes the result in the
+        destination file. Results appearing multiple times are given precedence in order of the source files given.
+        The behavior for duplicates results in a single source file is undefined.
+        :param source_files: List[str]
+        :param dest_file: str
+        """
+        from pandas import read_csv, DataFrame
+        sources = [read_csv(f) for f in source_files]
+        results = DataFrame(columns=['experiment_hash'])
+        for idx, source in enumerate(sources):
+            length_before = len(results)
+            results = cls._merge_results(results, source)
+            added = len(results) - length_before
+            print(f'{source_files[idx]}: total {len(source)}, added {added}, already known {len(source) - added} '
+                  f'results')
+        print(f'Merge contains a total of {len(results)} results from {len(source_files)} sources.')
+        results.to_csv(dest_file, index=False)
 
     @property
     def _lock_file(self):
@@ -385,7 +421,6 @@ class Experimenter(object):
         try:
             while True:
                 # wait for foreign process to give up the lock
-                print(f'{time.time()} waiting for lock file for {self._lock_id} ...')
                 while self._has_foreign_result_file_lock:
                     try:
                         wait_time = time.time() - os.path.getctime(self._lock_file)
@@ -399,20 +434,18 @@ class Experimenter(object):
                         pass
 
                     # wait and try again
-                    sleep(abs(random.gauss(check_interval_s, .1)))
+                    time.sleep(abs(random.gauss(check_interval_s, .1)))
 
                 # try to acquire the lock
-                print(f'{time.time()} acquire lock file for {self._lock_id} ...')
                 with open(self._lock_file, 'w') as f:
                     f.write(self._lock_id)
 
                 # wait to see if someone else also tries to acquire the lock,
                 # then check again if it is us now
-                sleep(random.choice(range(4)))
+                time.sleep(random.uniform(.1, 3))
 
                 # break if we can confirm we have the lock
                 if self._result_lock_owner == self._lock_id:
-                    print(f'{time.time()} successfully acquired lock for {self._lock_file}')
                     break
                 else:
                     if self._lock_owner_valid:
@@ -428,12 +461,10 @@ class Experimenter(object):
 
     def _release_result_file_lock(self, force=False):
         if not self._has_foreign_result_file_lock or force:
-            print(f'{time.time()} removing lock file')
             try:
                 os.remove(self._lock_file)
             except OSError as e:
                 print(f'{time.time()} error removing lock file: {e}')
-                pass
         else:
             print(f'{time.time()} not removing foreign lock file, as force=False')
 
@@ -480,13 +511,16 @@ def setup_result_logger(result_log_name):
     :param result_log_name: string
                         Path to or name to the log file
     """
-    root = logging.getLogger(result_log_name)
+    logger = logging.getLogger(result_log_name)
 
-    # Setup logging to both file and console
+    # Setup logging to file only
+    logger.propagate = False
+    for hdlr in logger.handlers:
+        logger.removeHandler(hdlr)
     file_handler = logging.FileHandler(filename='logs/%s.log' % result_log_name, mode='w')
     file_handler.setLevel(logging.INFO)
 
-    root.addHandler(file_handler)
+    logger.addHandler(file_handler)
     return file_handler
 
 

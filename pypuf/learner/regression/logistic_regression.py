@@ -13,7 +13,7 @@ from numpy.random import RandomState
 
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import compare_functions, TrainingSet, approx_dist_nonrandom
+from pypuf.tools import compare_functions, approx_dist_nonrandom, ChallengeResponseSet
 
 
 class LogisticRegression(Learner):
@@ -110,9 +110,12 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
+    def __init__(self, t_set: ChallengeResponseSet, n, k, transformation=LTFArray.transform_id,
+                 combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
-                 convergence_decimals=2, shuffle=False, test_set: TrainingSet = None, bias=False):
+                 convergence_decimals=2, shuffle=False, test_set: ChallengeResponseSet = None, bias=False,
+                 target_test_accuracy=None, test_accuracy_patience=None, test_accuracy_improvement=None,
+                 min_iterations=0):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -127,6 +130,8 @@ class LogisticRegression(Learner):
         :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
         :param logger: logging.Logger
                        Logger which is used to log detailed information of learn iterations.
+        :param target_test_accuracy: None or float. If test accuracy exceeds this value, the learning is aborted.
+        :param min_iterations: int. Number of iterations the learner does before converging.
         """
         self.iteration_count = 0
         self.epoch_count = 0
@@ -139,6 +144,7 @@ class LogisticRegression(Learner):
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
         self.iteration_limit = iteration_limit
+        self.min_iterations = min_iterations
         self.convergence_decimals = convergence_decimals
         self.transformation = transformation
         self.combiner = combiner
@@ -146,12 +152,15 @@ class LogisticRegression(Learner):
         self.converged = False
         self.logger = logger or logging
         self.updater = None
-        self.minibatch_size = minibatch_size or self.training_set.N
+        self.minibatch_size = minibatch_size
         self.shuffle = shuffle
         self.training_set_dist = -1
         self.training_set_dist_sign = -1
         self.test_set_dist = -1
         self.bias = bias
+        self.target_test_accuracy = target_test_accuracy
+        self.test_accuracy_patience = test_accuracy_patience
+        self.test_accuracy_improvement = test_accuracy_improvement
 
     @property
     def training_set(self):
@@ -170,7 +179,7 @@ class LogisticRegression(Learner):
         # pylint: disable-msg=W0201
         self.__training_set = val
 
-    def gradient(self, model, challenges, responses, block_size=10**5):
+    def gradient(self, model, challenges, responses, block_size=10**6):
         """
         Compute the gradient of the given model.
         :param model: pypuf.simulation.arbiter_based.LTFArray
@@ -280,6 +289,7 @@ class LogisticRegression(Learner):
                  The computed model.
         """
         self.logger.debug('LR learner started')
+        test_set_accuracies = []
 
         # log format
         def log_state(step_size):
@@ -288,8 +298,6 @@ class LogisticRegression(Learner):
             """
             if self.logger is None:
                 return
-            if self.test_set:
-                self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
             self.logger.debug(
                 '%i\t%s\t%f\t%f\t%f\t%s' % (
                     self.iteration_count,
@@ -305,6 +313,7 @@ class LogisticRegression(Learner):
         seterr(all='raise')
 
         # Prepare challenges
+        self.logger.debug(f'Challenge bit type {self.training_set.challenges.dtype}')
         self.logger.debug(f'Transforming {len(self.training_set.challenges)} given {self.n}-bit '
                           f'challenges using {self.transformation.__name__} for k={self.k} ...')
         transformed_challenges = self.transformation(self.training_set.challenges, self.k)
@@ -333,7 +342,9 @@ class LogisticRegression(Learner):
         converged = False
         self.iteration_count = 0
         log_state(0)
-        number_of_batches = (self.training_set.N + 1) // self.minibatch_size
+        number_of_batches = ceil(self.training_set.N / (self.minibatch_size or self.training_set.N))
+        self.logger.debug(f'using {self.training_set.N} examples with batches of size '
+                          f'{self.minibatch_size}, i.e. {number_of_batches} batches')
         efba_challenge_batches = []
         response_batches = []
         if not self.shuffle:
@@ -365,7 +376,26 @@ class LogisticRegression(Learner):
 
                 # check convergence
                 current_step_size = norm(self.updater.step)
-                converged = current_step_size < 10**-self.convergence_decimals
+                if self.test_set and self.test_set.N:
+                    self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
+                    test_set_accuracies.append(1 - self.test_set_dist)
+                converged = (
+                    current_step_size < 10**-self.convergence_decimals
+                    or (self.target_test_accuracy and 1 - self.test_set_dist > self.target_test_accuracy)
+                    or (
+                        self.test_accuracy_improvement
+                        and self.test_accuracy_patience
+                        and len(test_set_accuracies) >= self.test_accuracy_patience
+                        and (
+                            abs(
+                                min(test_set_accuracies[-self.test_accuracy_patience:])
+                                - max(test_set_accuracies[-self.test_accuracy_patience:])
+                            ) < self.test_accuracy_improvement
+                        )
+                    )
+                ) and (
+                    self.iteration_count > self.min_iterations
+                )
 
                 # log
                 log_state(current_step_size)
@@ -373,9 +403,6 @@ class LogisticRegression(Learner):
                 if converged:
                     break
 
-        if not converged:
-            self.converged = False
-        else:
-            self.converged = True
-
+        self.efba_sub_challenges = None  # del ref to training set memory to allow GC if the t-set is also dereferenced
+        self.converged = converged
         return model

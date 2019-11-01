@@ -16,11 +16,11 @@ class XORArbiterPUF(NoisyLTFArray):
     Embedded Systems (2009)
     """
 
-    def __init__(self, n: int, k: int, seed: int = None, transform=None, noisiness=0, noise_seed=None):
+    def __init__(self, n: int, k: int, seed: int = None, transform=None, noisiness: float = 0, noise_seed: int = None):
         random_instance = RandomState(seed=seed) if seed is not None else RandomState()
         super().__init__(
             weight_array=self.normal_weights(n=n, k=k, random_instance=random_instance),
-            transform=transform or LTFArray.transform_id,
+            transform=transform or LTFArray.transform_atf,
             combiner=LTFArray.combiner_xor,
             sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
                 n=n,
@@ -60,7 +60,7 @@ class InterposePUF(Simulation):
     """
 
     def __init__(self, n: int, k_down: int, k_up: int = 1, interpose_pos: int = None, seed: int = None, transform=None,
-                 noisiness=0, noise_seed=None):
+                 noisiness: float = 0, noise_seed: int = None):
         super().__init__()
         self.n = n
         self.up = XORArbiterPUF(n, k_up, seed, transform, noisiness, noise_seed)
