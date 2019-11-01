@@ -20,7 +20,7 @@ class XORArbiterPUF(NoisyLTFArray):
         random_instance = RandomState(seed=seed) if seed is not None else RandomState()
         super().__init__(
             weight_array=self.normal_weights(n=n, k=k, random_instance=random_instance),
-            transform=transform or LTFArray.transform_id,
+            transform=transform or LTFArray.transform_atf,
             combiner=LTFArray.combiner_xor,
             sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
                 n=n,

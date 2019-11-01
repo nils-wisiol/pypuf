@@ -9,10 +9,9 @@ from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
 
-from numpy import abs as np_abs
+from numpy import abs as np_abs, absolute
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
-from numpy import squeeze
 from numpy import sum as np_sum
 from numpy.random import RandomState
 
@@ -104,10 +103,10 @@ def append_last(arr, item):
     return append(arr, item_arr, axis=axis)
 
 
-def approx_dist(instance1, instance2, num, random_instance=RandomState()):
+def approx_dist(instance1: Simulation, instance2: Simulation, num, random_instance=RandomState()):
     """
-    Approximate the distance of two functions instance1, instance2 by evaluating instance1 random set of inputs.
-    instance1, instance2 needs to have eval() method and input_length member.
+    Approximate the distance of two Simulations instance1, instance2 by evaluating a random set of inputs.
+    The image of instance1 and instance2 needs to be {-1,1}, and they must have identical challenge_length().
     :param instance1: pypuf.simulation.arbiter_based.base.Simulation
     :param instance2: pypuf.simulation.arbiter_based.base.Simulation
     :param num: int
@@ -117,9 +116,32 @@ def approx_dist(instance1, instance2, num, random_instance=RandomState()):
     :return: float
              Probability (randomly uniform x) for instance1.eval(x) != instance2.eval(x)
     """
-    assert instance1.n == instance2.n
-    inputs = random_inputs(instance1.n, num, random_instance=random_instance)
+    assert instance1.challenge_length() == instance2.challenge_length(), \
+        'Cannot compare instances with different challenge spaces of dimension %i and %i, respectively.' \
+        % (instance1.challenge_length(), instance2.challenge_length())
+    inputs = random_inputs(instance1.challenge_length(), num, random_instance=random_instance)
     return (num - count_nonzero(instance1.eval(inputs) == instance2.eval(inputs))) / num
+
+
+def approx_dist_real(instance1: Simulation, instance2: Simulation, num, random_instance=RandomState()):
+    """
+    Approximate the distance of two Simulations instance1, instance2 by evaluating a random set of inputs.
+    Both must have identical challenge_length().
+    :param instance1: pypuf.simulation.arbiter_based.base.Simulation
+    :param instance2: pypuf.simulation.arbiter_based.base.Simulation
+    :param num: int
+                Number of n bit vector
+    :param random_instance: numpy.random.RandomState
+                            The PRNG which is used to generate the input arrays.
+    :return: float
+             Generalization of approx_dist(instance1, instance2, ...),
+             Expectation (randomly uniform x) |instance1.eval(x) - instance2.eval(x)| / 2
+    """
+    assert instance1.challenge_length() == instance2.challenge_length(), \
+        'Cannot compare instances with different challenge spaces of dimension %i and %i, respectively.' \
+        % (instance1.challenge_length(), instance2.challenge_length())
+    inputs = random_inputs(instance1.challenge_length(), num, random_instance=random_instance)
+    return average(absolute(instance1.eval(inputs) - instance2.eval(inputs)))
 
 
 def approx_dist_nonrandom(instance, test_set):
@@ -371,7 +393,7 @@ class ChallengeResponseSet:
         :param total: Total number of blocks.
         :return: A challenge response set.
         """
-        return self.subset(range(
+        return self.subset(slice(
             int(i / total * self.N),
             int((i + 1) / total * self.N)
         ))
@@ -394,29 +416,20 @@ class TrainingSet(ChallengeResponseSet):
     Note that this is, strictly speaking, not a set.
     """
 
-    def __init__(self, instance, N, random_instance=RandomState(), reps=1):
+    def __init__(self, instance, N, random_instance=RandomState()):
         """
-        :param instance:        pypuf.simulation.base.Simulation
-                                Instance which is used to generate responses for random challenges
-        :param N:               int
-                                Number of desired challenges
+        :param instance: pypuf.simulation.base.Simulation
+                         Instance which is used to generate responses for random challenges.
+        :param N: int
+                  Number of desired challenges
         :param random_instance: numpy.random.RandomState
-                                PRNG instance for pseudo random sampling challenges
-        :param reps:            int
-                                Number of repeated evaluations of every challenge on instance (None equals 1)
+                                PRNG which is used to draft challenges.
         """
         self.instance = instance
-        self.N = min(N, 2 ** instance.n)
         challenges = sample_inputs(instance.n, N, random_instance=random_instance)
-        responses = zeros((self.N, reps))
-        for i in range(reps):
-            responses[:, i] = instance.eval(challenges[:, :]).T
-        if reps == 1:
-            responses = squeeze(responses, axis=0)
-        self.reps = reps
         super().__init__(
             challenges=challenges,
-            responses=responses,
+            responses=instance.eval(challenges)
         )
 
 
