@@ -12,8 +12,7 @@ from numpy.random.mtrand import RandomState
 
 from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
-#from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
-from pypuf.learner.evolution_strategies.cmaes_new import ReliabilityBasedCMAES
+from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
@@ -42,7 +41,7 @@ class Result(NamedTuple):
     abortions: int
     individual_accuracies: str
     stops: str
-
+    
 
 class ExperimentReliabilityBasedCMAES(Experiment):
     """This class implements an experiment for executing the reliability based CMAES learner for XOR LTF arrays.
@@ -101,20 +100,14 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         self.model = self.learner.learn()
 
     def analyze(self):
-        if self.model is None or self.instance is None:
-            dist = 0
-            accs = 'dummy'
-        else:
-            dist = 1.0 - tools.approx_dist(self.instance, self.model, 10000, self.prng_c)
-            accs =','.join(map(str, self.calc_individual_accs()))
         return Result(
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=dist,
+            accuracy=1.0 - tools.approx_dist(self.instance, self.model, 10000, self.prng_c),
             iterations=self.learner.num_iterations,
             abortions=self.learner.num_abortions,
-            individual_accuracies=accs,
+            individual_accuracies=','.join(map(str, self.calc_individual_accs())),
             stops=self.learner.stops,
         )
 

@@ -31,25 +31,14 @@ class ReliabilityAttackStudy(Study):
                 )
             )
             for n in [64]
-            for k in [1]
-            for transform in ['atf']
-            for noisiness in [.25]
-            for N in [10**4]
-            for R in [11]
-            for pop_size in [20]
-            for seed in [0]
+            for k in [1, 2, 3, 4, 5, 6]
+            for transform in ['atf', 'id', 'lightweight_secure', 'fixed_permutation']
+            for noisiness in [.01, .1, .25, .5]
+            for N in [10**4, 10**5, 5 * 10**5, 10**6]
+            for R in [3, 5, 11, 19, 49]
+            for pop_size in [20, 50, 90]
+            for seed in range(10)
         ]
-
-    """
-        for n in [64]
-        for k in [1, 2, 3, 4, 5, 6]
-        for transform in ['atf', 'id', 'lightweight_secure', 'fixed_permutation']
-        for noisiness in [.01, .1, .25, .5]
-        for N in [10**4, 10**5, 5 * 10**5, 10**6]
-        for R in [3, 5, 11, 19, 49]
-        for pop_size in [20, 50, 90]
-        for seed in range(10)
-    """
 
     def plot(self):
         data = self.experimenter.results.copy()

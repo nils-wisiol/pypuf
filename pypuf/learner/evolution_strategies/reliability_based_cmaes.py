@@ -47,7 +47,6 @@ class ReliabilityBasedCMAES(Learner):
         :param logger:          Logger, the instance that logs detailed information every learning iteration
         """
         self.training_set = training_set
-        print("HERE",training_set.responses.shape)
         self.k = k
         self.n = n
         self.transform = transform
@@ -113,7 +112,6 @@ class ReliabilityBasedCMAES(Learner):
         # Learn all individual LTF arrays (chains)
         with self.avoid_printing():
             while self.num_learned < self.k and self.num_abortions < 10 * self.k:
-                print("Learned: ", self.k)
                 aborted = False
                 options['seed'] = self.prng.randint(2 ** 32)
                 is_same_solution = self.create_abortion_function(
@@ -177,7 +175,6 @@ class ReliabilityBasedCMAES(Learner):
     @contextlib.contextmanager
     def avoid_printing():
         """Avoid printing on sys.stdout while learning"""
-        yield
         save_stdout = sys.stdout
         sys.stdout = open('/dev/null', 'w')
         yield
@@ -187,22 +184,17 @@ class ReliabilityBasedCMAES(Learner):
     @staticmethod
     def create_fitness_function(challenges, measured_rels, epsilon, transform, combiner):
         """Return a fitness function on a fixed set of challenges and corresponding reliabilities"""
-        print("Measured Reliabilities:", measured_rels)
-        # Niklas: Measured Reliabilities: [3. 3. 3. ... 3. 3. 3.] ... ?
         this = ReliabilityBasedCMAES
 
         def fitness(individual):
             """Return individuals sorted by their correlation coefficient as fitness"""
             ltf_array = LTFArray(individual[np.newaxis, :], transform, combiner)
             delay_diffs = ltf_array.val(challenges)
-            print(delay_diffs)
-            # Niklas: Change here!
             reliabilities = np.zeros(np.shape(delay_diffs))
             indices_of_reliable = np.abs(delay_diffs[:]) > epsilon
             reliabilities[indices_of_reliable] = 1
             correlation = this.calc_corr(reliabilities, measured_rels)
             obj_vals = 1 - (1 + correlation)/2
-            print("Fitness: ", obj_vals, end="\r", flush=True)
             return obj_vals
 
         return fitness
@@ -262,12 +254,7 @@ class ReliabilityBasedCMAES(Learner):
     @staticmethod
     def measure_rels(responses):
         """Return array of measured reliabilities of instance"""
-        # Niklas: What?
-        # TODO: PRINT
-        print("RESPONSES:", responses)
         measured_rels = np.abs(np.sum(responses, axis=0))
-        #measured_rels = np.sum(responses, axis=0) / responses.shape[1]
-        print("MEASURED_RELS:", measured_rels)
         if np.var(measured_rels) == 0:
             raise Exception('The challenges\' reliabilities evaluated on the instance to learn are to high!')
         return measured_rels
