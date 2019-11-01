@@ -7,8 +7,11 @@
 import cma
 import numpy as np
 
-from tools import transform_challenge_11_to_01 as 11_to_01
+from scipy.stats import pearsonr
 
+from pypuf.learner.base import Learner
+from pypuf.tools import transform_challenge_11_to_01
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 # ==================== Reliability for PUF and MODEL ==================== #
 
@@ -18,11 +21,12 @@ def reliabilities_PUF(response_bits):
         :param response_bits: Array with shape [num_challenges, num_measurements]
     """
     # Convert to 0/1 from 1/-1
+    response_bits = np.array(response_bits, dtype=np.int8)
     if (-1 in response_bits):
-        response_bits = 11_to_01(response_bits)
-    return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=0))
+        response_bits = transform_challenge_11_to_01(response_bits)
+    return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
 
-def reliabilities_MODEL(delay_diffs, EPSILON=0.1):
+def reliabilities_MODEL(delay_diffs, EPSILON=3):
     """
         Computes 'Hypothical Reliabilities' according to [Becker].
         :param delay_diffs: Array with shape [num_challenges]
@@ -83,26 +87,32 @@ class ReliabilityBasedCMAES(Learner):
         self.num_learned = 0
         self.logger = logger
 
+        #TODO linearize challenges to use them in id transform for LTF model
+
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
 
-    def fitness(self, weights):
+    def objective(self, weights):
         """
-            Fitness of a model given by weights. Therefore we use the 'Pearson Correlation
+            Objective to be minimized. Therefore we use the 'Pearson Correlation
             Coefficient' of the model reliabilities and puf reliabilities.
         """
         model = LTFArray(weights[np.newaxis, :], self.transform, self.combiner)
         delay_diffs = model.val(self.training_set.challenges)
         model_reliabilities = reliabilities_MODEL(delay_diffs)
-        return np.corrcoef(model_reliabilities, self.puf_reliabilities)
+        corr = pearsonr(model_reliabilities, self.puf_reliabilities)
+        return np.abs(1 - corr[0])
 
 
     def learn(self):
         options = {
             'seed': self.prng.randint(2 ** 32),
-            'pop': self.pop_size,
+            #'timeout': "2.5 * 60**2"
             'maxiter': self.limit_i,
-            'tolstagnation': self.limit_s,
+            #'tolstagnation': self.limit_s,
         }
-        es = cma.CMAEvolutionStrategy(np.zeros(self.n), 0.5, inopts=options)
-        es.optimize(self.fitness)
+        es = cma.CMAEvolutionStrategy(np.zeros(self.n), 1, inopts=options)
+        es.optimize(self.objective)
+        w = es.best.x
+        model = LTFArray(w[np.newaxis, :], self.transform, self.combiner)
+        return model
 

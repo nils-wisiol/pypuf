@@ -32,7 +32,7 @@ class ReliabilityAttackStudy(Study):
             )
             for n in [64]
             for k in [1]
-            for transform in ['id']
+            for transform in ['atf']
             for noisiness in [.25]
             for N in [10**4]
             for R in [11]
