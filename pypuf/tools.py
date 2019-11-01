@@ -9,7 +9,8 @@ from inspect import getmembers, isclass
 from math import ceil, log
 from random import sample
 
-from numpy import abs as np_abs, absolute
+from numpy import abs as np_abs
+from numpy import absolute
 from numpy import count_nonzero, array, append, zeros, vstack, mean, prod, ones, dtype, full, shape, copy, int8, \
     multiply, empty, average
 from numpy import squeeze

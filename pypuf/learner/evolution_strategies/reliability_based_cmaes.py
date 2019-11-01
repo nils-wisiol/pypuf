@@ -47,7 +47,6 @@ class ReliabilityBasedCMAES(Learner):
         :param logger:          Logger, the instance that logs detailed information every learning iteration
         """
         self.training_set = training_set
-        print("HERE",training_set.responses.shape)
         self.k = k
         self.n = n
         self.transform = transform

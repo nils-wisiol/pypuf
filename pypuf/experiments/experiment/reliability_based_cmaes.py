@@ -14,6 +14,7 @@ from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
 #from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
 from pypuf.learner.evolution_strategies.cmaes_new import ReliabilityBasedCMAES
+from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
