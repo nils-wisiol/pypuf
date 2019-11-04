@@ -36,6 +36,7 @@ class MLPDiversePUFsStudy(Study):
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
+    SHUFFLE = True
 
     EXPERIMENTS = []
 
