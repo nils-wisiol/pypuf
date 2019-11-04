@@ -1,4 +1,4 @@
-FROM intelpython/intelpython3_full
+FROM python:3.6
 
 RUN mkdir /app
 WORKDIR /app
