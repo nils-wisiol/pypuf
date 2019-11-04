@@ -37,6 +37,10 @@ class InterposeMLPStudy(Study):
     PRINT_LEARNING = False
 
     SIZES = {
+                (5, 5): (
+                    [2 * 10**6, 3 * 10**6, 4 * 10**6, 5 * 10**6],
+                    [0.0004, 0.0008, 0.002],
+                ),
                 (6, 6): (
                     [8 * 10**6, 16 * 10**6, 32 * 10**6, 64 * 10**6],  # up to 40GB
                     [0.0002, 0.0004, 0.0006, 0.0008, 0.001],
@@ -94,8 +98,8 @@ class InterposeMLPStudy(Study):
                 )
             )
             for seed in range(10)
-            for batch_size in [10**5]
-            for layer_size in [128, 192, 256, 386, 512]
+            for batch_size in [10**5]  # for k=5, 4000 may be good or better
+            for layer_size in [128, 192, 256, 386, 512]  # for k=5, more than 128 seems unnecessary
             for n in [64]
             for (k_up, k_down), (N_set, LR_set) in self.SIZES.items()
             for N in N_set
