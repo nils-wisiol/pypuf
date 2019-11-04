@@ -7,9 +7,6 @@ from pypuf.studies.base import Study
 
 class ReliabilityAttackStudy(Study):
 
-    SHUFFLE = True
-    EXPERIMENTER_CALLBACK_MIN_PAUSE = 60
-
     def experiments(self):
         return [
             ExperimentReliabilityBasedCMAES(
@@ -55,7 +52,8 @@ class ReliabilityAttackStudy(Study):
         data = self.experimenter.results.copy()
         data['pop_size__reps__noisiness'] = data.apply(
             lambda row: f'{row["pop_size"]}__{row["reps"]}__{row["noisiness"]}', axis=1)
-        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'], 1 - row['accuracy']), axis=1)
+        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'],
+            1 - row['accuracy']), axis=1)
         for hue in ['', 'pop_size', 'reps', 'noisiness']:
             grid = catplot(
                 x='num',

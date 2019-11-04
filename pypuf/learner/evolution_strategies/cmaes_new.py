@@ -9,7 +9,7 @@ import numpy as np
 
 from scipy.stats import pearsonr
 
-import pypuf.tools as tools
+from pypuf.tools import approx_dist, transform_challenge_11_to_01
 from pypuf.bipoly import BiPoly
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -27,7 +27,7 @@ def reliabilities_PUF(response_bits):
     # Convert to 0/1 from 1/-1
     response_bits = np.array(response_bits, dtype=np.int8)
     if (-1 in response_bits):
-        response_bits = tools.transform_challenge_11_to_01(response_bits)
+        response_bits = transform_challenge_11_to_01(response_bits)
     return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
 
 def reliabilities_MODEL(delay_diffs, EPSILON=3):
@@ -99,7 +99,7 @@ class ReliabilityBasedCMAES(Learner):
         w = es.best.x[:-1]
         #print(es.fit.hist)
         a = [
-            1 - tools.approx_dist(
+            1 - approx_dist(
                 LTFArray(v[:self.n].reshape(1,self.n), self.transform, self.combiner),
                 LTFArray(w[:self.n].reshape(1,self.n) ,self.transform, self.combiner),
                 10000,
@@ -168,9 +168,5 @@ class ReliabilityBasedCMAES(Learner):
                 n_chain += 1
 
         model = LTFArray(np.array(pool), self.transform, self.combiner)
-        # TODO: migrate to result object
-        a = [[pearsonr(v[:self.n],w)[0] for w in pool] for v in self.training_set.instance.weight_array]
-        print(np.array(a))
-
         return model
 
