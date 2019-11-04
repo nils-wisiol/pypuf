@@ -9,10 +9,9 @@ import numpy as np
 
 from scipy.stats import pearsonr
 
+import pypuf.tools as tools
 from pypuf.bipoly import BiPoly
 from pypuf.learner.base import Learner
-import pypuf.tools as tools
-from pypuf.tools import transform_challenge_11_to_01
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
@@ -28,7 +27,7 @@ def reliabilities_PUF(response_bits):
     # Convert to 0/1 from 1/-1
     response_bits = np.array(response_bits, dtype=np.int8)
     if (-1 in response_bits):
-        response_bits = transform_challenge_11_to_01(response_bits)
+        response_bits = tools.transform_challenge_11_to_01(response_bits)
     return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
 
 def reliabilities_MODEL(delay_diffs, EPSILON=3):
@@ -50,27 +49,27 @@ class ReliabilityBasedCMAES(Learner):
     """
 
     def __init__(self, training_set, k, n, transform, combiner,
-                 pop_size, limit_stag, limit_iter, random_seed, logger):
+                 pop_size, abort_delta, abort_iter, random_seed, logger):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
-                                challenge response pairs
+                                challenge response pairs.
         :param k:               Width, the number of parallel LTFs in the LTF array
-        :param n:               Length, the number stages within the LTF array
+        :param n:               Length, the number stages within the LTF array.
         :param transform:       Transformation function, the function that modifies the
-                                input within the LTF array
+                                input within the LTF array.
         :param combiner:        Combiner, the function that combines particular chains'
-                                outputs within the LTF array
+                                outputs within the LTF array.
         :param pop_size:        Population size, the number of sampled points of every
-                                CMAES iteration
-        :param limit_stag:      Stagnation limit, the maximal number of stagnating
-                                iterations within the CMAES
-        :param limit_iter:      Iteration limit, the maximal number of iterations within
-                                the CMAES
+                                CMAES iteration.
+        :param abort_delta:     Stagnation value, the maximal delta within *abort_iter*
+                                iterations before early stopped.
+        :param abort_iter:      Stagnation iteration limit, the window size of iterations
+                                where *abort_delta* is calculated.
         :param random_seed:     PRNG seed used by the CMAES algorithm for sampling
-                                solution points
+                                solution points.
         :param logger:          Logger, the instance that logs detailed information every
-                                learning iteration
+                                learning iteration.
         """
         self.training_set = training_set
         self.k = k
@@ -78,8 +77,8 @@ class ReliabilityBasedCMAES(Learner):
         self.transform = transform
         self.combiner = combiner
         self.pop_size = pop_size
-        self.limit_s = limit_stag
-        self.limit_i = limit_iter
+        self.abort_delta = abort_delta
+        self.abort_iter = abort_iter
         self.prng = np.random.RandomState(random_seed)
         self.chains_learned = np.zeros((self.k, self.n))
         self.num_iterations = 0

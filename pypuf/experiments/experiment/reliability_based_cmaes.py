@@ -30,8 +30,8 @@ class Parameters(NamedTuple):
     num: int
     reps: int
     pop_size: int
-    limit_stag: int
-    limit_iter: int
+    abort_delta: float
+    abort_iter: int
 
 
 class Result(NamedTuple):
@@ -94,8 +94,8 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             self.instance.transform,
             self.instance.combiner,
             self.parameters.pop_size,
-            self.parameters.limit_stag,
-            self.parameters.limit_iter,
+            self.parameters.abort_delta,
+            self.parameters.abort_iter,
             self.parameters.seed_model,
             self.progress_logger,
         )
