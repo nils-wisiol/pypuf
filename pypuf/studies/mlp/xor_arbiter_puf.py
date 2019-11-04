@@ -25,10 +25,10 @@ class MLPDiversePUFsStudy(Study):
 
     COMBINER = 'xor'
     ACTIVATION = 'relu'
-    ITERATION_LIMIT = 40
+    ITERATION_LIMIT = 100
     LOSS = 'log_loss'
     DOMAIN_IN = -1
-    PATIENCE = 4
+    PATIENCE = 30
     TOLERANCE = 0.0025
     PENALTY = 0.0002
     BETA_1 = 0.9
