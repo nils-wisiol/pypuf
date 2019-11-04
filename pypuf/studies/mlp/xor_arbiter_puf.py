@@ -14,7 +14,8 @@ from numpy.random.mtrand import seed
 from seaborn import stripplot, lineplot, scatterplot, color_palette
 
 from pypuf.studies.base import Study
-from pypuf.experiments.experiment.mlp_skl import ExperimentMLPScikitLearn, Parameters as Parameters_skl
+
+from pypuf.studies.mlp.aseeri import Parameters, ExperimentMLPScikitLearn
 
 
 class MLPDiversePUFsStudy(Study):
@@ -40,16 +41,14 @@ class MLPDiversePUFsStudy(Study):
 
     TRANSFORMATIONS = ['atf', 'lightweight_secure', 'fixed_permutation']
 
-    PREPROCESSINGS = ['no', 'short', 'full']
-
-    SCALES = [0.25, 1, 4]
+    PREPROCESSINGS = ['full']  # ['no', 'short', 'full']
 
     SIZES = {
-        (64, 4): list(map(lambda x: x*125e3, SCALES)),
-        # (64, 5): list(map(lambda x: x*300e3, SCALES)),
-        # (64, 6): list(map(lambda x: x*1e6, SCALES)),
-        # (64, 7): list(map(lambda x: x*5e6, SCALES)),
-        # (64, 8): list(map(lambda x: x*30e6, SCALES)),
+        (64, 4): [0.4e6],
+        (64, 5): [0.8e6],
+        (64, 6): [2e6],
+        (64, 7): [5e6],
+        (64, 8): [30e6],
     }
 
     SAMPLES_PER_POINT = {
@@ -61,19 +60,19 @@ class MLPDiversePUFsStudy(Study):
     }
 
     LEARNING_RATES = {
-        (64, 4): [0.001, 0.005, 0.02],   # [0.0095],
-        (64, 5): [0.001, 0.005, 0.02],   # [0.0088],
-        (64, 6): [0.001, 0.005, 0.02],   # [0.0078],
-        (64, 7): [0.001, 0.005, 0.02],   # [0.0064],
-        (64, 8): [0.001, 0.005, 0.02],   # [0.005],
+        (64, 4): [0.0025],
+        (64, 5): [0.0025],
+        (64, 6): [0.0055],
+        (64, 7): [0.002],
+        (64, 8): [0.001],
     }
 
     LAYERS = {
-        (64, 4): [[2**4, 2**4, 2**4], [2**4, 2**4], [2**6, 2**6, 2**6]],
-        (64, 5): [[2**5, 2**5, 2**5]],
-        (64, 6): [[2**6, 2**6, 2**6]],
-        (64, 7): [[2**7, 2**7, 2**7]],
-        (64, 8): [[2**8, 2**8, 2**8]],
+        (64, 4): [[2 ** 4, 2 ** 4, 2 ** 4]],
+        (64, 5): [[2 ** 5, 2 ** 5, 2 ** 5]],
+        (64, 6): [[2 ** 6, 2 ** 6, 2 ** 6]],
+        (64, 7): [[2 ** 7, 2 ** 7, 2 ** 7]],
+        (64, 8): [[2 ** 8, 2 ** 8, 2 ** 8]],
     }
 
     BATCH_SIZES = {
@@ -102,8 +101,8 @@ class MLPDiversePUFsStudy(Study):
                                     for batch_size in self.BATCH_SIZES[(n, k)]:
                                         self.EXPERIMENTS.append(
                                             ExperimentMLPScikitLearn(
-                                                progress_log_prefix=None,
-                                                parameters=Parameters_skl(
+                                                progress_log_prefix=self.name(),
+                                                parameters=Parameters(
                                                     seed_simulation=0x3 + cycle,
                                                     seed_challenges=0x1415 + cycle,
                                                     seed_model=0x9265 + cycle,
@@ -127,6 +126,8 @@ class MLPDiversePUFsStudy(Study):
                                                     iteration_limit=self.ITERATION_LIMIT,
                                                     batch_size=batch_size,
                                                     print_learning=self.PRINT_LEARNING,
+                                                    domain_out=-1,
+                                                    loss='log_loss',
                                                 )
                                             )
                                         )
