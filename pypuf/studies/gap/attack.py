@@ -23,15 +23,15 @@ class ReliabilityAttackStudy(Study):
                     num=N,
                     reps=R,
                     pop_size=pop_size,
-                    abort_delta=0.01,
-                    abort_iter=5,
+                    abort_delta=0.005,
+                    abort_iter=10,
                 )
             )
             for n in [64]
-            for k in [2]
+            for k in [4]
             for transform in ['fixed_permutation']
             for noisiness in [.25]
-            for N in [10**4]
+            for N in [150*10**3]
             for R in [11]
             for pop_size in [20]
             for seed in [1]
