@@ -1,11 +1,17 @@
 """
 Plots to visualize results by experiments or studies.
 """
+
 from itertools import cycle
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, MultipleLocator
+from mpl_toolkits.mplot3d import Axes3D
+from numpy import max as max_np, min as min_np, log, array, log2, log10
+from numpy import mean as mean_np, quantile as quantile_np, sum as sum_np
 from numpy import zeros
+from pandas import read_csv, DataFrame
+from seaborn import lineplot, set_style
 
 
 class SuccessRatePlot:
@@ -18,7 +24,6 @@ class SuccessRatePlot:
         """
         Prepare a plot
         :param filename: destination file (PDF)
-        :param results: an object with results keyed with experiment ids
         :param group_by: determines among which groups success rates are computed
         :param experiment_hashes: ids of results that shall be used
         :param success_threshold: defines what is considered a success
@@ -120,8 +125,105 @@ class SuccessRatePlot:
             self.axis.plot(success_rate[:, 0], success_rate[:, 1], '-', color=col, linewidth=0.8, alpha=.7)
 
         if self.axis.has_data():
-            legend = self.axis.legend(loc=2, fontsize=self.legend_size)
+            legend = self.axis.legend(loc='best', fontsize=self.legend_size)
             self.figure.savefig(self.filename, bbox_extra_artists=(legend,), bbox_inches='tight', pad_inches=0)
+
+
+class AccuracyPlotter:
+
+    def __init__(self, min_tick, max_tick, estimator='mean', group_by='transformation', group_by_ex=None, grid=False):
+        self.estimator = estimator
+        self.group_by = group_by
+        self.group_by_ex = group_by_ex
+        self.min_tick = min_tick
+        self.max_tick = max_tick
+        self.grid = grid
+        self.df = None
+
+    def get_data_frame(self, source, names=None):
+        self.df = read_csv(source, names=names, sep='\t', header=None) if isinstance(source, str) else source
+        return
+
+    def get_title(self):
+        k = self.df['k'].iloc[0]
+        n = self.df['n'].iloc[0]
+        return 'Comparison of Accuracies \non ({}, {})-XOR-Arbiter PUFs \n'.format(k, n) + \
+               'using {} as estimator'.format('{} with p={}'.format(self.estimator[0], self.estimator[1])
+                                              if isinstance(self.estimator, tuple) else 'mean')
+
+    def create_plot(self, save_path=None):
+        figure = plt.figure()
+        axis = figure.add_subplot()
+        assert isinstance(self.df, DataFrame)
+        set_style('white')
+        estimator = get_estimator(self.estimator)
+        figure = lineplot(
+            x='N',
+            y='accuracy',
+            hue=self.group_by,
+            style=self.group_by_ex,
+            estimator=estimator,
+            ci=None,
+            data=self.df,
+            alpha=0.6,
+            sort=True,
+        )
+        legend_alpha = 1
+        axis.set_xlabel(
+            '{} with p={}'.format(self.estimator[0], self.estimator[1])
+            if isinstance(self.estimator, tuple) else 'mean'
+        )
+        axis.set_ylim([-.01 if isinstance(self.estimator, tuple) and self.estimator[0] == 'success' else .49, 1.01])
+        axis.set_xlim([0, self.max_tick + (self.max_tick / 100)])
+        axis.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        axis.yaxis.set_minor_locator(plt.MultipleLocator(0.01))
+        axis.tick_params(which='major', width=1.0, length=5)
+        axis.tick_params(which='minor', width=0.5, length=2)
+        if self.grid:
+            plt.grid(True)
+            legend_alpha = 0.5
+            axis.xaxis.set_minor_locator(plt.MultipleLocator(self.min_tick))
+            axis.grid(b=True, which='major', color='lightgrey', linewidth=1)
+            axis.grid(b=True, which='minor', color='lightgrey', linewidth=0.5)
+        handles, labels = axis.get_legend_handles_labels()
+        labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+        legend = axis.legend(handles, labels, loc='best', framealpha=legend_alpha)
+        for l in legend.get_lines():
+            l.set_alpha(0.7)
+        axis.set_title(self.get_title())
+        if save_path is not None:
+            figure.savefig(fname=save_path, dpi=500, quality=95, format='pdf')
+        plt.close()
+        return
+
+
+def get_estimator(estimator):
+    if estimator == 'mean':
+        return mean_np
+
+    elif estimator == 'max' or estimator == 'best':
+        return max_np
+
+    elif estimator == 'min' or estimator == 'worst':
+        return min_np
+
+    elif estimator.startswith('quantile'):
+        q = float(estimator[estimator.find('=')+1:]) if '=' in estimator else 0.9
+
+        def quantile(values):
+            return quantile_np(values, q, interpolation='linear')
+
+        return quantile
+
+    elif estimator.startswith('success'):
+        p = float(estimator[estimator.find('=')+1:]) if '=' in estimator else 0.7
+
+        def success(values):
+            return sum_np(values >= p) / len(values)
+
+        return success
+
+    return
 
 
 class PermutationIndexPlot:
@@ -225,3 +327,71 @@ class PermutationIndexPlot:
 
         plt.tight_layout()
         self.figure.savefig(self.filename)
+
+
+def plot3d_size_dependency(df):
+    fig = plt.figure(figsize=(30, 10))
+    ax1 = fig.add_subplot(131, projection='3d')
+    xs = log2(df.n)
+    ys = df.k
+    zs1 = log10(df.N)
+    ax1.scatter(xs, ys, zs1)
+    ax1.set_xticks(xs)
+    ax1.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax1.set_yticks(ys)
+    ax1.set_zticklabels([rf'${int(round(10**(z-3), 0))} \times 10^3$' for z in ax1.get_zticks()[1:]])
+    ax1.set_xlabel('n')
+    ax1.set_ylabel('k')
+    ax1.set_zlabel('N')
+    ax1.set_title('Trainingset Sizes')
+    ax1.view_init(azim=240, elev=20)
+    numx = len(set(xs))
+    numy = len(set(ys))
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax1.plot(xs[indices], ys[indices], zs1[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax1.plot(xs[indices], ys[indices], zs1[indices], color='b', alpha=0.5)
+
+    ax2 = fig.add_subplot(132, projection='3d')
+    zs2 = log10(df.N_Rührmair)
+    ax2.scatter(xs, ys, zs2)
+    ax2.set_xticks(xs)
+    ax2.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax2.set_yticks(ys)
+    ax2.set_zticklabels([rf'${int(round(10 ** (z - 3), 0))} \times 10^3$' for z in ax1.get_zticks()[1:]])
+    ax2.set_xlabel('n')
+    ax2.set_ylabel('k')
+    ax2.set_zlabel('N')
+    ax2.set_title('Trainingset Sizes (Rührmair)')
+    ax2.view_init(azim=240, elev=20)
+    numx = len(set(xs))
+    numy = len(set(ys))
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax2.plot(xs[indices], ys[indices], zs2[indices], color='b', alpha=0.5)
+
+    ax3 = fig.add_subplot(133, projection='3d')
+    zs3 = df.learning_rate
+    ax3.scatter(xs, ys, zs3)
+    ax3.set_xticks(xs)
+    ax3.set_xticklabels([rf'$2^{ {int(x)} }$' for x in xs])
+    ax3.set_yticks(ys)
+    ax3.set_xlabel('n')
+    ax3.set_ylabel('k')
+    ax3.set_zlabel('learning_rate')
+    ax3.set_title('Learning Rates')
+    ax3.view_init(azim=330, elev=20)
+    for i in range(numy):
+        indices = list(i * numx + array(list(range(numx))))
+        ax3.plot(xs[indices], ys[indices], zs3[indices], color='b', alpha=0.5)
+    for i in range(numx):
+        indices = list(numx * array(list(range(numy))) + i)
+        ax3.plot(xs[indices], ys[indices], zs3[indices], color='b', alpha=0.5)
+
+    fig.subplots_adjust(hspace=0)
+    fig.savefig('figures/sizes_dependency.pdf')
