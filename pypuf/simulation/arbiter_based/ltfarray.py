@@ -851,6 +851,21 @@ class LTFArray(Simulation):
                              f'evaluation, and of shape (N, k, n+1) for bias-aware evaluation. This LTFArray has '
                              f'k={self.k} and n={self.n}, but challenges given had shape {efba_sub_challenges.shape}.')
 
+    @classmethod
+    def preprocess(cls, transformation, kind='full'):
+        if kind == 'no':
+            def id(challenges, k):
+                return cls.transform_id(challenges, 1)[:, 0, :]
+            return id
+        if kind == 'short':
+            def short_transformation(challenges, k):
+                return transformation(challenges, k)[:, 0, :]
+            return short_transformation
+        if kind == 'full':
+            return transformation
+        else:
+            raise Exception('preprocess() only has the options: "no", "short", and "full"')
+
 
 class NoisyLTFArray(LTFArray):
     """
