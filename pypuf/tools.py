@@ -38,7 +38,7 @@ def random_input(n, random_instance=RandomState()):
 def all_inputs(n):
     """
     This functions generates a iterator which produces all possible {-1,1}-vectors.
-    :param int
+    :param n: int
            Length of a n bit vector
     :returns: array of int8
               An array with all possible different {-1,1}-vectors of length `n`.
@@ -282,6 +282,8 @@ def approx_stabilities(instance, num, reps, random_instance=RandomState()):
                 Amount of challenges to be evaluated
     :param reps: int
                  Amount of repetitions per challenge
+    :param random_instance: numpy.random.RandomState
+                 PRNG instance for generating seeded random values
     :return: array of float
              Array of the stabilities for each challenge
     """
