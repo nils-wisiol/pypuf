@@ -26,8 +26,8 @@ class ReliabilityAttackStudy(Study):
                     num=N,
                     reps=R,
                     pop_size=pop_size,
-                    abort_delta=20,
-                    abort_iter=500,
+                    abort_delta=0.01,
+                    abort_iter=5,
                 )
             )
             for n in [64]

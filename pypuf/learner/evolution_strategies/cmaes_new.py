@@ -110,10 +110,15 @@ class ReliabilityBasedCMAES(Learner):
         print(np.array(a), self.objective(es.best.x))
 
     def is_iteration_stagnated(self, es):
-        fun_history = es.fit.hist[-5:]
-        if (len(es.fit.hist) < 50):
+        """
+            Abort criteria. This function is called after each optimization iteration.
+            When True is returned, the optimization is stopped and the current state is
+            returned.
+        """
+        fun_history = es.fit.hist[-self.abort_iter:]
+        if (len(es.fit.hist) < 100):
             return False
-        if (np.abs(max(fun_history) - min(fun_history)) < 0.01):
+        if (np.abs(max(fun_history) - min(fun_history)) < self.abort_delta):
             return True
         return False
 
@@ -132,6 +137,9 @@ class ReliabilityBasedCMAES(Learner):
 
 
     def learn(self):
+        """
+            Start learning and return optimized LTFArray.
+        """
         pool = []
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
@@ -141,9 +149,6 @@ class ReliabilityBasedCMAES(Learner):
 
             cma_options = {
                 'seed': self.prng.randint(2 ** 32),
-                #'maxiter': self.limit_i,
-                #'tolstagnation': self.limit_s,
-                #'tolstagnation': 10,
                 'termination_callback': self.is_iteration_stagnated
             }
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
@@ -166,8 +171,6 @@ class ReliabilityBasedCMAES(Learner):
         # TODO: migrate to result object
         a = [[pearsonr(v[:self.n],w)[0] for w in pool] for v in self.training_set.instance.weight_array]
         print(np.array(a))
-
-
 
         return model
 
