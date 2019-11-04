@@ -17,8 +17,7 @@ from scipy.stats import pearsonr
 from pypuf.tools import approx_dist, TrainingSet
 from pypuf.experiments.experiment.base import Experiment
 # from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
-from pypuf.learner.evolution_strategies.cmaes_new import ReliabilityBasedCMAES
-from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
+from pypuf.learner.evolution_strategies.cmaes import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
