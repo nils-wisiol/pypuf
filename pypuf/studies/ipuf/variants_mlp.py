@@ -273,7 +273,7 @@ class InterposeMLPStudy(Study):
 
     def plot(self):
         data = self.experimenter.results
-        data['size'] = data.apply(lambda row: f'({row["k_up"]}, {row["k_middle"]}, {row["k_down"]})', axis=1)
+        data['size'] = data.apply(lambda row: f'({row["k_up"]:.0f}, {row["k_middle"]:.0f}, {row["k_down"]:.0f})', axis=1)
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024 ** 3, axis=1)
         data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
         data = data.sort_values(['size', 'layers'])
@@ -285,13 +285,14 @@ class InterposeMLPStudy(Study):
                 y='accuracy',
                 row='size',
                 kind='swarm',
-                aspect=7.5,
-                height=1.2,
+                aspect=2,
+                height=4,
             )
             for name, params_ind in {
                 'layer': dict(hue='layers', hue_order=[str([2 ** s] * 3) for s in range(2, 10)]),
                 'learning_rate': dict(hue='learning_rate'),
             }.items():
                 f = catplot(**params, **params_ind)
+                f.axes.flatten()[0].set(ylim=(.45,1.))
                 f.savefig(f'figures/{self.name()}.{name}.pdf')
                 close(f.fig)
