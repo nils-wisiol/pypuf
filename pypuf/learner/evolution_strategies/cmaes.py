@@ -157,11 +157,11 @@ class ReliabilityBasedCMAES(Learner):
             es.optimize(self.objective, callback=self.print_accs)
             w = es.best.x[:self.n]
             # Flip chain for comparison; invariant of reliability
-            w = -w if w[0] < 0 else w
+            w_comp = -w if w[0] < 0 else w
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for v in pool:
-                if (np.abs(pearsonr(w, v)[0]) > 0.5):
+                if (np.abs(pearsonr(w_comp, v)[0]) > 0.5):
                     break
             else:
                 pool.append(w)
