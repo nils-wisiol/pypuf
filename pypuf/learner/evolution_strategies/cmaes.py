@@ -135,6 +135,16 @@ class ReliabilityBasedCMAES(Learner):
         corr = pearsonr(model_reliabilities, self.puf_reliabilities)
         return np.abs(1 - corr[0])
 
+    def test_model(self, model):
+        """
+            Perform a test using the training set and return the accuracy.
+            This function is used at the end of the training phase to determine,
+            whether the chains need to be flipped.
+        """
+        # Since responses can be noisy, we perform majority vote on response bits
+        Y_true = mode(self.training_set.responses, axis=1)[0].T
+        Y_test = model.eval(self.training_set.challenges)
+        return np.mean(Y_true == Y_test)
 
     def learn(self):
         """
@@ -157,16 +167,20 @@ class ReliabilityBasedCMAES(Learner):
             es.optimize(self.objective, callback=self.print_accs)
             w = es.best.x[:self.n]
             # Flip chain for comparison; invariant of reliability
-            w_comp = -w if w[0] < 0 else w
+            w = -w if w[0] < 0 else w
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for v in pool:
-                if (np.abs(pearsonr(w_comp, v)[0]) > 0.5):
+                if (np.abs(pearsonr(w, v)[0]) > 0.5):
                     break
             else:
                 pool.append(w)
                 n_chain += 1
 
+        # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(np.array(pool), self.transform, self.combiner)
+        if self.test_model(model) < 0.5:
+            pool[0] = - pool[0]
+            model = LTFArray(np.array(pool), self.transform, self.combiner)
         return model
 
