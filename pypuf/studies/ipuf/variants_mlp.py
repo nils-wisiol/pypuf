@@ -205,13 +205,23 @@ class InterposeMLPStudy(Study):
     """
     SHUFFLE = True
 
-    ITERATION_LIMIT = 50
+    ITERATION_LIMIT = 150
     PATIENCE = ITERATION_LIMIT
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
 
     SIZES = {
+        (1, 1, 1): (
+            [16, 24, 32],
+            [5 * 10 ** 5, 1 * 10 ** 6, 2 * 10 ** 6],
+            [.0002, .0004],
+        ),
+        (1, 1, 2): (
+            [16, 24, 32],
+            [5 * 10 ** 5, 1 * 10 ** 6, 2 * 10 ** 6],
+            [.0002, .0004],
+        ),
         (2, 2, 2): (
             [16, 24, 32],
             [5 * 10**5, 1 * 10**6, 2 * 10**6],
