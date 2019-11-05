@@ -6,15 +6,9 @@ The Deep Learning technique used here is the Optimization technique Adam for a S
 Forward Neural Network architecture called Multilayer Perceptron (MLP). Implementations of the MLP and Adam are
 used from Scikit-Learn and Tensorflow, respectively.
 """
-from re import findall
-from matplotlib.pyplot import subplots
-from matplotlib.ticker import FixedLocator
-from numpy.ma import ones
-from numpy.random.mtrand import seed
-from seaborn import stripplot, lineplot, scatterplot, color_palette
+from seaborn import catplot
 
 from pypuf.studies.base import Study
-
 from pypuf.studies.mlp.aseeri import Parameters, ExperimentMLPScikitLearn
 
 
@@ -135,208 +129,16 @@ class MLPDiversePUFsStudy(Study):
         return self.EXPERIMENTS
 
     def plot(self):
-        """
-        Visualize the quality, process, and runtime of learning by plotting the accuracy, the accuracies of each epoch,
-        and the measured time of each experiment, respectively.
-        """
-        if not self.EXPERIMENTS:
-            self.experiments()
-        self.plot_helper(
-            name='ScikitLearn',
-            df=self.experimenter.results,
-            param_x='learning_rate',
-            param_1='batch_size',
-            param_2='N',
+        data = self.experimenter.results
+        data['Ne6'] = data.apply(lambda row: row['N'] / 10e6, axis=1)
+        f = catplot(
+            data=data,
+            x='Ne6',
+            y='accuracy',
+            col='k',
+            row='transformation',
+            hue='layers',
+            aspect=.4,
+            height=10,
         )
-        """
-        self.plot_history(
-            df=self.experimenter.results
-        )
-        """
-
-    def plot_helper(self, name, df, param_x, param_1, param_2=None):
-        param_y = 'accuracy'
-        df['layers'] = df['layers'].apply(str)
-        df = df[df['experiment'] == 'ExperimentMLP' + name]
-        ncols = len(self.TRANSFORMATIONS) * len(self.PREPROCESSINGS)
-        nrows = 4
-        fig, axes = subplots(ncols=ncols, nrows=nrows)
-        fig.set_size_inches(10 * ncols, 5 * nrows)
-        axes = axes.reshape((nrows, ncols))
-        alpha_scatter = 0.4
-        alpha_lines = 0.8
-        palette = color_palette(palette='plasma')
-        for j, transform in enumerate(self.TRANSFORMATIONS):
-            for k, preprocessing in enumerate(self.PREPROCESSINGS):
-                a = j * len(self.TRANSFORMATIONS) + k
-                data = df[(df['transformation'] == transform) & (df['preprocessing'] == preprocessing)]
-                for l, layer in enumerate(['[16, 16, 16]', '[16, 16]', '[64, 64, 64]']):
-                    data_layer = data[(data['layers'] == layer)]
-                    lineplot(
-                        x=param_x,
-                        y=param_y,
-                        hue=param_1,
-                        style=param_2,
-                        data=data_layer,
-                        ax=axes[l][a],
-                        legend=False,
-                        estimator='mean',
-                        ci=None,
-                        alpha=alpha_lines,
-                        #palette=palette,
-                    )
-                    scatterplot(
-                        x=param_x,
-                        y=param_y,
-                        hue=param_1,
-                        style=param_2,
-                        data=data_layer,
-                        ax=axes[l][a],
-                        legend='full',
-                        alpha=alpha_scatter,
-                        #palette=palette,
-                    )
-                    lib = 'tensorflow' if name == 'Tensorflow' else 'scikit-learn' if name == 'ScikitLearn' else ''
-                    axes[l][a].set_title('transform={}\npreprocessing={}\nlayers={}'.format(
-                        transform, preprocessing, layer))
-                    axes[l][a].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
-                lineplot(
-                    x='accuracy',
-                    y='measured_time',
-                    hue=param_1,
-                    style=param_2,
-                    data=data,
-                    ax=axes[-1][a],
-                    legend='full',
-                    estimator='mean',
-                    ci=None,
-                    alpha=alpha_lines,
-                    #palette=palette,
-                )
-                axes[-1][j].set_xscale('linear')
-                axes[-1][j].set_yscale('linear')
-                axes[-1][j].set_xlabel(param_y)
-                axes[-1][j].set_ylabel('runtime in s')
-                axes[-1][j].set_ylim(bottom=0)
-                axes[-1][j].xaxis.set_minor_locator(FixedLocator([.7, .9, .98]))
-                axes[-1][j].grid(b=True, which='minor', color='gray', linestyle=':')
-                axes[-1][j].legend(loc='upper right', bbox_to_anchor=(1.235, 1.03))
-        fig.subplots_adjust(hspace=.5, wspace=.5)
-        title = fig.suptitle('Accuracy of {} Results on XOR Arbiter PUF'.format(name))
-        title.set_position([.5, 1.05])
-        fig.savefig('figures/{}_{}.pdf'.format(self.name(), name), bbox_inches='tight', dpi=300, pad_inches=.5)
-
-        width = 0.3
-        seed(42)
-        df = self.experimenter.results
-        distances = 1 - df.accuracy
-        df['distance'] = distances
-        ncols = len(set([k for n, k in self.SIZES.keys()]))
-        nrows = 3
-        fig, axes = subplots(ncols=ncols, nrows=nrows)
-        fig.set_size_inches(7 * ncols, 4 * nrows)
-        axes = axes.reshape((nrows, ncols))
-        marker = 'o'
-
-        for i, k in enumerate(list(sorted(set(df.k)))):
-            stripplot(
-                x='n',
-                y='accuracy',
-                data=df[df.k == k],
-                ax=axes[0][i],
-                jitter=True,
-                zorder=1,
-                marker=marker,
-                alpha=alpha_scatter,
-                #palette=palette,
-            )
-            for j, n in enumerate(list(sorted(set(df.n)))):
-                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
-                for l, N in enumerate(Ns):
-                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].accuracy.mean()
-                    axes[0][i].plot([j - width / 2, j + width / 2], [mean, mean],
-                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
-            axes[0][i].set_title('k={}\n'.format(k))
-            axes[0][i].set_yscale('linear')
-            axes[0][i].set_ylabel('accuracy')
-
-            stripplot(
-                x='n',
-                y='distance',
-                data=df[df.k == k],
-                ax=axes[1][i],
-                jitter=True,
-                zorder=1,
-                marker=marker,
-                alpha=alpha_scatter,
-                #palette=palette,
-            )
-            for j, n in enumerate(list(sorted(set(df.n)))):
-                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
-                for l, N in enumerate(Ns):
-                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].distance.mean()
-                    axes[1][i].plot([j - width / 2, j + width / 2], [mean, mean],
-                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
-            axes[1][i].set_yscale('log')
-            axes[1][i].invert_yaxis()
-            axes[1][i].set_ylim(top=0.002, bottom=1.0)
-            major_ticks = [0.1, 0.2, 0.3, 0.4, 0.5]
-            minor_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
-            axes[1][i].set_yticks(ticks=major_ticks, minor=False)
-            axes[1][i].set_yticks(ticks=minor_ticks, minor=True)
-            axes[1][i].set_yticklabels(ones(shape=5) - major_ticks, minor=False)
-            axes[1][i].set_yticklabels(ones(shape=5) - minor_ticks, minor=True)
-            axes[1][i].grid(b=True, which='minor', color='gray', linestyle='--')
-            axes[1][i].set_ylabel('accuracy')
-
-            stripplot(
-                x='n',
-                y='measured_time',
-                data=df[df.k == k],
-                ax=axes[2][i],
-                jitter=True,
-                zorder=1,
-                marker=marker,
-                alpha=alpha_scatter,
-                #palette=palette,
-            )
-            for j, n in enumerate(list(sorted(set(df.n)))):
-                Ns = list(sorted(set(df[(df.k == k) & (df.n == n)].N)))
-                for l, N in enumerate(Ns):
-                    mean = df[(df.k == k) & (df.n == n) & (df.N == N)].measured_time.mean()
-                    axes[2][i].plot([j - width / 2, j + width / 2], [mean, mean],
-                                    color=(l / len(Ns),) * 3, linewidth=1, zorder=2, label=l if j == 0 else None)
-            axes[2][i].set_yscale('log')
-
-        axes[2][0].set_ylabel('runtime in s')
-        fig.subplots_adjust(hspace=0.3, wspace=0.3)
-        title = fig.suptitle('Overview of Learning Results on XOR Arbiter PUFs of length 64\n'
-                             'using Multilayer Perceptron on each 100 PUF simulations per width k', size=16)
-        title.set_position([0.5, 1.0])
-        fig.savefig('figures/{}_overview.pdf'.format(self.name()), bbox_inches='tight', dpi=300, pad_inches=.5)
-
-    def plot_history(self, df):
-        ks = list(sorted(set(self.experimenter.results.k)))
-        intervals = {(.0, .7): 'bad', (.7, .9): 'medium', (.9, .98): 'good', (.98, 1.): 'perfect'}
-        sizes = [(k, n) for k in ks for n in list(sorted(set(df[df.k == k].n)))]
-        ncols = len(sizes)
-        nrows = len(intervals)
-        fig, axes = subplots(ncols=ncols, nrows=nrows)
-        fig.set_size_inches(8 * ncols, 3 * nrows)
-        axes = axes.reshape((nrows, ncols))
-        for j, (k, n) in enumerate(sizes):
-            data = df[(df.k == k) & (df.n == n)]
-            axes[0][j].set_title('k={}, n={}\n'.format(k, n))
-            for i, (low, high) in enumerate(intervals):
-                curves = data[(data.accuracy >= low) & (data.accuracy < high)].accuracy_curve
-                axes[i][j].set_ylabel('{} results\n\n{}'.format(intervals[(low, high)], 'accuracy') if j == 0
-                                      else '{}'.format('accuracy'))
-                axes[i][j].set_xlabel('{}'.format('epoch'))
-                for curve in curves:
-                    axes[i][j].plot([float(s) for s in findall(pattern=r'-?\d+\.?\d*', string=str(curve))])
-        fig.subplots_adjust(hspace=.5, wspace=.5)
-        title = fig.suptitle('History of {} of MLP learning Results on XOR Arbiter PUFs'.format('accuracy'))
-        title.set_position([.5, 1.05])
-
-        fig.savefig('figures/{}_history.pdf'.format(self.name()), bbox_inches='tight', pad_inches=.5)
-
+        f.fig.savefig(f'figures/{self.name()}.pdf')
