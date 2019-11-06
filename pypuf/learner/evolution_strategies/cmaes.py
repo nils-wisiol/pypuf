@@ -187,8 +187,10 @@ class ReliabilityBasedCMAES(Learner):
                     initial_step_size=1.0,
                     fitness_function=self.objective,
                     termination_no_effect=5e-3)
-            print("Pop size", cma.population_size)
-            w, _ = cma.search()
+
+            with tf.device('/GPU:0'):
+                w, _ = cma.search()
+
             w = w[:-1]
             # Flip chain for comparison; invariant of reliability
             w = -w if w[0] < 0 else w
