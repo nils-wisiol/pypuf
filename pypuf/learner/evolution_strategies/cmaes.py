@@ -4,12 +4,15 @@
     PUFs". The learning algorithm applies Covariance Matrix Adaptation Evolution
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
-import cma
+#import cma
+from cma import CMA
 import numpy as np
+import tensorflow as tf
+import tensorflow_probability as tfp
 
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, mode
 
-from pypuf.tools import approx_dist, transform_challenge_11_to_01
+from pypuf.tools import approx_dist, transform_challenge_11_to_01,transform_challenge_01_to_11
 from pypuf.bipoly import BiPoly
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -35,7 +38,16 @@ def reliabilities_MODEL(delay_diffs, EPSILON=3):
         Computes 'Hypothical Reliabilities' according to [Becker].
         :param delay_diffs: Array with shape [num_challenges]
     """
-    return np.abs(delay_diffs) > EPSILON
+    res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), EPSILON)
+    return res
+
+def tf_pearsonr(x, y):
+    centered_x = x - tf.reduce_mean(x, axis=0)
+    centered_y = y - tf.reduce_mean(y) #can be precomp
+    cov_xy = tf.tensordot(centered_y, centered_x, axes=1)
+    auto_cov = tf.sqrt(tf.reduce_sum(centered_x**2, axis=0) * tf.reduce_sum(centered_y**2))
+    corr = cov_xy / auto_cov
+    return corr
 
 # ============================ Learner class ============================ #
 
@@ -127,14 +139,29 @@ class ReliabilityBasedCMAES(Learner):
             Objective to be minimized. Therefore we use the 'Pearson Correlation
             Coefficient' of the model reliabilities and puf reliabilities.
         """
-        weights = state[:self.n]
-        epsilon = state[-1]
-        model = LTFArray(weights[np.newaxis, :], 'id', self.combiner)
-        delay_diffs = model.val(self.current_challenges)
+        # Weights and epsilon have the first dim as number of population
+        weights = state[:, :self.n]
+        epsilon = state[:, -1]
+        delay_diffs = tf.linalg.matmul(weights, self.current_challenges.T)
         model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
-        corr = pearsonr(model_reliabilities, self.puf_reliabilities)
-        return np.abs(1 - corr[0])
 
+        # Calculate pearson coefficient
+        x = np.array(model_reliabilities, dtype=np.float64)
+        y = np.array(self.puf_reliabilities, dtype=np.float64)
+        corr = tf_pearsonr(x, y)
+
+        return tf.abs(1 - corr)
+
+    def test_model(self, model):
+        """
+            Perform a test using the training set and return the accuracy.
+            This function is used at the end of the training phase to determine,
+            whether the chains need to be flipped.
+        """
+        # Since responses can be noisy, we perform majority vote on response bits
+        Y_true = mode(self.training_set.responses, axis=1)[0].T
+        Y_test = model.eval(self.training_set.challenges)
+        return np.mean(Y_true == Y_test)
 
     def learn(self):
         """
@@ -145,7 +172,9 @@ class ReliabilityBasedCMAES(Learner):
         n_chain = 0
         while n_chain < self.k:
             print("Attempting to learn chain", n_chain)
-            self.current_challenges = self.linearized_challenges[:, n_chain, :]
+            self.current_challenges = np.array(
+                    self.linearized_challenges[:, n_chain, :],
+                    dtype=np.float64) # tensorflow needs floats
 
             cma_options = {
                 'seed': self.prng.randint(2 ** 32),
@@ -153,20 +182,30 @@ class ReliabilityBasedCMAES(Learner):
             }
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
-            es = cma.CMAEvolutionStrategy(init_state, 1, inopts=cma_options)
-            es.optimize(self.objective, callback=self.print_accs)
-            w = es.best.x[:self.n]
+            cma = CMA(
+                    initial_solution=init_state,
+                    initial_step_size=1.0,
+                    fitness_function=self.objective,
+                    termination_no_effect=5e-3)
+            print("Pop size", cma.population_size)
+            w, _ = cma.search()
+            w = w[:-1]
             # Flip chain for comparison; invariant of reliability
-            w_comp = -w if w[0] < 0 else w
+            w = -w if w[0] < 0 else w
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for v in pool:
-                if (np.abs(pearsonr(w_comp, v)[0]) > 0.5):
+                if (tf.abs(pearsonr(w, v)[0]) > 0.5):
                     break
             else:
                 pool.append(w)
                 n_chain += 1
 
+        # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(np.array(pool), self.transform, self.combiner)
+        if self.test_model(model) < 0.5:
+            pool[0] = - pool[0]
+            model = LTFArray(np.array(pool), self.transform, self.combiner)
+
         return model
 
