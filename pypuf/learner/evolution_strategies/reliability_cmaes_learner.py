@@ -8,7 +8,6 @@
 from cma import CMA
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 from scipy.stats import pearsonr, mode
 
@@ -167,7 +166,8 @@ class ReliabilityBasedCMAES(Learner):
         """
             Start learning and return optimized LTFArray.
         """
-        pool = []
+        # pool: collection of learned chains, discard_count: x:Y x was discarded due to Y
+        pool, discard_count = [], {i : [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
@@ -180,7 +180,8 @@ class ReliabilityBasedCMAES(Learner):
                 'seed': self.prng.randint(2 ** 32),
                 'termination_callback': self.is_iteration_stagnated
             }
-            init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
+            tf.random.set_seed(self.prng.randint(low=0, high=2**32-1))
+            init_state = list(np.ones(self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
             cma = CMA(
                     initial_solution=init_state,
@@ -196,8 +197,9 @@ class ReliabilityBasedCMAES(Learner):
             w = -w if w[0] < 0 else w
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
-            for v in pool:
+            for i, v in enumerate(pool):
                 if (tf.abs(pearsonr(w, v)[0]) > 0.5):
+                    discard_count[n_chain].append(i)
                     break
             else:
                 pool.append(w)
@@ -208,6 +210,8 @@ class ReliabilityBasedCMAES(Learner):
         if self.test_model(model) < 0.5:
             pool[0] = - pool[0]
             model = LTFArray(np.array(pool), self.transform, self.combiner)
+
+        print(discard_count)
 
         return model
 
