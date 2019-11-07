@@ -4,8 +4,7 @@
     PUFs". The learning algorithm applies Covariance Matrix Adaptation Evolution
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
-#import cma
-from cma import CMA
+from .cmaes.cma import CMA
 import numpy as np
 import tensorflow as tf
 
