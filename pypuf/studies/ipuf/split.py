@@ -196,32 +196,69 @@ class SplitAttack(Experiment):
 
     def _get_model_up(self):
         # create a training set for the upper PUF, based on the lower layer model
-        N = self.parameters.N
+        N, n = self.parameters.N, self.parameters.n
         challenges = self.training_set.challenges
+        responses = self.training_set.responses
 
         self.progress_logger.debug('creating training set for upper layer')
-        block_size = 10**4  # TODO adjust block size
-        selected_challenges = []
-        selected_responses = []
+        block_size = 10**6
+
+        # the max. number of challenges we select must be set up in advance to benefit from
+        # numpy memory and cpu efficiency. While this number is non-deterministic and depends
+        # on the given instance and training set, we expect it to be about N/2. To get a
+        # reasonable upper bound, we add about 500MB of margin and round up to the next
+        # multiple of block_size.
+        N_selected = int((N/2 + (500 * 1024**2 / n)) // block_size + 1) * block_size
+        selected_challenges = empty(shape=(N_selected, n), dtype=BIT_TYPE)
+        self.progress_logger.debug(f'setting the max number of challenges for the upper training set to '
+                                   f'{N_selected}, using {selected_challenges.nbytes / 1024**3:.2f}GiB, about '
+                                   f'{N_selected / N * 100:.2f}% of all challenges')
+        selected_responses = empty(shape=(N_selected,), dtype=BIT_TYPE)
+        filled = 0
         for idx in range(int(ceil(N / block_size))):
+            # carve out a block to work on, max. size block_size, true size block_len
             block_slice = slice(idx * block_size, (idx + 1) * block_size)
-            block = challenges[block_slice]
-            block_len = len(block)
-            challenges_p1 = self._interpose(block, +ones(shape=(block_len, 1)))
-            challenges_m1 = self._interpose(block, -ones(shape=(block_len, 1)))
+            block_challenges = challenges[block_slice]
+            block_responses = responses[block_slice]
+            block_len = len(block_challenges)
+
+            # create extended challenges (number: 2 * block_len)
+            challenges_p1 = self._interpose(block_challenges, +ones(shape=(block_len, 1)))
+            challenges_m1 = self._interpose(block_challenges, -ones(shape=(block_len, 1)))
+
+            # evaluate extended challenges
             responses_p1 = self.model_down.eval(challenges_p1)
             responses_m1 = self.model_down.eval(challenges_m1)
 
-            for i in range(len(responses_p1)):
-                c = self.training_set.challenges[i]
-                r = self.training_set.responses[i]
-                rp1, rm1 = responses_p1[i], responses_m1[i]
-                if rp1 != rm1:
-                    selected_challenges.append(c)
-                    selected_responses.append(1 if rp1 == r else -1)
+            # identify challenges that depend on the interpose bit, i.e. yield unequal response
+            # for unequal interpose bit
+            responses_unequal = responses_p1 != responses_m1
+            unequal = sum(responses_unequal)
 
-        assert selected_challenges, 'No challenges found to use for training of the upper layer'
-        training_set_up = ChallengeResponseSet(array(selected_challenges), array(selected_responses))
+            # copy all these challenges (without interpose bit) to selected_challenges
+            block_new = slice(
+                filled,
+                filled + unequal
+            )
+            selected_challenges[block_new] = block_challenges[responses_unequal]
+
+            # to create the training set for the upper layer, we use the interpose bit that yielded
+            # the response that matched our training set as the response of the upper layer, i.e.
+            # select +1 if +1 as interpose bit yielded the correct response, or
+            # select -1 if -1 as interpose bit yielded the correct response.
+            # Let r be the response bit as recorded in the training set, rp1 the response bit
+            # of the challenge with 1 as interpose bit. Then
+            # selected_response = +1 if rp1 == r else -1.
+            # This is the same as selected_response = rp1 * r.
+            # We apply the product using numpy for all challenges at a time.
+            selected_responses[block_new] = responses_p1[responses_unequal] * block_responses[responses_unequal]
+
+            filled += unequal
+            self.progress_logger.debug(f'wrote selected {{challenges, responses}} from {filled} to '
+                                       f'{filled + unequal}')
+
+        # cut off selected_challenges and selected_responses to the correct size
+        training_set_up = ChallengeResponseSet(selected_challenges[:filled], selected_responses[:filled])
         self.progress_logger.debug(f'training set for upper layer created, size '
                                    f'{training_set_up.challenges.nbytes / 1024**3}GiB')
 
