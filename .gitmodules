@@ -1,0 +1,3 @@
+[submodule "pypuf/learner/evolution_strategies/cma-es"]
+	path = pypuf/learner/evolution_strategies/cma-es
+	url = https://github.com/n1kn4x/cma-es.git
