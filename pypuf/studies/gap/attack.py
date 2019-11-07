@@ -29,7 +29,7 @@ class ReliabilityAttackStudy(Study):
             )
             for n in [64]
             for k in [4]
-            for transform in ['atf']
+            for transform in ['fixed_permutation']
             for noisiness in [.25]
             for N in [150*10**3]
             for R in [11]

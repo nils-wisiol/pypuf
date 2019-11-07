@@ -8,6 +8,4 @@ matplotlib~=3.0.0
 pandas~=0.24.1
 seaborn~=0.9.0
 scikit-learn~=0.20
-cma-es
-tensorflow~=2.0.0b1
-tensorflow-gpu
+tensorflow-gpu~=2.0.0b1
