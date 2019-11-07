@@ -7,7 +7,7 @@
 import cma
 import numpy as np
 
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, mode
 
 from pypuf.tools import approx_dist, transform_challenge_11_to_01
 from pypuf.bipoly import BiPoly
