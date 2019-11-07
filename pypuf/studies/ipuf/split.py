@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, array2string, pi, sqrt, ones, ndarray, average
+from numpy import concatenate, zeros, array, array2string, pi, sqrt, ones, ndarray, average, empty, ceil
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
 from seaborn import catplot, axes_style
@@ -14,7 +14,7 @@ from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF, XORArbiterP
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.simulation.base import Simulation
 from pypuf.studies.base import Study
-from pypuf.tools import ChallengeResponseSet, TrainingSet, approx_dist, approx_dist_nonrandom
+from pypuf.tools import ChallengeResponseSet, TrainingSet, approx_dist, approx_dist_nonrandom, BIT_TYPE
 
 
 class Parameters(NamedTuple):
@@ -166,6 +166,7 @@ class SplitAttack(Experiment):
 
     def _get_next_model_down(self):
         # create a training set for the lower PUF, based on the upper layer model
+        self.progress_logger.debug(f'copying challenges of size {self.training_set.challenges.nbytes / 1024**3:.2f}GiB')
         challenges = self.training_set.challenges[:, :]
         responses = self.model_up.eval(challenges)
         challenges = self._interpose(challenges, responses)
@@ -197,21 +198,32 @@ class SplitAttack(Experiment):
         # create a training set for the upper PUF, based on the lower layer model
         N = self.parameters.N
         challenges = self.training_set.challenges
-        challenges_p1 = self._interpose(challenges, +ones(shape=(N, 1)))
-        challenges_m1 = self._interpose(challenges, -ones(shape=(N, 1)))
-        responses_p1 = self.model_down.eval(challenges_p1)
-        responses_m1 = self.model_down.eval(challenges_m1)
+
+        self.progress_logger.debug('creating training set for upper layer')
+        block_size = 10**4  # TODO adjust block size
         selected_challenges = []
         selected_responses = []
-        for i in range(self.parameters.N):
-            c = self.training_set.challenges[i]
-            r = self.training_set.responses[i]
-            rp1, rm1 = responses_p1[i], responses_m1[i]
-            if rp1 != rm1:
-                selected_challenges.append(c)
-                selected_responses.append(1 if rp1 == r else -1)
+        for idx in range(int(ceil(N / block_size))):
+            block_slice = slice(idx * block_size, (idx + 1) * block_size)
+            block = challenges[block_slice]
+            block_len = len(block)
+            challenges_p1 = self._interpose(block, +ones(shape=(block_len, 1)))
+            challenges_m1 = self._interpose(block, -ones(shape=(block_len, 1)))
+            responses_p1 = self.model_down.eval(challenges_p1)
+            responses_m1 = self.model_down.eval(challenges_m1)
+
+            for i in range(len(responses_p1)):
+                c = self.training_set.challenges[i]
+                r = self.training_set.responses[i]
+                rp1, rm1 = responses_p1[i], responses_m1[i]
+                if rp1 != rm1:
+                    selected_challenges.append(c)
+                    selected_responses.append(1 if rp1 == r else -1)
+
         assert selected_challenges, 'No challenges found to use for training of the upper layer'
         training_set_up = ChallengeResponseSet(array(selected_challenges), array(selected_responses))
+        self.progress_logger.debug(f'training set for upper layer created, size '
+                                   f'{training_set_up.challenges.nbytes / 1024**3}GiB')
 
         # analysis: training set accuracy
         self.training_set_up_accuracy.append(average(
