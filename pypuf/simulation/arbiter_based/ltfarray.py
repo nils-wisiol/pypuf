@@ -2,7 +2,7 @@
 This module provides several different implementations of arbiter PUF simulations. The linear threshold function array
 model is the core of each simulation class.
 """
-from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
+from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append, empty, ceil
 from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
 from numpy.random import RandomState
 
@@ -793,14 +793,22 @@ class LTFArray(Simulation):
     def response_length(self) -> int:
         return 1
 
-    def eval(self, challenges, result_type=tools.BIT_TYPE):
+    def eval(self, challenges, result_type=tools.BIT_TYPE, block_size=10**6):
         """
         Same es val, but only returns the sign of the responses.
         :param challenges: array of challenges of shape (N, n)
         :param result_type: numpy data type for result
+        :param block_size: number of challenges to evaluate at once, decrease to save memory.
+                           Set to None to evaluate everything in one go.
         :return: array of responses of shape (N,)
         """
-        return sign(self.val(challenges)).astype(result_type)
+        N = challenges.shape[0]
+        block_size = block_size or N
+        responses = empty(shape=(N,), dtype=result_type)
+        for idx in range(int(ceil(N / block_size))):
+            block = slice(idx * block_size, (idx + 1) * block_size)
+            responses[block] = sign(self.val(challenges[block])).astype(result_type)
+        return responses
 
     def val(self, challenges):
         """
@@ -997,6 +1005,12 @@ class SimulationMajorityLTFArray(LTFArray):
         # majority vote only works with an odd number of votes
         assert vote_count % 2 == 1
         self.vote_count = vote_count
+
+    def eval(self, challenges, result_type=tools.BIT_TYPE, block_size=None):
+        # TODO Add block-wise eval support. It seems to work, but it changes the noise, as the noise PRNG will be called
+        #  differently.
+        assert block_size is None, f'{self.__class__.__name__} currently does not support block-wise evaluation.'
+        return super().eval(challenges, result_type, block_size=None)
 
     def val(self, challenges):
         """
