@@ -164,7 +164,7 @@ class ReliabilityBasedCMAES(Learner):
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
             es = cma.CMAEvolutionStrategy(init_state, 1, inopts=cma_options)
-            es.optimize(self.objective, callback=self.print_accs)
+            es.optimize(self.objective)#, callback=self.print_accs)
             w = es.best.x[:self.n]
             # Flip chain for comparison; invariant of reliability
             w = -w if w[0] < 0 else w
