@@ -164,10 +164,10 @@ class MLPDiversePUFsStudy(Study):
 
     COMBINER = 'xor'
     ACTIVATION = 'relu'
-    ITERATION_LIMIT = 100
+    ITERATION_LIMIT = 40
     LOSS = 'log_loss'
     DOMAIN_IN = -1
-    PATIENCE = 30
+    PATIENCE = 4
     TOLERANCE = 0.0025
     PENALTY = 0.0002
     BETA_1 = 0.9
@@ -179,9 +179,9 @@ class MLPDiversePUFsStudy(Study):
 
     EXPERIMENTS = []
 
-    TRANSFORMATIONS = ['atf', 'lightweight_secure', 'fixed_permutation']
+    TRANSFORMATIONS = ['atf']
 
-    PREPROCESSINGS = ['full']  # ['no', 'short', 'full']
+    PREPROCESSINGS = ['short']
 
     SIZES = {
         (64, 4): [0.4e6],
@@ -192,11 +192,11 @@ class MLPDiversePUFsStudy(Study):
     }
 
     SAMPLES_PER_POINT = {
-        (64, 4): 5,
-        (64, 5): 5,
-        (64, 6): 5,
-        (64, 7): 5,
-        (64, 8): 5,
+        (64, 4): 100,
+        (64, 5): 100,
+        (64, 6): 100,
+        (64, 7): 100,
+        (64, 8): 100,
     }
 
     LEARNING_RATES = {
@@ -216,11 +216,11 @@ class MLPDiversePUFsStudy(Study):
     }
 
     BATCH_SIZES = {
-        (64, 4): [2**5, 2**8, 2**11],
-        (64, 5): [2**5, 2**8, 2**11],
-        (64, 6): [2**5, 2**8, 2**11, 2**14],
-        (64, 7): [2**5, 2**8, 2**11, 2**14],
-        (64, 8): [2**5, 2**8, 2**11, 2**14],
+        (64, 4): [1000],
+        (64, 5): [1000],
+        (64, 6): [10000],
+        (64, 7): [10000],
+        (64, 8): [10000],
     }
 
     def experiments(self):
