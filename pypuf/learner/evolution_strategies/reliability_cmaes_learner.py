@@ -163,7 +163,8 @@ class ReliabilityBasedCMAES(Learner):
 
     def learn(self):
         """
-            Start learning and return optimized LTFArray.
+            Start learning and return optimized LTFArray and count of failed learning
+            attempts.
         """
         # pool: collection of learned chains, discard_count: x:Y x was discarded due to Y
         pool, discard_count = [], {i : [] for i in range(self.k)}
@@ -210,7 +211,5 @@ class ReliabilityBasedCMAES(Learner):
             pool[0] = - pool[0]
             model = LTFArray(np.array(pool), self.transform, self.combiner)
 
-        print(discard_count)
-
-        return model
+        return model, discard_count
 
