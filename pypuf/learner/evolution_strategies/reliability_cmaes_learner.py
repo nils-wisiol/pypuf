@@ -166,8 +166,10 @@ class ReliabilityBasedCMAES(Learner):
             Start learning and return optimized LTFArray and count of failed learning
             attempts.
         """
-        # pool: collection of learned chains, discard_count: x:Y x was discarded due to Y
-        pool, discard_count = [], {i : [] for i in range(self.k)}
+        # pool: collection of learned chains, meta_data: information about learning
+        meta_data, pool = {}, []
+        meta_data['discard_count'] = {i : [] for i in range(self.k)}
+        meta_data['iteration_count'] = {i : [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
@@ -189,8 +191,12 @@ class ReliabilityBasedCMAES(Learner):
                     fitness_function=self.objective,
                     termination_no_effect=5e-3)
 
+            # Learn the chain the GPU
             with tf.device('/GPU:0'):
                 w, _ = cma.search()
+
+            # Update meta data about how many iterations it took to find a solution
+            meta_data['iteration_count'][n_chain].append(cma.generation)
 
             w = w[:-1]
             # Flip chain for comparison; invariant of reliability
@@ -199,7 +205,7 @@ class ReliabilityBasedCMAES(Learner):
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(pool):
                 if (tf.abs(pearsonr(w, v)[0]) > 0.5):
-                    discard_count[n_chain].append(i)
+                    meta_data['discard_count'][n_chain].append(i)
                     break
             else:
                 pool.append(w)
@@ -211,5 +217,5 @@ class ReliabilityBasedCMAES(Learner):
             pool[0] = - pool[0]
             model = LTFArray(np.array(pool), self.transform, self.combiner)
 
-        return model, discard_count
+        return model, meta_data
 
