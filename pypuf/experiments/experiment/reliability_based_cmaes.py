@@ -32,9 +32,7 @@ class Parameters(NamedTuple):
     noisiness: float
     num: int
     reps: int
-    pop_size: int
     abort_delta: float
-    abort_iter: int
 
 
 class Result(NamedTuple):
@@ -43,7 +41,6 @@ class Result(NamedTuple):
     pid: int
     accuracy: float
     iterations: int
-    abortions: int
     stops: str
     max_possible_acc: float
     cross_model_correlation: list
@@ -71,14 +68,13 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         """
 
         super().__init__(
-            '%s.0x%x_%i_%i_%i_%i_%i' % (
+            '%s.0x%x_%i_%i_%i_%i' % (
                 progress_log_name,
                 parameters.seed_instance,
                 parameters.k,
                 parameters.n,
                 parameters.num,
-                parameters.reps,
-                parameters.pop_size),
+                parameters.reps),
             parameters)
         self.prng_i = RandomState(seed=self.parameters.seed_instance)
         self.prng_c = RandomState(seed=self.parameters.seed_challenges)
@@ -121,9 +117,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                            self.parameters.n,
                            self.instance.transform,
                            self.instance.combiner,
-                           self.parameters.pop_size,
                            self.parameters.abort_delta,
-                           self.parameters.abort_iter,
                            self.parameters.seed_model,
                            self.progress_logger)
 
@@ -159,7 +153,6 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             pid=getpid(),
             accuracy=empirical_accuracy,
             iterations=self.learner.num_iterations,
-            abortions=self.learner.num_abortions,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
             cross_model_correlation=cross_model_correlation,

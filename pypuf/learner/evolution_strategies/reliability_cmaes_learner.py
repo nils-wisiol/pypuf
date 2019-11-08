@@ -59,7 +59,7 @@ class ReliabilityBasedCMAES(Learner):
     """
 
     def __init__(self, training_set, k, n, transform, combiner,
-                 pop_size, abort_delta, abort_iter, random_seed, logger):
+                 abort_delta, random_seed, logger):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -70,12 +70,8 @@ class ReliabilityBasedCMAES(Learner):
                                 input within the LTF array.
         :param combiner:        Combiner, the function that combines particular chains'
                                 outputs within the LTF array.
-        :param pop_size:        Population size, the number of sampled points of every
-                                CMAES iteration.
         :param abort_delta:     Stagnation value, the maximal delta within *abort_iter*
                                 iterations before early stopped.
-        :param abort_iter:      Stagnation iteration limit, the window size of iterations
-                                where *abort_delta* is calculated.
         :param random_seed:     PRNG seed used by the CMAES algorithm for sampling
                                 solution points.
         :param logger:          Logger, the instance that logs detailed information every
@@ -86,15 +82,11 @@ class ReliabilityBasedCMAES(Learner):
         self.n = n
         self.transform = transform
         self.combiner = combiner
-        self.pop_size = pop_size
         self.abort_delta = abort_delta
-        self.abort_iter = abort_iter
         self.prng = np.random.RandomState(random_seed)
         self.chains_learned = np.zeros((self.k, self.n))
         self.num_iterations = 0
         self.stops = ''
-        self.num_abortions = 0
-        self.num_learned = 0
         self.logger = logger
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
@@ -119,18 +111,6 @@ class ReliabilityBasedCMAES(Learner):
             ]
         print(np.array(a), self.objective(es.best.x))
 
-    def is_iteration_stagnated(self, es):
-        """
-            Abort criteria. This function is called after each optimization iteration.
-            When True is returned, the optimization is stopped and the current state is
-            returned.
-        """
-        fun_history = es.fit.hist[-self.abort_iter:]
-        if (len(es.fit.hist) < 100):
-            return False
-        if (np.abs(max(fun_history) - min(fun_history)) < self.abort_delta):
-            return True
-        return False
 
     def objective(self, state):
         """
@@ -178,10 +158,6 @@ class ReliabilityBasedCMAES(Learner):
                     self.linearized_challenges[:, n_chain, :],
                     dtype=np.float64) # tensorflow needs floats
 
-            cma_options = {
-                'seed': self.prng.randint(2 ** 32),
-                'termination_callback': self.is_iteration_stagnated
-            }
             tf.random.set_seed(self.prng.randint(low=0, high=2**32-1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
@@ -189,7 +165,7 @@ class ReliabilityBasedCMAES(Learner):
                     initial_solution=init_state,
                     initial_step_size=1.0,
                     fitness_function=self.objective,
-                    termination_no_effect=5e-3)
+                    termination_no_effect=self.abort_delta)
 
             # Learn the chain the GPU
             with tf.device('/GPU:0'):
