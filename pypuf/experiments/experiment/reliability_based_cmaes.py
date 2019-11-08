@@ -47,6 +47,7 @@ class Result(NamedTuple):
     max_possible_acc: float
     cross_model_correlation: list
     discard_count: dict
+    iteration_count: dict
 
 
 
@@ -126,7 +127,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                            self.progress_logger)
 
         # Start learning a model
-        self.model, self.discard_count = self.learner.learn()
+        self.model, self.learning_meta_data = self.learner.learn()
 
 
     def analyze(self):
@@ -161,5 +162,6 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
             cross_model_correlation=cross_model_correlation,
-            discard_count=self.discard_count
+            discard_count=self.learning_meta_data['discard_count'],
+            iteration_count=self.learning_meta_data['iteration_count']
         )
