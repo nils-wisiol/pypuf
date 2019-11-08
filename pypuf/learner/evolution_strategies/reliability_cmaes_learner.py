@@ -180,7 +180,7 @@ class ReliabilityBasedCMAES(Learner):
                 'termination_callback': self.is_iteration_stagnated
             }
             tf.random.set_seed(self.prng.randint(low=0, high=2**32-1))
-            init_state = list(np.ones(self.n)) + [2]
+            init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
             cma = CMA(
                     initial_solution=init_state,
