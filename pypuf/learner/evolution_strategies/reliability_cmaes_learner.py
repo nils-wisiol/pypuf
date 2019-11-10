@@ -16,8 +16,6 @@ from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
-
-
 # ==================== Reliability for PUF and MODEL ==================== #
 
 def reliabilities_PUF(response_bits):
@@ -37,7 +35,7 @@ def reliabilities_MODEL(delay_diffs, EPSILON=3):
         :param delay_diffs: Array with shape [num_challenges]
     """
     res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), EPSILON)
-    return res
+    return tf.cast(res, tf.double)
 
 def tf_pearsonr(x, y):
     centered_x = x - tf.reduce_mean(x, axis=0)
@@ -124,8 +122,8 @@ class ReliabilityBasedCMAES(Learner):
         model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
 
         # Calculate pearson coefficient
-        x = np.array(model_reliabilities, dtype=np.float64)
-        y = np.array(self.puf_reliabilities, dtype=np.float64)
+        x = tf.Variable(model_reliabilities, tf.double)
+        y = tf.Variable(self.puf_reliabilities, tf.double)
         corr = tf_pearsonr(x, y)
 
         return tf.abs(1 - corr)
@@ -186,6 +184,7 @@ class ReliabilityBasedCMAES(Learner):
             else:
                 pool.append(w)
                 n_chain += 1
+
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(np.array(pool), self.transform, self.combiner)
