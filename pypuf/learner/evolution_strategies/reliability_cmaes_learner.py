@@ -37,7 +37,7 @@ def reliabilities_MODEL(delay_diffs, EPSILON=3):
         :param delay_diffs: Array with shape [num_challenges]
     """
     res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), EPSILON)
-    return res
+    return tf.cast(res, tf.double)
 
 def tf_pearsonr(x, y):
     """
