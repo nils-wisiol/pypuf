@@ -130,8 +130,8 @@ class ReliabilityBasedCMAES(Learner):
         model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
 
         # Calculate pearson coefficient
-        x = np.array(model_reliabilities, dtype=np.float64)
-        y = np.array(self.puf_reliabilities, dtype=np.float64)
+        x = tf.Variable(model_reliabilities, tf.double)
+        y = tf.Variable(self.puf_reliabilities, tf.double)
         corr = tf_pearsonr(x, y)
 
         # MOD: Calculate correlation with already learned chains
