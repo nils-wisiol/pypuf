@@ -40,10 +40,16 @@ def reliabilities_MODEL(delay_diffs, EPSILON=3):
     return res
 
 def tf_pearsonr(x, y):
+    """
+        Calculates Pearson Correlation Coefficient.
+        x and y are matrices with data vectors as columns.
+        Return array where index i,j is the pearson correlation of i'th
+        column vector in x and the j'th column vector in y.
+    """
     centered_x = x - tf.reduce_mean(x, axis=0)
-    centered_y = y - tf.reduce_mean(y) #can be precomp
-    cov_xy = tf.tensordot(centered_y, centered_x, axes=1)
-    auto_cov = tf.sqrt(tf.reduce_sum(centered_x**2, axis=0) * tf.reduce_sum(centered_y**2))
+    centered_y = y - tf.reduce_mean(y, axis=0)
+    cov_xy = tf.tensordot(tf.transpose(centered_x), centered_y, axes=1)
+    auto_cov = tf.sqrt(tf.tensordot(tf.reduce_sum(centered_x**2, axis=0), tf.reduce_sum(centered_y**2, axis=0), axes=0))
     corr = cov_xy / auto_cov
     return corr
 
@@ -128,7 +134,15 @@ class ReliabilityBasedCMAES(Learner):
         y = np.array(self.puf_reliabilities, dtype=np.float64)
         corr = tf_pearsonr(x, y)
 
-        return tf.abs(1 - corr)
+        # MOD: Calculate correlation with already learned chains
+        corr2 = 0
+        if len(self.pool) > 0:
+            corr2 = tf.abs(tf_pearsonr(np.array(self.pool).T, tf.transpose(weights)))
+            mask = tf.math.greater(corr2, 0.5)
+            corr2 = tf.where(mask, corr2 - 0.5, tf.zeros_like(corr2))
+            corr2 = tf.reduce_max(corr2, axis=0)
+
+        return tf.abs(1 - corr) + corr2
 
     def test_model(self, model):
         """
@@ -147,7 +161,7 @@ class ReliabilityBasedCMAES(Learner):
             attempts.
         """
         # pool: collection of learned chains, meta_data: information about learning
-        meta_data, pool = {}, []
+        meta_data, self.pool = {}, []
         meta_data['discard_count'] = {i : [] for i in range(self.k)}
         meta_data['iteration_count'] = {i : [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
@@ -168,7 +182,7 @@ class ReliabilityBasedCMAES(Learner):
                     termination_no_effect=self.abort_delta)
 
             # Learn the chain the GPU
-            with tf.device('/GPU:0'):
+            with tf.device('/GPU:1'):
                 w, _ = cma.search()
 
             # Update meta data about how many iterations it took to find a solution
@@ -179,19 +193,19 @@ class ReliabilityBasedCMAES(Learner):
             w = -w if w[0] < 0 else w
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
-            for i, v in enumerate(pool):
+            for i, v in enumerate(self.pool):
                 if (tf.abs(pearsonr(w, v)[0]) > 0.5):
                     meta_data['discard_count'][n_chain].append(i)
                     break
             else:
-                pool.append(w)
+                self.pool.append(w)
                 n_chain += 1
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
-        model = LTFArray(np.array(pool), self.transform, self.combiner)
+        model = LTFArray(np.array(self.pool), self.transform, self.combiner)
         if self.test_model(model) < 0.5:
-            pool[0] = - pool[0]
-            model = LTFArray(np.array(pool), self.transform, self.combiner)
+            self.pool[0] = - self.pool[0]
+            model = LTFArray(np.array(self.pool), self.transform, self.combiner)
 
         return model, meta_data
 
