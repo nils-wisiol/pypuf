@@ -26,22 +26,22 @@ class ReliabilityAttackStudy(Study):
                 )
             )
             for n in [64]
-            for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
-            for noisiness in [.1, .25,]
-            for k, N in [(1, 20*10**3),(2, 100*10**3),(4, 150*10**3),(6, 200*10**3),(8, 300*10**3)]
-            for R in [3, 5, 11, 19, 49]
-            for seed in [1, 42, 1337]
-        ]
-
-    """
-
-            for n in [64]
             for k in [4]
             for transform in ['atf']
             for noisiness in [.25]
             for N in [150*10**3]
             for R in [11]
             for seed in [1]
+        ]
+
+    """
+            for n in [64]
+            for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
+            for noisiness in [.1, .25,]
+            for k, N in [(1, 20*10**3),(2, 100*10**3),(4, 150*10**3),(6, 200*10**3),(8, 300*10**3)]
+            for R in [3, 5, 11, 19, 49]
+            for seed in [1, 42, 1337]
+
     """
 
     def plot(self):
