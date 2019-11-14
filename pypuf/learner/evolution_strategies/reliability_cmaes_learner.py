@@ -140,7 +140,8 @@ class ReliabilityBasedCMAES(Learner):
             corr2 = tf.abs(tf_pearsonr(np.array(self.pool).T, tf.transpose(weights)))
             mask = tf.math.greater(corr2, 0.5)
             corr2 = tf.where(mask, corr2 - 0.5, tf.zeros_like(corr2))
-            corr2 = tf.reduce_max(corr2, axis=0)
+            corr2 = corr**2
+            corr2 = tf.reduce_sum(corr2, axis=0)
 
         return tf.abs(1 - corr) + corr2
 
