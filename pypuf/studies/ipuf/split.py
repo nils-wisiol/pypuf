@@ -3,10 +3,11 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, array2string, pi, sqrt, ones, ndarray, average, empty, ceil
+from numpy import concatenate, zeros, array, ones, ndarray, empty, ceil, average, Inf, isnan, array2string, pi, sqrt
 from numpy.random.mtrand import RandomState
+from pandas import DataFrame
 from scipy.stats import pearsonr
-from seaborn import catplot, axes_style
+from seaborn import axes_style, relplot, barplot
 
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -400,26 +401,96 @@ class SplitAttackStudy(Study):
             for seed in range(100)
         ]
 
+    @staticmethod
+    def _Ncat(row):
+        N = row['N']
+        symb = {
+            'M': 1e6,
+            'k': 1e3,
+        }
+        for s, t in symb.items():
+            if N >= t:
+                r = N / t
+                if int(r) == r:
+                    return '%i%s' % (int(r), s)
+                else:
+                    return '%.2f%s' % (r, s)
+        return '%i' % int(N)
+
     def plot(self):
         data = self.experimenter.results
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024**3, axis=1)
         data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
+        data['Ncat'] = data.apply(lambda row: f'{row["N"]/1e6:.2f}M' if row['N'] > 1e6 else f'{int(row["N"])}', axis=1)
         data['size'] = data.apply(lambda row: '(%i,%i)' % (int(row['k_up']), int(row['k_down'])), axis=1)
         data['measured_time'] = data.apply(lambda row: round(row['measured_time']), axis=1)
+        data['success'] = data.apply(lambda row: row['accuracy'] >= .95, axis=1)
         data = data.sort_values(['size'])
+
+        groups = data.groupby(['N', 'k_up', 'k_down', 'n'])
+        rt_data = DataFrame(columns=['N', 'k_up', 'k_down', 'n',
+                                     'success_rate', 'avg_time_success', 'avg_time_fail', 'num_success', 'num_fail',
+                                     'num_total', 'time_to_success'])
+        for (N, k_up, k_down, n), g_data in groups:
+            num_success = len(g_data[g_data['success'] == True].index)
+            num_total = len(g_data.index)
+            success_rate = num_success / num_total
+            mean_time_success = average(g_data[g_data['success'] == True]['measured_time'])
+            mean_time_fail = average(g_data[g_data['success'] == False]['measured_time']) if success_rate < 1 else 0
+            exp_number_of_trials_until_success = 1 / success_rate if success_rate > 0 else Inf  # Geometric dist.
+            time_to_success = (exp_number_of_trials_until_success - 1) * mean_time_fail + mean_time_success
+            if isnan(time_to_success):
+                continue
+            rt_data = rt_data.append(
+                {
+                    'N': N, 'k_up': k_up, 'k_down': k_down, 'n': n,
+                    'success_rate': success_rate,
+                    'avg_time_success': mean_time_success,
+                    'avg_time_fail': mean_time_fail,
+                    'num_success': num_success,
+                    'num_fail': num_total - num_success,
+                    'num_total': num_total,
+                    'time_to_success': time_to_success,
+                },
+                ignore_index=True,
+            )
+        rt_data['size'] = rt_data.apply(lambda row: '%i-bit\n(%i,%i)' % (int(row['n']), int(row['k_up']), int(row['k_down'])), axis=1)
+        rt_data['Ncat'] = rt_data.apply(lambda row: self._Ncat(row), axis=1)
+        rt_data = rt_data.sort_values(['k_up', 'k_down', 'N'])
+        hue_order = rt_data[['N', 'Ncat']].sort_values(['N'])['Ncat']
+
         with axes_style('whitegrid'):
-            f = catplot(
+            ax = barplot(
+                data=rt_data,
+                x='size',
+                y='time_to_success',
+                hue='Ncat',
+                hue_order=hue_order,
+                ci=None,
+            )
+            ticks = {'1s': 1, '1min': 60, '1h': 3600, '1d': 24 * 3600, '3d': 3 * 24 *3600}
+            ax.set_yscale('log')
+            ax.set_yticks(list(ticks.values()))
+            ax.set_yticklabels(list(ticks.keys()))
+            ax.set_title('Split Attack on Interpose PUF')
+            ax.set_ylabel('Attack Time Until First Success')
+            ax.set_xlabel('Security Parameters:\nChallenge-Length, (#XORs upper layer, #XORs lower layer)')
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Training\nSet Size')
+            ax.get_figure().set_size_inches(5, 3)
+            ax.get_figure().savefig(f'figures/{self.name()}.pdf', bbox_inches='tight',)
+            close(ax.get_figure())
+            return
+
+            f = relplot(
                 data=data,
                 x='Ne6',
                 y='accuracy',
                 row='size',
                 hue='measured_time',
-                kind='swarm',
                 aspect=3,
                 height=2,
-                legend=False,
             )
             for ax in f.axes.flatten():
                 ax.set(ylim=(.45, 1))
-            f.savefig(f'figures/{self.name()}.pdf')
+            f.savefig(f'figures/{self.name()}.accuracy.pdf')
             close(f.fig)
