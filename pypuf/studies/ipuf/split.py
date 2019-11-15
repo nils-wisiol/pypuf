@@ -440,11 +440,11 @@ class SplitAttackStudy(Study):
         data['success'] = data.apply(lambda row: row['accuracy'] >= .95, axis=1)
         data = data.sort_values(['size'])
 
-        groups = data.groupby(['N', 'k_up', 'k_down', 'n'])
-        rt_data = DataFrame(columns=['N', 'k_up', 'k_down', 'n',
+        groups = data.groupby(['N', 'k_up', 'k_down', 'n', 'noisiness'])
+        rt_data = DataFrame(columns=['N', 'k_up', 'k_down', 'n', 'noisiness',
                                      'success_rate', 'avg_time_success', 'avg_time_fail', 'num_success', 'num_fail',
-                                     'num_total', 'time_to_success'])
-        for (N, k_up, k_down, n), g_data in groups:
+                                     'num_total', 'time_to_success', 'avg_reliability'])
+        for (N, k_up, k_down, n, noisiness), g_data in groups:
             num_success = len(g_data[g_data['success'] == True].index)
             num_total = len(g_data.index)
             success_rate = num_success / num_total
@@ -452,11 +452,12 @@ class SplitAttackStudy(Study):
             mean_time_fail = average(g_data[g_data['success'] == False]['measured_time']) if success_rate < 1 else 0
             exp_number_of_trials_until_success = 1 / success_rate if success_rate > 0 else Inf  # Geometric dist.
             time_to_success = (exp_number_of_trials_until_success - 1) * mean_time_fail + mean_time_success
+            avg_reliability = g_data['simulation_noise'].mean()
             if isnan(time_to_success):
                 continue
             rt_data = rt_data.append(
                 {
-                    'N': N, 'k_up': k_up, 'k_down': k_down, 'n': n,
+                    'N': N, 'k_up': k_up, 'k_down': k_down, 'n': n, 'noisiness': noisiness,
                     'success_rate': success_rate,
                     'avg_time_success': mean_time_success,
                     'avg_time_fail': mean_time_fail,
@@ -464,21 +465,23 @@ class SplitAttackStudy(Study):
                     'num_fail': num_total - num_success,
                     'num_total': num_total,
                     'time_to_success': time_to_success,
+                    'avg_reliability': avg_reliability,
                 },
                 ignore_index=True,
             )
+        rt_data = rt_data.sort_values(['k_up', 'k_down', 'N'])
+        print(rt_data)
+
         rt_data['size'] = rt_data.apply(lambda row: '%i-bit\n(%i,%i)' % (int(row['n']), int(row['k_up']), int(row['k_down'])), axis=1)
         rt_data['Ncat'] = rt_data.apply(lambda row: self._Ncat(row), axis=1)
-        rt_data = rt_data.sort_values(['k_up', 'k_down', 'N'])
-        hue_order = rt_data[['N', 'Ncat']].sort_values(['N'])['Ncat']
+        rt_data['x'] = rt_data.apply(lambda row: '%s\n%s' % (row['size'], row['Ncat']), axis=1)
 
         with axes_style('whitegrid'):
             ax = barplot(
                 data=rt_data,
-                x='size',
+                x='x',
                 y='time_to_success',
-                hue='Ncat',
-                hue_order=hue_order,
+                hue='noisiness',
                 ci=None,
             )
             ticks = {'1s': 1, '1min': 60, '1h': 3600, '1d': 24 * 3600, '3d': 3 * 24 *3600}
@@ -487,8 +490,8 @@ class SplitAttackStudy(Study):
             ax.set_yticklabels(list(ticks.keys()))
             ax.set_title('Split Attack on Interpose PUF')
             ax.set_ylabel('Attack Time Until First Success')
-            ax.set_xlabel('Security Parameters:\nChallenge-Length, (#XORs upper layer, #XORs lower layer)')
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Training\nSet Size')
+            ax.set_xlabel('Security Parameters and Training-Set Size')
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Noise Level')
             ax.get_figure().set_size_inches(5, 3)
             ax.get_figure().savefig(f'figures/{self.name()}.pdf', bbox_inches='tight',)
             close(ax.get_figure())
