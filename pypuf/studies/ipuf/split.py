@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, ones, ndarray, empty, ceil, average, Inf, isnan, array2string, pi, sqrt
+from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
@@ -88,19 +88,33 @@ class SplitAttack(Experiment):
         self.test_set = TrainingSet(self.simulation, 10**4, RandomState(self.parameters.seed + 1))
 
     def run(self):
+        self.progress_logger.debug('Creating initial training set down')
+        training_set_down = ChallengeResponseSet(
+            challenges=self._interpose(
+                challenges=tile(A=self.training_set.challenges, reps=(2, 1)),
+                bits=concatenate((ones(self.parameters.N), -ones(self.parameters.N)), axis=0),
+            ),
+            responses=tile(A=self.training_set.responses, reps=2),
+        )
+        self.progress_logger.debug('done')
+
         while True:
             self.progress_logger.debug('computing first down model')
-            self.model_down = self._get_first_model_down()
+            self.model_down = self._get_first_model_down(xt_set=training_set_down)
 
             # attacker model accuracy
-            test_set_accuracy = 1 - approx_dist_nonrandom(self.model_down, self.test_set)
+            model_ipuf = InterposePUF(
+                n=self.parameters.n,
+                k_down=self.parameters.k_down,
+                k_up=self.parameters.k_up,
+                transform='atf',
+                seed=self.parameters.seed + 42,
+            )
+            model_ipuf.down = self.model_down
+            test_set_accuracy = 1 - approx_dist_nonrandom(model_ipuf, self.test_set)
 
             # analysis: initial total accuracy
-            self.accuracies.append(1 - approx_dist(self.model_down, self.simulation, 10 ** 4, RandomState(1)))
-
-            # convert to down model
-            self.model_down.weight_array = self._interpose(self.model_down.weight_array, sqrt(2/pi), replace=False)
-            self.model_down.n += 1
+            self.accuracies.append(1 - approx_dist(model_ipuf, self.simulation, 10 ** 4, RandomState(1)))
 
             # analysis: down model accuracy
             self.accuracies_down.append(1 - approx_dist(self.model_down, self.simulation.down, 10 ** 4, RandomState(1)))
@@ -110,6 +124,8 @@ class SplitAttack(Experiment):
             self.first_rounds += 1
             if not (.45 <= test_set_accuracy <= .55) or self.first_rounds > 10:
                 break
+
+        del training_set_down
 
         # early stop?
         if .45 <= test_set_accuracy <= .55:
@@ -156,18 +172,19 @@ class SplitAttack(Experiment):
         self.progress_logger.debug(f'current accuracy up: {self.accuracies_up[-1]:.2f}, '
                                    f'down: {self.accuracies_down[-1]:.2f}, total: {self.accuracies[-1]}')
 
-    def _get_first_model_down(self):
+    def _get_first_model_down(self, xt_set):
         self.progress_logger.debug('initially training down model')
         learner = LogisticRegression(
-            t_set=self.training_set,
-            n=self.parameters.n,
+            t_set=xt_set,
+            n=self.parameters.n + 1,
             k=self.parameters.k_down,
             transformation=self.simulation.down.transform,
             weights_prng=RandomState(self.parameters.seed + 271828 + self.first_rounds),
             logger=self.progress_logger,
         )
+        model = learner.learn()
         self.iterations += learner.iteration_count
-        return learner.learn()
+        return model
 
     def _get_next_model_down(self):
         # create a training set for the lower PUF, based on the upper layer model
