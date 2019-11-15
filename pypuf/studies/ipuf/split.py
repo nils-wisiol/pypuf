@@ -24,6 +24,7 @@ class Parameters(NamedTuple):
     k_down: int
     N: int
     seed: int
+    noisiness: float
 
 
 class Result(NamedTuple):
@@ -44,11 +45,13 @@ class Result(NamedTuple):
     training_set_down_accuracy: List[float]
     rounds: int
     first_rounds: int
+    simulation_noise: float
 
 
 class SplitAttack(Experiment):
 
     simulation: InterposePUF
+    simulation_noise_free: InterposePUF
     training_set: ChallengeResponseSet
     test_set: ChallengeResponseSet
     model_down: LTFArray
@@ -74,12 +77,20 @@ class SplitAttack(Experiment):
         self.first_rounds = 0
 
     def prepare(self):
-        self.simulation = InterposePUF(
+        simulation_parameters = dict(
             n=self.parameters.n,
             k_down=self.parameters.k_down,
             k_up=self.parameters.k_up,
             transform='atf',
             seed=self.parameters.seed,
+        )
+        self.simulation = InterposePUF(
+            **simulation_parameters,
+            noisiness=self.parameters.noisiness,
+            noise_seed=self.parameters.seed + 1,
+        )
+        self.simulation_noise_free = InterposePUF(
+            **simulation_parameters,
         )
         self.training_set = TrainingSet(self.simulation, self.parameters.N, RandomState(self.parameters.seed))
         self.test_set = TrainingSet(self.simulation, 10**4, RandomState(self.parameters.seed + 1))
@@ -322,6 +333,7 @@ class SplitAttack(Experiment):
             accuracies_down=self.accuracies_down,
             rounds=self.rounds,
             first_rounds=self.first_rounds,
+            simulation_noise=1 - approx_dist(self.simulation, self.simulation_noise_free, 10**4, RandomState(31418)),
         )
 
     def _interpose(self, challenges, bits, replace=None):
@@ -365,15 +377,16 @@ class SplitAttackStudy(Study):
             SplitAttack(
                 progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-seed={seed}',
                 parameters=Parameters(
-                    n=n, k_up=k_up, k_down=k_down, N=N, seed=seed,
+                    n=n, k_up=k_up, k_down=k_down, N=N, seed=seed, noisiness=noisiness,
                 )
             )
             for n in [64]
+            for noisiness in [.01, .1, .2, .5]
             for k_up, k_down, N in [
-                #(1, 1, 10000),
-                #(2, 2, 5),
-                #(3, 3, 80000),
-                #(4, 4, 100000),
+                (1, 1, 10000),
+                (2, 2, 50000),
+                (3, 3, 80000),
+                (4, 4, 100000),
                 #(5, 5, 600000),
                 # (6, 6, 2000000),
                 # (6, 6, 5000000),
@@ -394,7 +407,7 @@ class SplitAttackStudy(Study):
                 # (1, 7, 12000000),
                 # (1, 7, 20000000),
                 # (1, 8, 150000000),
-                (1, 8, 200000000),  # ~17 GB
+                # (1, 8, 200000000),  # ~17 GB
                 # (1, 9, 350000000),  # ~32 GB
                 # (1, 9, 450000000),  # ~42 GB
             ]
