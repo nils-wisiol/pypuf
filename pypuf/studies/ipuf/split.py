@@ -44,6 +44,7 @@ class Result(NamedTuple):
     training_set_down_accuracy: List[float]
     rounds: int
     first_rounds: int
+    iterations: int
 
 
 class SplitAttack(Experiment):
@@ -60,6 +61,7 @@ class SplitAttack(Experiment):
     accuracies: List[float]
     accuracies_up: List[float]
     accuracies_down: List[float]
+    iterations: int
 
     def __init__(self, progress_log_name, parameters):
         super().__init__(progress_log_name, parameters)
@@ -72,6 +74,7 @@ class SplitAttack(Experiment):
         self.accuracies_down = []
         self.rounds = 0
         self.first_rounds = 0
+        self.iterations = 0
 
     def prepare(self):
         self.simulation = InterposePUF(
@@ -163,6 +166,7 @@ class SplitAttack(Experiment):
             weights_prng=RandomState(self.parameters.seed + 271828 + self.first_rounds),
             logger=self.progress_logger,
         )
+        self.iterations += learner.iteration_count
         return learner.learn()
 
     def _get_next_model_down(self):
@@ -192,7 +196,8 @@ class SplitAttack(Experiment):
         model_down = learner.learn(init_weight_array=self.model_down.weight_array)
         self.accuracies_down.append(1 - approx_dist(model_down, self.simulation.down, 10 ** 4, RandomState(1)))
         self.progress_logger.debug(f'new down model accuracy: {self.accuracies_down[-1]:.2f}')
-        
+        self.iterations += learner.iteration_count
+
         return model_down
 
     def _get_model_up(self):
@@ -282,6 +287,7 @@ class SplitAttack(Experiment):
         model_up = learner.learn() if not getattr(self, 'model_up', None) else learner.learn(init_weight_array=self.model_up.weight_array)
         self.accuracies_up.append(1 - approx_dist(model_up, self.simulation.up, 10 ** 4, RandomState(1)))
         self.progress_logger.debug(f'new up model accuracy: {self.accuracies_up[-1]:.2f}')
+        self.iterations += learner.iteration_count
 
         return model_up
 
@@ -322,6 +328,7 @@ class SplitAttack(Experiment):
             accuracies_down=self.accuracies_down,
             rounds=self.rounds,
             first_rounds=self.first_rounds,
+            iterations=self.iterations,
         )
 
     def _interpose(self, challenges, bits, replace=None):
