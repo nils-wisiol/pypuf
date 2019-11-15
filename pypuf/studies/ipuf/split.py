@@ -381,7 +381,7 @@ class SplitAttackStudy(Study):
                 )
             )
             for n in [64]
-            for noisiness in [.01, .1, .2, .5]
+            for noisiness in [0, .01, .1, .2, .5]
             for k_up, k_down, N in [
                 (1, 1, 10000),
                 (2, 2, 50000),
