@@ -437,7 +437,7 @@ class SplitAttackStudy(Study):
         data['Ncat'] = data.apply(lambda row: f'{row["N"]/1e6:.2f}M' if row['N'] > 1e6 else f'{int(row["N"])}', axis=1)
         data['size'] = data.apply(lambda row: '(%i,%i)' % (int(row['k_up']), int(row['k_down'])), axis=1)
         data['measured_time'] = data.apply(lambda row: round(row['measured_time']), axis=1)
-        data['success'] = data.apply(lambda row: row['accuracy'] >= .95, axis=1)
+        data['success'] = data.apply(lambda row: row['accuracy'] >= .95 * row['simulation_noise'], axis=1)
         data = data.sort_values(['size'])
 
         groups = data.groupby(['N', 'k_up', 'k_down', 'n', 'noisiness'])
@@ -453,8 +453,6 @@ class SplitAttackStudy(Study):
             exp_number_of_trials_until_success = 1 / success_rate if success_rate > 0 else Inf  # Geometric dist.
             time_to_success = (exp_number_of_trials_until_success - 1) * mean_time_fail + mean_time_success
             avg_reliability = g_data['simulation_noise'].mean()
-            if isnan(time_to_success):
-                continue
             rt_data = rt_data.append(
                 {
                     'N': N, 'k_up': k_up, 'k_down': k_down, 'n': n, 'noisiness': noisiness,
@@ -478,7 +476,7 @@ class SplitAttackStudy(Study):
 
         with axes_style('whitegrid'):
             ax = barplot(
-                data=rt_data,
+                data=rt_data[~isnan(rt_data['time_to_success'])],
                 x='x',
                 y='time_to_success',
                 hue='noisiness',
