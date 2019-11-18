@@ -1,5 +1,5 @@
 from scipy.stats import pearsonr
-from numpy import array, copy, ones, zeros, shape, empty
+from numpy import array, copy, ones, zeros, shape, empty, tile
 
 from pypuf.tools import TrainingSet, ChallengeResponseSet, approx_dist
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -8,24 +8,25 @@ from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 
 def extend_tset(tset, pos):
-    N, n = shape(tset)
-    xtset = empty(shape=(N*2, n+1))
-    xtset[:N, :pos] = tset[:, :pos]
-    xtset[:N, :pos] = tset[:, :pos]
-    xtset[N:, pos+1:] = tset[:, pos:]
-    xtset[N:, pos+1:] = tset[:, pos:]
-    xtset[N:, pos] = 1
-    xtset[:N, pos] = -1
-    return xtset
+    N, n = shape(tset.challenges)
+    xcs = empty(shape=(N*2, n+1))
+    xcs[:N, :pos] = tset.challenges[:, :pos]
+    xcs[N:, :pos] = tset.challenges[:, :pos]
+    xcs[:N, pos+1:] = tset.challenges[:, pos:]
+    xcs[N:, pos+1:] = tset.challenges[:, pos:]
+    xcs[N:, pos] = 1
+    xcs[:N, pos] = -1
+    xrs = tile(A=tset.responses, reps=2)
+    return ChallengeResponseSet(challenges=xcs, responses=xrs)
 
 
 # Set Parameters
 n = 64
 n_2 = n//2
-k_up = 2
-k_down = 6
+k_up = 3
+k_down = 3
 # seed = 42
-N = int(800e3)
+N = int(100e3)
 transform = LTFArray.transform_atf
 
 print('\nLearn {}-bit ({}, {})-IPUF with {} CRPs using a multi-tier learning process based on logistic regression...\n'
@@ -43,29 +44,18 @@ print('\nLearn down PUF...')
 model_down = learner_down.learn()
 print('total epochs: {}\t\tconverged: {}'.format(learner_down.epoch_count, learner_down.converged))
 
-first_half_correlations = array([[pearsonr(model_down.weight_array[j, :n_2], ipuf.down.weight_array[i, :n_2])[0]
-                                  for i in range(k_down)] for j in range(k_down)])
-last_half_correlations = array([[pearsonr(model_down.weight_array[j, n_2:], ipuf.down.weight_array[i, n_2+1:])[0]
-                                 for i in range(k_down)] for j in range(k_down)])
-print('correlations:')
-print('first half:')
-print(abs(first_half_correlations).max(axis=1))
-print('last half:')
-print(abs(last_half_correlations).max(axis=1))
-print('##################################################################')
-print(abs(model_down.weight_array[:, :n_2]).mean())
-print(abs(model_down.weight_array[:, -n_2:]).mean())
-print('##################################################################')
+model = InterposePUF(n=n, k_down=k_down, k_up=k_up)
+model.down = model_down
+accuracy = 1 - approx_dist(instance1=ipuf, instance2=model, num=10**4)
+print(f'accuracy: {accuracy}')
 
-# Include middle weight into model_down
-print('\nInclude middle weight into model_down...')
-weights_extended = zeros(shape=(k_down, n + 2))
-weights_extended[:, :n_2] = model_down.weight_array[:, :n_2]
-weights_extended[:, n_2+1:] = model_down.weight_array[:, n_2:]
-model_down.weight_array = weights_extended
-model_down.n += 1
-accuracy_down = 1 - approx_dist(instance1=ipuf.down, instance2=model_down, num=10**4)
-print('accuracy down: {}'.format(accuracy_down))
+correlations = array([[pearsonr(model_down.weight_array[j], ipuf.down.weight_array[i])[0]
+                       for i in range(k_down)] for j in range(k_down)])
+print('correlations:')
+print(abs(correlations).max(axis=1))
+print(abs(correlations))
+print(ipuf.down.weight_array[:, n_2+1])
+print(model_down.weight_array[:, n_2+1])
 
 """
 # Filter CRPs in order to learn down PUF
