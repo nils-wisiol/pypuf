@@ -65,7 +65,7 @@ class ReliabilityBasedCMAES(Learner):
     """
 
     def __init__(self, training_set, k, n, transform, combiner,
-                 abort_delta, random_seed, logger):
+                 abort_delta, random_seed, logger, gpu_id):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -94,6 +94,7 @@ class ReliabilityBasedCMAES(Learner):
         self.num_iterations = 0
         self.stops = ''
         self.logger = logger
+        self.gpu_id = gpu_id
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
@@ -101,6 +102,7 @@ class ReliabilityBasedCMAES(Learner):
         # Linearize challenges for faster LTF computation (shape=(N,k,n))
         self.linearized_challenges = self.transform(self.training_set.challenges,
                                                     k=self.k)
+
 
 
     def print_accs(self, es):
@@ -138,10 +140,10 @@ class ReliabilityBasedCMAES(Learner):
         corr2 = 0
         if len(self.pool) > 0:
             corr2 = tf.abs(tf_pearsonr(np.array(self.pool).T, tf.transpose(weights)))
-            mask = tf.math.greater(corr2, 0.5)
-            corr2 = tf.where(mask, corr2 - 0.5, tf.zeros_like(corr2))
+            mask = tf.math.greater(corr2, 0.25)
+            corr2 = tf.where(mask, corr2 - 0.25, tf.zeros_like(corr2))
             corr2 = corr**2
-            corr2 = tf.reduce_sum(corr2, axis=0)
+            corr2 = tf.reduce_sum(tf.cast(mask, tf.double), axis=0)
 
         return tf.abs(1 - corr) + corr2
 
@@ -182,9 +184,9 @@ class ReliabilityBasedCMAES(Learner):
                     fitness_function=self.objective,
                     termination_no_effect=self.abort_delta)
 
-            # Learn the chain the GPU
-            with tf.device('/GPU:1'):
-                w, _ = cma.search()
+            # Learn the chain (on the GPU)
+            with tf.device('/GPU:%d' % self.gpu_id):
+                w, score = cma.search()
 
             # Update meta data about how many iterations it took to find a solution
             meta_data['iteration_count'][n_chain].append(cma.generation)

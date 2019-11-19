@@ -118,7 +118,8 @@ class ExperimentReliabilityBasedCMAES(Experiment):
                            self.instance.combiner,
                            self.parameters.abort_delta,
                            self.parameters.seed_model,
-                           self.progress_logger)
+                           self.progress_logger,
+                           self.gpu_id)
 
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
