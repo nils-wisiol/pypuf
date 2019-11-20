@@ -396,6 +396,12 @@ class SplitAttackStudy(Study):
 
     SHUFFLE = True
 
+    @staticmethod
+    def _noise_levels(k_up, k_down):
+        if k_up <= 4 and k_down <= 4:
+            return [0, .01, .1, .2, .5]
+        return [0]
+
     def experiments(self):
         return [
             SplitAttack(
@@ -405,7 +411,6 @@ class SplitAttackStudy(Study):
                 )
             )
             for n in [64]
-            for noisiness in [0, .01, .1, .2, .5]
             for k_up, k_down, N in [
                 (1, 1, 10000),
                 (2, 2, 50000),
@@ -435,6 +440,7 @@ class SplitAttackStudy(Study):
                 # (1, 9, 350000000),  # ~32 GB
                 # (1, 9, 450000000),  # ~42 GB
             ]
+            for noisiness in self._noise_levels(k_up, k_down)
             for seed in range(100)
         ]
 
