@@ -164,10 +164,11 @@ class SplitAttack(Experiment):
             except NoTrainingSetException:
                 self.progress_logger.debug('WARNING: could not create large enough training set for upper layer. '
                                            'Aborting!')
-                if not self.model_up:
+                if not getattr(self, 'model_up', None):
                     # use random model
                     self.model_up = XORArbiterPUF(n=self.parameters.n, k=self.parameters.k_up,
                                                   seed=self.parameters.seed + 27182)
+                    self.accuracies_up.append(-1)
                 self._update_model()
                 break
             self._update_model()
