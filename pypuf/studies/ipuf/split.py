@@ -104,11 +104,12 @@ class SplitAttack(Experiment):
     def run(self):
         self.progress_logger.debug('Creating initial training set down')
         training_set_down = self._interpose_crp_set_pm1(self.training_set)
+        test_set_down = self._interpose_crp_set_pm1(self.test_set)
         self.progress_logger.debug('done')
 
         while True:
             self.progress_logger.debug('computing first down model')
-            self.model_down = self._get_first_model_down(xt_set=training_set_down)
+            self.model_down = self._get_first_model_down(xt_set=training_set_down, xtest_set=test_set_down)
 
             # attacker model accuracy
             model_ipuf = InterposePUF(
@@ -180,7 +181,7 @@ class SplitAttack(Experiment):
         self.progress_logger.debug(f'current accuracy up: {self.accuracies_up[-1]:.2f}, '
                                    f'down: {self.accuracies_down[-1]:.2f}, total: {self.accuracies[-1]}')
 
-    def _get_first_model_down(self, xt_set):
+    def _get_first_model_down(self, xt_set, xtest_set):
         self.progress_logger.debug('initially training down model')
         learner = LogisticRegression(
             t_set=xt_set,
@@ -189,6 +190,8 @@ class SplitAttack(Experiment):
             transformation=self.simulation.down.transform,
             weights_prng=RandomState(self.parameters.seed + 271828 + self.first_rounds),
             logger=self.progress_logger,
+            test_set=xtest_set,
+            target_test_accuracy=.74,
         )
         model = learner.learn()
         self.iterations += learner.iteration_count
