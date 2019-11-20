@@ -292,9 +292,14 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
-        training_set_up = ChallengeResponseSet(selected_challenges[:filled], selected_responses[:filled])
-        self.progress_logger.debug(f'training set for upper layer created, size '
-                                   f'{training_set_up.challenges.nbytes / 1024**3}GiB')
+        test_set_size = int(min(10**4, .05 * filled))
+        test_slice = slice(0, test_set_size)
+        training_slice = slice(test_set_size, filled)
+        test_set_up = ChallengeResponseSet(selected_challenges[test_slice], selected_responses[test_slice])
+        training_set_up = ChallengeResponseSet(selected_challenges[training_slice], selected_responses[training_slice])
+        self.progress_logger.debug(f'training and test set for upper layer created, sizes '
+                                   f'{training_set_up.challenges.nbytes / 1024**3}GiB, '
+                                   f'{test_set_up.challenges.nbytes / 1024**3}GiB')
 
         # analysis: training set accuracy
         self.training_set_up_accuracy.append(average(
@@ -311,6 +316,9 @@ class SplitAttack(Experiment):
             transformation=self.simulation.up.transform,
             weights_prng=RandomState(self.parameters.seed + 43),
             logger=self.progress_logger,
+            test_set=test_set_up,
+            test_accuracy_patience=5,
+            test_accuracy_improvement=.01,
         )
         model_up = learner.learn() if not getattr(self, 'model_up', None) else learner.learn(init_weight_array=self.model_up.weight_array)
         self.accuracies_up.append(1 - approx_dist(model_up, self.simulation.up, 10 ** 4, RandomState(1)))
