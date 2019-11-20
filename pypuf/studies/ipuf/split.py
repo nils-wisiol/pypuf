@@ -292,6 +292,8 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
+        if filled < 200:
+            raise Exception('Could not create training set for upper layer. Noise too high? Training set too small?')
         test_set_size = int(min(10**4, max(.05 * filled, 1)))
         test_slice = slice(0, test_set_size)
         training_slice = slice(test_set_size, filled)
