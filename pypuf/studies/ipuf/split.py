@@ -50,6 +50,10 @@ class Result(NamedTuple):
     iterations: int
 
 
+class NoTrainingSetException(BaseException):
+    pass
+
+
 class SplitAttack(Experiment):
 
     simulation: InterposePUF
@@ -155,7 +159,12 @@ class SplitAttack(Experiment):
             def done():
                 return self.rounds > 5 or 1 - approx_dist_nonrandom(self.model, self.test_set) >= .95
 
-            self.model_up = self._get_model_up()
+            try:
+                self.model_up = self._get_model_up()
+            except NoTrainingSetException:
+                self.progress_logger.debug('WARNING: could not create large enough training set for upper layer. '
+                                           'Aborting!')
+                break
             self._update_model()
             if done():
                 break
@@ -292,8 +301,8 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
-        if filled < 200:
-            raise Exception('Could not create training set for upper layer. Noise too high? Training set too small?')
+        if filled < 50:
+            raise NoTrainingSetException
         test_set_size = int(min(10**4, max(.05 * filled, 1)))
         test_slice = slice(0, test_set_size)
         training_slice = slice(test_set_size, filled)
