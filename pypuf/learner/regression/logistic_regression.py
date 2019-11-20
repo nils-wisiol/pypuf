@@ -13,7 +13,7 @@ from numpy.random import RandomState
 
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-from pypuf.tools import compare_functions, TrainingSet, approx_dist_nonrandom
+from pypuf.tools import compare_functions, approx_dist_nonrandom, ChallengeResponseSet
 
 
 class LogisticRegression(Learner):
@@ -110,9 +110,10 @@ class LogisticRegression(Learner):
 
             return self.step
 
-    def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
+    def __init__(self, t_set: ChallengeResponseSet, n, k, transformation=LTFArray.transform_id,
+                 combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
-                 convergence_decimals=2, shuffle=False, test_set: TrainingSet = None, bias=False,
+                 convergence_decimals=2, shuffle=False, test_set: ChallengeResponseSet = None, bias=False,
                  target_test_accuracy=None):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
