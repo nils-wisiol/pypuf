@@ -112,7 +112,8 @@ class LogisticRegression(Learner):
 
     def __init__(self, t_set, n, k, transformation=LTFArray.transform_id, combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
-                 convergence_decimals=2, shuffle=False, test_set: TrainingSet = None, bias=False):
+                 convergence_decimals=2, shuffle=False, test_set: TrainingSet = None, bias=False,
+                 target_test_accuracy=None):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -127,6 +128,7 @@ class LogisticRegression(Learner):
         :param weights_prng: PRNG to draw the initial model from. Defaults to fresh `numpy.random.RandomState` instance.
         :param logger: logging.Logger
                        Logger which is used to log detailed information of learn iterations.
+        :param target_test_accuracy: None or float. If test accuracy exceeds this value, the learning is aborted.
         """
         self.iteration_count = 0
         self.epoch_count = 0
@@ -152,6 +154,7 @@ class LogisticRegression(Learner):
         self.training_set_dist_sign = -1
         self.test_set_dist = -1
         self.bias = bias
+        self.target_test_accuracy = target_test_accuracy
 
     @property
     def training_set(self):
@@ -288,8 +291,6 @@ class LogisticRegression(Learner):
             """
             if self.logger is None:
                 return
-            if self.test_set:
-                self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
             self.logger.debug(
                 '%i\t%s\t%f\t%f\t%f\t%s' % (
                     self.iteration_count,
@@ -365,7 +366,12 @@ class LogisticRegression(Learner):
 
                 # check convergence
                 current_step_size = norm(self.updater.step)
-                converged = current_step_size < 10**-self.convergence_decimals
+                if self.test_set:
+                    self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
+                converged = (
+                        current_step_size < 10**-self.convergence_decimals or
+                        (self.target_test_accuracy is not None and 1 - self.test_set_dist > self.target_test_accuracy)
+                )
 
                 # log
                 log_state(current_step_size)
@@ -373,9 +379,5 @@ class LogisticRegression(Learner):
                 if converged:
                     break
 
-        if not converged:
-            self.converged = False
-        else:
-            self.converged = True
-
+        self.converged = converged
         return model
