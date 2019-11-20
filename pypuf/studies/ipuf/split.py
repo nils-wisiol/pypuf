@@ -442,6 +442,8 @@ class SplitAttackStudy(Study):
 
     @staticmethod
     def _noise_levels(k_up, k_down):
+        if k_down == 1:
+            return [0, .01, .1, .2]
         if k_up <= 4 and k_down <= 4:
             return [0, .01, .1, .2, .5]
         return [0]
