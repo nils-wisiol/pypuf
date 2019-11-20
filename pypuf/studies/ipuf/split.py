@@ -453,11 +453,11 @@ class SplitAttackStudy(Study):
                 )
             )
             for n in [64]
-            for k_up, k_down, N in [
-                (1, 1, 10000),
-                (2, 2, 50000),
-                (3, 3, 80000),
-                (4, 4, 100000),
+            for k_up, k_down, Ns in [
+                (1, 1, [1000, 2000, 5000, 10000]),
+                (2, 2, [10000, 20000, 50000, 100000]),
+                (3, 3, [10000, 20000, 50000, 100000]),
+                (4, 4, [10000, 20000, 50000, 100000]),
                 #(5, 5, 600000),
                 # (6, 6, 2000000),
                 # (6, 6, 5000000),
@@ -482,6 +482,7 @@ class SplitAttackStudy(Study):
                 # (1, 9, 350000000),  # ~32 GB
                 # (1, 9, 450000000),  # ~42 GB
             ]
+            for N in Ns
             for noisiness in self._noise_levels(k_up, k_down)
             for seed in range(100)
         ]
