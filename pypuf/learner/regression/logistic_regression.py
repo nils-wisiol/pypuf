@@ -370,7 +370,7 @@ class LogisticRegression(Learner):
 
                 # check convergence
                 current_step_size = norm(self.updater.step)
-                if self.test_set:
+                if self.test_set and self.test_set.N:
                     self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
                     test_set_accuracies.append(1 - self.test_set_dist)
                 converged = (
