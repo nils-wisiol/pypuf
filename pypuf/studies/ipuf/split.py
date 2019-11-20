@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy
+from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy, Inf, isnan
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
