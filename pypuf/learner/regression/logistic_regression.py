@@ -114,7 +114,7 @@ class LogisticRegression(Learner):
                  combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
                  convergence_decimals=2, shuffle=False, test_set: ChallengeResponseSet = None, bias=False,
-                 target_test_accuracy=None):
+                 target_test_accuracy=None, test_accuracy_patience=None, test_accuracy_improvement=None):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -156,6 +156,8 @@ class LogisticRegression(Learner):
         self.test_set_dist = -1
         self.bias = bias
         self.target_test_accuracy = target_test_accuracy
+        self.test_accuracy_patience = test_accuracy_patience
+        self.test_accuracy_improvement = test_accuracy_improvement
 
     @property
     def training_set(self):
@@ -284,6 +286,7 @@ class LogisticRegression(Learner):
                  The computed model.
         """
         self.logger.debug('LR learner started')
+        test_set_accuracies = []
 
         # log format
         def log_state(step_size):
@@ -369,9 +372,21 @@ class LogisticRegression(Learner):
                 current_step_size = norm(self.updater.step)
                 if self.test_set and self.test_set.N:
                     self.test_set_dist = approx_dist_nonrandom(model, self.test_set)
+                    test_set_accuracies.append(1 - self.test_set_dist)
                 converged = (
-                        current_step_size < 10**-self.convergence_decimals or
-                        (self.target_test_accuracy is not None and 1 - self.test_set_dist > self.target_test_accuracy)
+                    current_step_size < 10**-self.convergence_decimals
+                    or (self.target_test_accuracy and 1 - self.test_set_dist > self.target_test_accuracy)
+                    or (
+                        self.test_accuracy_improvement
+                        and self.test_accuracy_patience
+                        and len(test_set_accuracies) >= self.test_accuracy_patience
+                        and (
+                            abs(
+                                min(test_set_accuracies[-self.test_accuracy_patience:])
+                                - max(test_set_accuracies[-self.test_accuracy_patience:])
+                            ) < self.test_accuracy_improvement
+                        )
+                    )
                 )
 
                 # log
