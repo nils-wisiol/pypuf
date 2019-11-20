@@ -201,6 +201,7 @@ class SplitAttack(Experiment):
         # create a training set for the lower PUF, based on the upper layer model
         self.progress_logger.debug(f'copying challenges of size {self.training_set.challenges.nbytes / 1024**3:.2f}GiB')
         training_set = self._interpose_crp_set(self.training_set, self.model_up.eval(self.training_set.challenges))
+        test_set = self._interpose_crp_set(self.test_set, self.model_up.eval(self.test_set.challenges))
 
         # analysis: training set accuracy
         self.training_set_down_accuracy.append(average(
@@ -217,6 +218,9 @@ class SplitAttack(Experiment):
             transformation=self.simulation.down.transform,
             weights_prng=RandomState(0),  # overwritten below
             logger=self.progress_logger,
+            test_set=test_set,
+            test_accuracy_patience=5,
+            test_accuracy_improvement=.01,
         )
         model_down = learner.learn(init_weight_array=self.model_down.weight_array)
         self._record_down_accuracy()
