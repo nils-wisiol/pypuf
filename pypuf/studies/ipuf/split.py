@@ -103,13 +103,7 @@ class SplitAttack(Experiment):
 
     def run(self):
         self.progress_logger.debug('Creating initial training set down')
-        training_set_down = ChallengeResponseSet(
-            challenges=self._interpose(
-                challenges=tile(A=self.training_set.challenges, reps=(2, 1)),
-                bits=concatenate((ones(self.parameters.N), -ones(self.parameters.N)), axis=0),
-            ),
-            responses=tile(A=self.training_set.responses, reps=2),
-        )
+        training_set_down = self._interpose_crp_set_pm1(self.training_set)
         self.progress_logger.debug('done')
 
         while True:
@@ -410,6 +404,15 @@ class SplitAttack(Experiment):
             1 - approx_dist(self._flip_model(self.model_down), self.simulation.down, 10 ** 4, RandomState(1)))
         self.progress_logger.debug(f'down model accuracy: {self.accuracies_down[-1]:.2f} / flipped: '
                                    f'{self.accuracies_down_flipped[-1]:.2f}')
+
+    def _interpose_crp_set_pm1(self, crp_set: ChallengeResponseSet):
+        return ChallengeResponseSet(
+            challenges=self._interpose(
+                challenges=tile(A=crp_set.challenges, reps=(2, 1)),
+                bits=concatenate((ones(crp_set.N), -ones(crp_set.N)), axis=0),
+            ),
+            responses=tile(A=crp_set.responses, reps=2),
+        )
 
 
 class SplitAttackStudy(Study):
