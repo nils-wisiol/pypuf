@@ -292,7 +292,7 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
-        test_set_size = int(min(10**4, .05 * filled))
+        test_set_size = int(min(10**4, max(.05 * filled, 1)))
         test_slice = slice(0, test_set_size)
         training_slice = slice(test_set_size, filled)
         test_set_up = ChallengeResponseSet(selected_challenges[test_slice], selected_responses[test_slice])
