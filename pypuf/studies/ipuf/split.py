@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile
+from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
@@ -38,6 +38,7 @@ class Result(NamedTuple):
     accuracies: List[float]
     accuracies_up: List[float]
     accuracies_down: List[float]
+    accuracies_down_flipped: List[float]
     correlation_down_front: object
     correlation_down_back: object
     correlation_up: object
@@ -64,6 +65,7 @@ class SplitAttack(Experiment):
     accuracies: List[float]
     accuracies_up: List[float]
     accuracies_down: List[float]
+    accuracies_down_flipped: List[float]
     iterations: int
 
     def __init__(self, progress_log_name, parameters):
@@ -75,6 +77,7 @@ class SplitAttack(Experiment):
         self.accuracies = []
         self.accuracies_up = []
         self.accuracies_down = []
+        self.accuracies_down_flipped = []
         self.rounds = 0
         self.first_rounds = 0
         self.iterations = 0
@@ -128,8 +131,8 @@ class SplitAttack(Experiment):
             self.accuracies.append(1 - approx_dist(model_ipuf, self.simulation, 10 ** 4, RandomState(1)))
 
             # analysis: down model accuracy
-            self.accuracies_down.append(1 - approx_dist(self.model_down, self.simulation.down, 10 ** 4, RandomState(1)))
-            self.progress_logger.debug(f'initial accuracy down: {self.accuracies_down[-1]:.2f} total: {self.accuracies[-1]:.2f}')
+            self.progress_logger.debug('inital accuracy:')
+            self._record_down_accuracy()
 
             # first model good?
             self.first_rounds += 1
@@ -222,8 +225,7 @@ class SplitAttack(Experiment):
             logger=self.progress_logger,
         )
         model_down = learner.learn(init_weight_array=self.model_down.weight_array)
-        self.accuracies_down.append(1 - approx_dist(model_down, self.simulation.down, 10 ** 4, RandomState(1)))
-        self.progress_logger.debug(f'new down model accuracy: {self.accuracies_down[-1]:.2f}')
+        self._record_down_accuracy()
         self.iterations += learner.iteration_count
 
         return model_down
@@ -354,6 +356,7 @@ class SplitAttack(Experiment):
             accuracies=self.accuracies,
             accuracies_up=self.accuracies_up,
             accuracies_down=self.accuracies_down,
+            accuracies_down_flipped=self.accuracies_down_flipped,
             rounds=self.rounds,
             first_rounds=self.first_rounds,
             simulation_noise=1 - approx_dist(self.simulation, self.simulation_noise_free, 10**4, RandomState(31418)),
@@ -390,6 +393,23 @@ class SplitAttack(Experiment):
                     challenges[:, self.n2:]
                 ), axis=1
             )
+
+    def _flip_model(self, model):
+        flipped_weights = copy(model.weight_array)
+        flipped_weights[:, self.n2+1:] = -flipped_weights[:, self.n2+1:]
+        return LTFArray(
+            weight_array=flipped_weights[:,:-1],
+            transform=model.transform,
+            combiner=model.combiner,
+            bias=flipped_weights[:,-1],
+        )
+
+    def _record_down_accuracy(self):
+        self.accuracies_down.append(1 - approx_dist(self.model_down, self.simulation.down, 10 ** 4, RandomState(1)))
+        self.accuracies_down_flipped.append(
+            1 - approx_dist(self._flip_model(self.model_down), self.simulation.down, 10 ** 4, RandomState(1)))
+        self.progress_logger.debug(f'down model accuracy: {self.accuracies_down[-1]:.2f} / flipped: '
+                                   f'{self.accuracies_down_flipped[-1]:.2f}')
 
 
 class SplitAttackStudy(Study):
