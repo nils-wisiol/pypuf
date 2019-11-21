@@ -457,46 +457,54 @@ class SplitAttackStudy(Study):
     SHUFFLE = True
 
     @staticmethod
-    def _noise_levels(k_up, k_down):
+    def _noise_levels(n, k_up, k_down):
+        if n != 64:
+            return [0]
         if k_down == 1:
             return [0, .1, .2]
         if k_up <= 4 and k_down <= 4:
             return [0, .1, .2, .5]
         return [0, .02, .05, .1]
 
+    @staticmethod
+    def _bit_lengths(k_up, k_down):
+        if k_up <= 4 and k_down <= 4:
+            return [32, 48, 56, 64, 72, 96, 128]
+        return [64]
+
     def experiments(self):
         return [
             SplitAttack(
                 progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-seed={seed}',
                 parameters=Parameters(
-                    n=n, k_up=k_up, k_down=k_down, N=N, seed=seed, noisiness=noisiness,
+                    n=n, k_up=k_up, k_down=k_down, N=int(N * n/64), seed=seed, noisiness=noisiness,
                 )
             )
-            for n in [64]
             for k_up, k_down, Ns in [
                 (1, 1, [1000, 2000, 5000, 10000]),
                 (2, 2, [10000, 20000, 50000, 100000]),
                 (3, 3, [10000, 20000, 50000, 100000]),
                 (4, 4, [20000, 50000, 100000, 200000]),
-                (5, 5, [500000, 600000, 600000, 1000000]),
-                (6, 6, [1000000, 2000000, 5000000, 10000000]),
-                (7, 7, [10000000, 20000000, 5000000, 10000000]),
+                # (5, 5, [500000, 600000, 600000, 1000000]),
+                # (6, 6, [1000000, 2000000, 5000000, 10000000]),
+                # (7, 7, [10000000, 20000000, 5000000, 10000000]),
                 # (8, 8, 400000000),  # about 25 GB of training set size, needs ~37GB
                 # (9, 9, 700000000),
                 # (9, 9, 800000000),  # nearly 50 GB of training set size, needs ~75 GB
-                (1, 2, [2000, 5000, 10000, 20000, 50000, 100000]),
-                (1, 3, [10000, 20000, 50000, 100000]),
-                (1, 4, [10000, 20000, 50000, 100000]),
-                (1, 5, [200000, 500000, 600000, 1000000]),
-                (1, 6, [500000, 1000000, 2000000, 5000000]),
-                (1, 7, [2000000, 5000000, 10000000, 20000000]),
+                # (1, 2, [2000, 5000, 10000, 20000, 50000, 100000]),
+                # (1, 3, [10000, 20000, 50000, 100000]),
+                # (1, 4, [10000, 20000, 50000, 100000]),
+                # (1, 5, [200000, 500000, 600000, 1000000]),
+                # (1, 6, [500000, 1000000, 2000000, 5000000]),
+                # (1, 7, [2000000, 5000000, 10000000, 20000000]),
                 # (1, 8, 150000000),
                 # (1, 8, 200000000),  # ~17 GB
                 # (1, 9, 350000000),  # ~32 GB
                 # (1, 9, 450000000),  # ~42 GB
             ]
             for N in Ns
-            for noisiness in self._noise_levels(k_up, k_down)
+            for n in self._bit_lengths(k_up, k_down)
+            for noisiness in self._noise_levels(n, k_up, k_down)
             for seed in range(100)
         ]
 
