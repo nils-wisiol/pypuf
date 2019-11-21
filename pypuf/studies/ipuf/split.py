@@ -71,6 +71,8 @@ class SplitAttack(Experiment):
     accuracies_down: List[float]
     accuracies_down_flipped: List[float]
     iterations: int
+    learner_up: LogisticRegression
+    learner_down: LogisticRegression
 
     def __init__(self, progress_log_name, parameters):
         super().__init__(progress_log_name, parameters)
@@ -85,6 +87,7 @@ class SplitAttack(Experiment):
         self.rounds = 0
         self.first_rounds = 0
         self.iterations = 0
+        self.learner_up = None
 
     def prepare(self):
         simulation_parameters = dict(
@@ -198,7 +201,7 @@ class SplitAttack(Experiment):
 
     def _get_first_model_down(self, xt_set, xtest_set):
         self.progress_logger.debug('initially training down model')
-        learner = LogisticRegression(
+        self.learner_down = LogisticRegression(
             t_set=xt_set,
             n=self.parameters.n + 1,
             k=self.parameters.k_down,
@@ -207,9 +210,10 @@ class SplitAttack(Experiment):
             logger=self.progress_logger,
             test_set=xtest_set,
             target_test_accuracy=.74,
+            min_iterations=10,
         )
-        model = learner.learn()
-        self.iterations += learner.iteration_count
+        model = self.learner_down.learn()
+        self.iterations += self.learner_down.iteration_count
         return model
 
     def _get_next_model_down(self):
@@ -226,20 +230,12 @@ class SplitAttack(Experiment):
 
         # model training
         self.progress_logger.debug('re-training down model')
-        learner = LogisticRegression(
-            t_set=training_set,
-            n=self.parameters.n + 1,
-            k=self.parameters.k_down,
-            transformation=self.simulation.down.transform,
-            weights_prng=RandomState(0),  # overwritten below
-            logger=self.progress_logger,
-            test_set=test_set,
-            test_accuracy_patience=5,
-            test_accuracy_improvement=.01,
-        )
-        model_down = learner.learn(init_weight_array=self.model_down.weight_array)
+        self.learner_down.target_test_accuracy = None
+        self.learner_down.test_set = test_set
+        self.learner_down.training_set = training_set
+        model_down = self.learner_down.learn(init_weight_array=self.model_down.weight_array, refresh_updater=False)
         self._record_down_accuracy()
-        self.iterations += learner.iteration_count
+        self.iterations += self.learner_down.iteration_count
 
         return model_down
 
@@ -326,21 +322,26 @@ class SplitAttack(Experiment):
 
         # train the upper model
         self.progress_logger.debug('(re)training up model')
-        learner = LogisticRegression(
-            t_set=training_set_up,
-            n=self.parameters.n,
-            k=self.parameters.k_up,
-            transformation=self.simulation.up.transform,
-            weights_prng=RandomState(self.parameters.seed + 43),
-            logger=self.progress_logger,
-            test_set=test_set_up,
-            test_accuracy_patience=5,
-            test_accuracy_improvement=.01,
-        )
-        model_up = learner.learn() if not getattr(self, 'model_up', None) else learner.learn(init_weight_array=self.model_up.weight_array)
+        if not self.learner_up:
+            self.learner_up = LogisticRegression(
+                t_set=training_set_up,
+                n=self.parameters.n,
+                k=self.parameters.k_up,
+                transformation=self.simulation.up.transform,
+                weights_prng=RandomState(self.parameters.seed + 43),
+                logger=self.progress_logger,
+                test_set=test_set_up,
+                convergence_decimals=2,
+                min_iterations=10,
+            )
+            model_up = self.learner_up.learn()
+        else:
+            self.learner_up.training_set = training_set_up
+            self.learner_up.test_set = test_set_up
+            model_up = self.learner_up.learn(init_weight_array=self.model_up.weight_array, refresh_updater=False)
         self.accuracies_up.append(1 - approx_dist(model_up, self.simulation.up, 10 ** 4, RandomState(1)))
         self.progress_logger.debug(f'new up model accuracy: {self.accuracies_up[-1]:.2f}')
-        self.iterations += learner.iteration_count
+        self.iterations += self.learner_up.iteration_count
 
         return model_up
 
