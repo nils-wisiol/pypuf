@@ -149,7 +149,7 @@ class LogisticRegression(Learner):
         self.converged = False
         self.logger = logger or logging
         self.updater = None
-        self.minibatch_size = minibatch_size or self.training_set.N
+        self.minibatch_size = minibatch_size
         self.shuffle = shuffle
         self.training_set_dist = -1
         self.training_set_dist_sign = -1
@@ -338,7 +338,7 @@ class LogisticRegression(Learner):
         converged = False
         self.iteration_count = 0
         log_state(0)
-        number_of_batches = (self.training_set.N + 1) // self.minibatch_size
+        number_of_batches = (self.training_set.N + 1) // (self.minibatch_size or self.training_set.N)
         efba_challenge_batches = []
         response_batches = []
         if not self.shuffle:
