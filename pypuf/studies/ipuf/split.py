@@ -311,8 +311,8 @@ class SplitAttack(Experiment):
         test_set_up = ChallengeResponseSet(selected_challenges[test_slice], selected_responses[test_slice])
         training_set_up = ChallengeResponseSet(selected_challenges[training_slice], selected_responses[training_slice])
         self.progress_logger.debug(f'training and test set for upper layer created, sizes '
-                                   f'{training_set_up.challenges.nbytes / 1024**3}GiB, '
-                                   f'{test_set_up.challenges.nbytes / 1024**3}GiB')
+                                   f'{training_set_up.challenges.nbytes / 1024**3:.2f}GiB, '
+                                   f'{test_set_up.challenges.nbytes / 1024**3:.2f}GiB')
 
         # analysis: training set accuracy
         self.training_set_up_accuracy.append(average(
