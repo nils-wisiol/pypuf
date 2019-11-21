@@ -115,6 +115,12 @@ class Experimenter(object):
         """
         Runs all experiments. Blocks until all experiment are finished.
         """
+        # determine cpu type
+        from numpy.distutils import cpuinfo
+        try:
+            cpu = cpuinfo.cpu.info[0]['model name']
+        except Exception:  # pylint: disable=W
+            pass
 
         # Setup multiprocessing logging
         manager = SyncManager()
@@ -198,7 +204,15 @@ class Experimenter(object):
                         'experiment_id': result.experiment_id,
                         'experiment_hash': experiment.hash,
                         'experiment': experiment.__class__.__name__,
+                        'cpu': cpu,
                     })
+                    for env_var in [
+                            'PYPUF_CPU_LIMIT',
+                            'OMP_NUM_THREADS',
+                            'NUMEXPR_NUM_THREADS',
+                            'MKL_NUM_THREADS',
+                    ]:
+                        row.update({env_var: os.environ.get(env_var, None)})
                     row.update(experiment.parameters._asdict())
                     row.update(result._asdict())
                     self.results = self.results.append(DataFrame([row]), sort=True)
