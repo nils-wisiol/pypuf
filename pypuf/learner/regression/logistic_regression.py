@@ -114,7 +114,8 @@ class LogisticRegression(Learner):
                  combiner=LTFArray.combiner_xor, weights_mu=0,
                  weights_sigma=1, weights_prng=RandomState(), logger=None, iteration_limit=10000, minibatch_size=None,
                  convergence_decimals=2, shuffle=False, test_set: ChallengeResponseSet = None, bias=False,
-                 target_test_accuracy=None, test_accuracy_patience=None, test_accuracy_improvement=None):
+                 target_test_accuracy=None, test_accuracy_patience=None, test_accuracy_improvement=None,
+                 min_iterations=0):
         """
         Initialize a LTF Array Logistic Regression Learner for the specified LTF Array.
 
@@ -130,6 +131,7 @@ class LogisticRegression(Learner):
         :param logger: logging.Logger
                        Logger which is used to log detailed information of learn iterations.
         :param target_test_accuracy: None or float. If test accuracy exceeds this value, the learning is aborted.
+        :param min_iterations: int. Number of iterations the learner does before converging.
         """
         self.iteration_count = 0
         self.epoch_count = 0
@@ -142,6 +144,7 @@ class LogisticRegression(Learner):
         self.weights_sigma = weights_sigma
         self.weights_prng = weights_prng
         self.iteration_limit = iteration_limit
+        self.min_iterations = min_iterations
         self.convergence_decimals = convergence_decimals
         self.transformation = transformation
         self.combiner = combiner
@@ -387,6 +390,8 @@ class LogisticRegression(Learner):
                             ) < self.test_accuracy_improvement
                         )
                     )
+                ) and (
+                    self.iteration_count > self.min_iterations
                 )
 
                 # log
