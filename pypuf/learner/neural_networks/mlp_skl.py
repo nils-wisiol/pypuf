@@ -160,6 +160,8 @@ class MultiLayerPerceptronScikitLearn(Learner):
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(tmp)
             self.log(f'epoch {epoch} accuracy {tmp}')
+            if tmp > 0.95:
+                break
             if epoch < self.DELAY:
                 continue
             if tmp > best:
