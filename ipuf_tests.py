@@ -44,17 +44,17 @@ num = 100
 for i in range(num):
     ipuf = InterposePUF(n=n, k_up=k_up, k_down=k_down, transform=transform)
 
-    down_weights = zeros(shape=(k_down, n))
+    down_weights = zeros(shape=(k_down, n+1))
     down_weights[:, :n_2] = ipuf.down.weight_array[:, :n_2]
-    down_weights[:, n_2:] = ipuf.down.weight_array[:, n_2+1:-1]
+    down_weights[:, n_2:] = -ipuf.down.weight_array[:, n_2:-1]
     down_puf = LTFArray(
         weight_array=down_weights,
         transform=transform,
         combiner=combiner,
-        bias=ipuf.down.weight_array[:, -1]
+        # bias=ipuf.down.weight_array[:, -1]
     )
 
-    accuracy_down = 1 - approx_dist(instance1=down_puf, instance2=ipuf, num=10**4)
+    accuracy_down = 1 - approx_dist(instance1=down_puf, instance2=ipuf.down, num=10**4)
     print(accuracy_down)
     mean += accuracy_down
 

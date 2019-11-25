@@ -25,7 +25,7 @@ n = 64
 n_2 = n//2
 k_up = 3
 k_down = 3
-# seed = 42
+seed = 42
 N = int(100e3)
 transform = LTFArray.transform_atf
 
@@ -34,11 +34,14 @@ print('\nLearn {}-bit ({}, {})-IPUF with {} CRPs using a multi-tier learning pro
 
 # Initialize IPUF, training set and learner
 print('\nInitialize IPUF, training set and the learner for down PUF...')
-ipuf = InterposePUF(n=n, k_up=k_up, k_down=k_down, transform=transform)
+ipuf = InterposePUF(n=n, k_up=k_up, k_down=k_down, transform=transform, seed=seed)
 tset = TrainingSet(instance=ipuf, N=N)
 xtset = extend_tset(tset=tset, pos=n_2)
+
+
 learner_down = LogisticRegression(t_set=xtset, n=n+1, k=k_down, transformation=transform)
 
+"""
 # Learn down PUF
 print('\nLearn down PUF...')
 model_down = learner_down.learn()
@@ -56,7 +59,7 @@ print(abs(correlations).max(axis=1))
 print(abs(correlations))
 print(ipuf.down.weight_array[:, n_2+1])
 print(model_down.weight_array[:, n_2+1])
-
+"""
 """
 # Filter CRPs in order to learn down PUF
 print('\nFilter CRPs in order to learn down PUF...')
