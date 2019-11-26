@@ -44,6 +44,7 @@ class Result(NamedTuple):
     correlation_up: object
     training_set_up_accuracy: List[float]
     training_set_down_accuracy: List[float]
+    training_set_down_sizes: List[int]
     rounds: int
     first_rounds: int
     simulation_noise: float
@@ -66,6 +67,7 @@ class SplitAttack(Experiment):
     n2: int
     training_set_up_accuracy: List[float]
     training_set_down_accuracy: List[float]
+    training_set_down_sizes: List[int]
     accuracies: List[float]
     accuracies_up: List[float]
     accuracies_down: List[float]
@@ -80,6 +82,7 @@ class SplitAttack(Experiment):
         self.n2 = self.parameters.n // 2
         self.training_set_up_accuracy = []
         self.training_set_down_accuracy = []
+        self.training_set_down_sizes = []
         self.accuracies = []
         self.accuracies_up = []
         self.accuracies_down = []
@@ -266,6 +269,8 @@ class SplitAttack(Experiment):
             block_challenges = challenges[block_slice]
             block_responses = responses[block_slice]
             block_len = len(block_challenges)
+            self.progress_logger.debug(f'working on block {idx} from {block_slice.start} to {block_slice.stop}, '
+                                       f'total {block_len} challenges.')
 
             # create extended challenges (number: 2 * block_len)
             challenges_p1 = self._interpose(block_challenges, +ones(shape=(block_len, 1), dtype=BIT_TYPE))
@@ -279,6 +284,8 @@ class SplitAttack(Experiment):
             # for unequal interpose bit
             responses_unequal = responses_p1 != responses_m1
             unequal = sum(responses_unequal)
+            self.progress_logger.debug(f'found a total of {unequal} unequal responses out of {len(responses_p1)} '
+                                       f'queries')
 
             # copy all these challenges (without interpose bit) to selected_challenges
             block_new = slice(
@@ -303,6 +310,7 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
+        self.training_set_down_sizes.append(filled)
         if filled < 50:
             raise NoTrainingSetException
         test_set_size = int(min(10**4, max(.05 * filled, 1)))
@@ -378,6 +386,7 @@ class SplitAttack(Experiment):
             ),
             training_set_up_accuracy=self.training_set_up_accuracy,
             training_set_down_accuracy=self.training_set_down_accuracy,
+            training_set_down_sizes=self.training_set_down_sizes,
             accuracies=self.accuracies,
             accuracies_up=self.accuracies_up,
             accuracies_down=self.accuracies_down,
