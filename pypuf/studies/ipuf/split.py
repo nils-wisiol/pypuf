@@ -388,25 +388,7 @@ class SplitAttack(Experiment):
             iterations=self.iterations,
         )
 
-    def _interpose(self, challenges, bits, replace=None):
-        n = self.parameters.n
-        if replace is None:
-            replace = challenges.shape[1] == n + 1
-        if replace:
-            return self._interpose_replace(challenges, bits)
-        else:
-            return self._interpose_insert(challenges, bits)
-
-    def _interpose_replace(self, challenges, bits):
-        challenges = challenges[:, :]
-        if isinstance(bits, ndarray):
-            challenges[:, self.n2] = bits.reshape((challenges.shape[0],))
-            return challenges
-        else:
-            challenges[:, self.n2] = zeros(shape=(challenges.shape[0],), dtype=BIT_TYPE) + bits
-            return challenges
-
-    def _interpose_insert(self, challenges, bits):
+    def _interpose(self, challenges, bits):
         if isinstance(bits, ndarray):
             N = challenges.shape[0]
             return concatenate((challenges[:, :self.n2], bits.reshape(N, 1), challenges[:, self.n2:]), axis=1)
@@ -450,7 +432,6 @@ class SplitAttack(Experiment):
             self._interpose(crp_set.challenges[:, :], interpose_bits),
             crp_set.responses
         )
-
 
 
 class SplitAttackStudy(Study):
