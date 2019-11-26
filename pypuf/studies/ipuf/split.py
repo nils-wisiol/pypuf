@@ -318,7 +318,8 @@ class SplitAttack(Experiment):
         self.training_set_up_accuracy.append(average(
             self.simulation.up.eval(training_set_up.challenges) == training_set_up.responses
         ))
-        self.progress_logger.debug(f'new up training set accuracy: {self.training_set_up_accuracy[-1]:.2f} size: {len(selected_challenges)}')
+        self.progress_logger.debug(f'new up training set accuracy: {self.training_set_up_accuracy[-1]:.2f} size: '
+                                   f'{len(training_set_up.challenges)}')
 
         # train the upper model
         self.progress_logger.debug('(re)training up model')
