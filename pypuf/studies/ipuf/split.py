@@ -268,8 +268,8 @@ class SplitAttack(Experiment):
             block_len = len(block_challenges)
 
             # create extended challenges (number: 2 * block_len)
-            challenges_p1 = self._interpose(block_challenges, +ones(shape=(block_len, 1)))
-            challenges_m1 = self._interpose(block_challenges, -ones(shape=(block_len, 1)))
+            challenges_p1 = self._interpose(block_challenges, +ones(shape=(block_len, 1), dtype=BIT_TYPE))
+            challenges_m1 = self._interpose(block_challenges, -ones(shape=(block_len, 1), dtype=BIT_TYPE))
 
             # evaluate extended challenges
             responses_p1 = self.model_down.eval(challenges_p1)
@@ -403,7 +403,7 @@ class SplitAttack(Experiment):
             challenges[:, self.n2] = bits.reshape((challenges.shape[0],))
             return challenges
         else:
-            challenges[:, self.n2] = zeros(shape=(challenges.shape[0],)) + bits
+            challenges[:, self.n2] = zeros(shape=(challenges.shape[0],), dtype=BIT_TYPE) + bits
             return challenges
 
     def _interpose_insert(self, challenges, bits):
@@ -414,7 +414,7 @@ class SplitAttack(Experiment):
             return concatenate(
                 (
                     challenges[:, :self.n2],
-                    zeros(shape=(challenges.shape[0], 1)) + bits,
+                    zeros(shape=(challenges.shape[0], 1), dtype=BIT_TYPE) + bits,
                     challenges[:, self.n2:]
                 ), axis=1
             )
@@ -440,7 +440,7 @@ class SplitAttack(Experiment):
         return ChallengeResponseSet(
             challenges=self._interpose(
                 challenges=tile(A=crp_set.challenges, reps=(2, 1)),
-                bits=concatenate((ones(crp_set.N), -ones(crp_set.N)), axis=0),
+                bits=concatenate((ones(crp_set.N, dtype=BIT_TYPE), -ones(crp_set.N, dtype=BIT_TYPE)), axis=0),
             ),
             responses=tile(A=crp_set.responses, reps=2),
         )
