@@ -397,7 +397,7 @@ class InterposeMLPStudy(Study):
 
     def plot(self):
         data = self.experimenter.results
-        data['Ncat'] = data.apply(lambda row: SplitAttackStudy._Ncat(row), axis=1)
+        data['Ncat'] = data.apply(lambda row: SplitAttackStudy._Ncat(row['N']), axis=1)
         data['size'] = data.apply(
             func=lambda row: '%s: k=%i' % (str(re.search(r'<([^\s]+)\s', str(row['simulation'])).group(1)),
                                            int(row['first_k'])),

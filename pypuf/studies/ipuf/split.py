@@ -2,8 +2,9 @@ from os import getpid
 from typing import NamedTuple, List
 from uuid import UUID
 
-from matplotlib.pyplot import close
-from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy, Inf, isnan
+from matplotlib.pyplot import close, subplots
+from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy, Inf, isnan, \
+    isinf
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
@@ -503,8 +504,7 @@ class SplitAttackStudy(Study):
         ]
 
     @staticmethod
-    def _Ncat(row):
-        N = row['N']
+    def _Ncat(N):
         symb = {
             'M': 1e6,
             'k': 1e3,
@@ -519,10 +519,10 @@ class SplitAttackStudy(Study):
         return '%i' % int(N)
 
     def plot(self):
-        data = self.experimenter.results
+        data = self.experimenter.results.dropna(how='all')
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024**3, axis=1)
         data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
-        data['Ncat'] = data.apply(lambda row: f'{row["N"]/1e6:.2f}M' if row['N'] > 1e6 else f'{int(row["N"])}', axis=1)
+        data['Ncat'] = data.apply(lambda row: self._Ncat(row['N']), axis=1)
         data['size'] = data.apply(lambda row: '(%i,%i)' % (int(row['k_up']), int(row['k_down'])), axis=1)
         data['measured_time'] = data.apply(lambda row: round(row['measured_time']), axis=1)
         data['success'] = data.apply(lambda row: row['accuracy'] >= .95 * row['simulation_noise'], axis=1)
@@ -531,7 +531,7 @@ class SplitAttackStudy(Study):
         groups = data.groupby(['N', 'k_up', 'k_down', 'n', 'noisiness'])
         rt_data = DataFrame(columns=['N', 'k_up', 'k_down', 'n', 'noisiness',
                                      'success_rate', 'avg_time_success', 'avg_time_fail', 'num_success', 'num_fail',
-                                     'num_total', 'time_to_success', 'avg_reliability'])
+                                     'num_total', 'time_to_success', 'reliability', 'memory_avg', 'memory_max'])
         for (N, k_up, k_down, n, noisiness), g_data in groups:
             num_success = len(g_data[g_data['success'] == True].index)
             num_total = len(g_data.index)
@@ -539,8 +539,11 @@ class SplitAttackStudy(Study):
             mean_time_success = average(g_data[g_data['success'] == True]['measured_time'])
             mean_time_fail = average(g_data[g_data['success'] == False]['measured_time']) if success_rate < 1 else 0
             exp_number_of_trials_until_success = 1 / success_rate if success_rate > 0 else Inf  # Geometric dist.
-            time_to_success = (exp_number_of_trials_until_success - 1) * mean_time_fail + mean_time_success
-            avg_reliability = g_data['simulation_noise'].mean()
+            if isinf(exp_number_of_trials_until_success):
+                time_to_success = Inf
+            else:
+                time_to_success = (exp_number_of_trials_until_success - 1) * mean_time_fail + mean_time_success
+            reliability = g_data['simulation_noise'].mean()
             rt_data = rt_data.append(
                 {
                     'N': N, 'k_up': k_up, 'k_down': k_down, 'n': n, 'noisiness': noisiness,
@@ -551,48 +554,136 @@ class SplitAttackStudy(Study):
                     'num_fail': num_total - num_success,
                     'num_total': num_total,
                     'time_to_success': time_to_success,
-                    'avg_reliability': avg_reliability,
+                    'reliability': round(reliability * 100 // 10 * 10 / 100, 2),
+                    'memory_avg_gib': g_data['max_memory'].mean() / 1024**3,
+                    'memory_max_gib': g_data['max_memory'].max() / 1024**3,
                 },
                 ignore_index=True,
             )
-        rt_data = rt_data.sort_values(['k_up', 'k_down', 'N'])
+        rt_data = rt_data.sort_values(['k_up', 'k_down', 'N', 'reliability'])
         print(rt_data)
 
         rt_data['size'] = rt_data.apply(lambda row: '%i-bit\n(%i,%i)' % (int(row['n']), int(row['k_up']), int(row['k_down'])), axis=1)
-        rt_data['Ncat'] = rt_data.apply(lambda row: self._Ncat(row), axis=1)
-        rt_data['x'] = rt_data.apply(lambda row: '%s\n%s' % (row['size'], row['Ncat']), axis=1)
+        rt_data['Ncat'] = rt_data.apply(lambda row: self._Ncat(row['N']), axis=1)
+        rt_data = rt_data[rt_data['reliability'] > .6]
 
         with axes_style('whitegrid'):
-            ax = barplot(
-                data=rt_data[~isnan(rt_data['time_to_success'])],
-                x='x',
-                y='time_to_success',
-                hue='noisiness',
-                ci=None,
-            )
-            ticks = {'1s': 1, '1min': 60, '1h': 3600, '1d': 24 * 3600, '3d': 3 * 24 *3600}
-            ax.set_yscale('log')
-            ax.set_yticks(list(ticks.values()))
-            ax.set_yticklabels(list(ticks.keys()))
-            ax.set_title('Split Attack on Interpose PUF')
-            ax.set_ylabel('Attack Time Until First Success')
-            ax.set_xlabel('Security Parameters and Training-Set Size')
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Noise Level')
-            ax.get_figure().set_size_inches(5, 3)
-            ax.get_figure().savefig(f'figures/{self.name()}.pdf', bbox_inches='tight',)
-            close(ax.get_figure())
-            return
+            """
+            Plot 1: Expected time to success, comparing for different iPUF sizes, training set sizes, and levels of 
+            reliability. All 64 bit.
+            """
+            hues = ['reliability', 'Ncat']
+            f, axes = subplots(ncols=1, nrows=2*len(hues))
+            data_64 = rt_data[rt_data['n'] == 64]
+            for idx, hue in enumerate(hues):
+                data_64['x'] = data_64.apply(lambda row: '\n'.join(['%s' % row[h] for h in hues + ['size'] if h != hue]),
+                                             axis=1)
+                self._barplot(data_64[data_64['k_up'] == 1], axes[idx], hue, hues)
+                self._barplot(data_64[data_64['k_up'] != 1], axes[idx + len(hues)], hue, hues)
+            f.set_size_inches(15, 3 * 2 * len(hues))
+            f.subplots_adjust(hspace=.45)
+            f.savefig(f'figures/{self.name()}.pdf', bbox_inches='tight',)
+            close(f)
 
-            f = relplot(
-                data=data,
-                x='Ne6',
-                y='accuracy',
-                row='size',
-                hue='measured_time',
-                aspect=3,
-                height=2,
-            )
-            for ax in f.axes.flatten():
-                ax.set(ylim=(.45, 1))
-            f.savefig(f'figures/{self.name()}.accuracy.pdf')
-            close(f.fig)
+            """
+            Plot 2: Comparing expected time to success for different bit lengths and iPUF sizes (k,k) with k<=4. No 
+            noise.
+            """
+            data_stable = rt_data[rt_data['noisiness'] == 0]
+            n_data = DataFrame(columns=['k_up', 'k_down', 'n', 'N_best'])
+            for (k_up, k_down, n), group in data_stable.groupby(['k_up', 'k_down', 'n']):
+                n_data = n_data.append(
+                    {
+                        'k_up': k_up, 'k_down': k_down, 'n': n,
+                        'time_to_success_best': group['time_to_success'].min(),
+                        'N_best': self._Ncat(group.loc[group['time_to_success'].idxmin()]['N'])
+                    },
+                    ignore_index=True,
+                )
+            n_data = n_data.sort_values(['k_up', 'k_down', 'n'])
+            n_data['size'] = n_data.apply(lambda row: '(%.0f, %.0f)' % (row['k_up'], row['k_down']), axis=1)
+            groups = [(l, g) for (l, g) in n_data.groupby(['size']) if len(g) > 1]
+            f, axes = subplots(ncols=1,nrows=len(groups))
+            idx = 0
+            for size, group in groups:
+                relplot(
+                    data=group,
+                    x='n',
+                    y='time_to_success_best',
+                    hue='N_best',
+                    ci=None,
+                    ax=axes[idx],
+                )
+                ticks = {'1min': 60, '2.5min': 2.5 * 60, '5min': 5 * 60, '10min': 10 * 60,
+                         '20min': 20 * 60, '40min': 40 * 60, '1h': 60 * 60}
+                this_ticks = {l: v for (l, v) in ticks.items() if v < group['time_to_success_best'].max()}
+                axes[idx].set_yticks(list(this_ticks.values()))
+                axes[idx].set_yticklabels(list(this_ticks.keys()))
+                axes[idx].set_title('%s-Interpose PUF' % size)
+                axes[idx].set_ylabel('Attack Time Until First Success')
+                axes[idx].set_xscale('log')
+                axes[idx].set_yscale('log')
+                axes[idx].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Training Set Size')
+                idx += 1
+            f.set_size_inches(10, 3*len(groups))
+            f.subplots_adjust(hspace=.45)
+            f.savefig(f'figures/{self.name()}.n.pdf', bbox_inches='tight',)
+            close(f)
+
+            """
+            Plot 3: Comparing expected time to success for different (1,k) and (k,k) sizes, full reliability assumed.
+            """
+            f, axes = subplots(ncols=1,nrows=2)
+            n_data_64 = n_data[n_data['n'] == 64]
+            k_max = int(max(n_data_64['k_up'].max(), n_data_64['k_down'].max()))
+            print('k_max', k_max)
+            idx = 0
+            for label, group in [
+                ('1,k', n_data_64[n_data_64['k_up'] == 1]),
+                ('k,k', n_data_64[n_data_64['k_up'] == n_data_64['k_down']]),
+            ]:
+                relplot(
+                    data=group,
+                    x='k_down',
+                    y='time_to_success_best',
+                    hue='N_best',
+                    ci=None,
+                    ax=axes[idx],
+                    legend='full',
+                )
+                ticks = {'1min': 60, '2.5min': 2.5 * 60, '5min': 5 * 60, '10min': 10 * 60,
+                         '20min': 20 * 60, '40min': 40 * 60, '1h': 60 * 60, '1d': 24 * 60**2}
+                this_ticks = {l: v for (l, v) in ticks.items() if v < group['time_to_success_best'].max()}
+                axes[idx].set_xscale('log')
+                axes[idx].set_yscale('log')
+                axes[idx].set_yticks(list(this_ticks.values()))
+                axes[idx].set_yticklabels(list(this_ticks.keys()))
+                axes[idx].set_xticks([k for k in range(1, k_max + 1)])
+                axes[idx].set_xticklabels([str(k) for k in range(1, k_max + 1)])
+                axes[idx].set_title('%s-Interpose PUF' % label)
+                axes[idx].set_xlabel('k')
+                axes[idx].set_ylabel('Attack Time Until First Success')
+                axes[idx].legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title('Training Set Size')
+                idx += 1
+            f.set_size_inches(10, 3*len(groups))
+            f.subplots_adjust(hspace=.45)
+            f.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
+            close(f)
+
+    def _barplot(self, data, ax, hue, hues):
+        barplot(
+            data=data[~isnan(data['time_to_success'])],
+            x='x',
+            y='time_to_success',
+            hue=hue,
+            ci=None,
+            ax=ax,
+        )
+        ticks = {'30s': 30, '5min': 5 * 60, '20min': 20 * 60, '1h': 3600}
+        ticks.update({'6h': 6 * 3600, '1d': 24 * 3600})
+        ax.set_yscale('log')
+        ax.set_yticks(list(ticks.values()))
+        ax.set_yticklabels(list(ticks.keys()))
+        ax.set_xlabel(' / '.join([h for h in hues + ['size'] if h != hue]))
+        ax.set_ylabel('Attack Time Until First Success')
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.).set_title(hue)
