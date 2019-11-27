@@ -8,7 +8,7 @@ from numpy import concatenate, zeros, array, array2string, ones, ndarray, averag
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
-from seaborn import axes_style, barplot, set_context, lineplot
+from seaborn import axes_style, barplot, set_context, lineplot, relplot
 
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -652,36 +652,43 @@ class SplitAttackStudy(Study):
             """
             Plot 3: Comparing expected time to success for different (1,k) and (k,k) sizes, full reliability assumed.
             """
-            n_data_64 = stable_opt_data[stable_opt_data['n'] == 64]
+            n_data_64 = opt_data[(opt_data['n'] == 64) & (opt_data['reliability'] >= .8)].sort_values(
+                ['n', 'k_down', 'reliability'])
             n_data_64['iPUF Type'] = n_data_64.apply(lambda row: '(1,k)' if row['k_up'] == 1 else '(k,k)', axis=1)
             n_data_64['k'] = n_data_64['k_down']
             k_max = int(max(n_data_64['k_up'].max(), n_data_64['k_down'].max()))
-            ax = lineplot(
+            g = relplot(
                 data=n_data_64,
                 x='k',
                 y='time_to_success_best',
+                row='reliability',
+                kind='line',
                 markers=True,
                 style='iPUF Type',
                 ci=None,
+                aspect=3,
+                height=2.5,
                 legend='brief',
             )
-            f = ax.get_figure()
+            reliabilities = sorted(n_data_64['reliability'].unique())
+            for i, row in n_data_64.iterrows():
+                idx = reliabilities.index(row['reliability'])
+                align_h = 'right' if row['iPUF Type'] == '(k,k)' else 'left'
+                align_v = 'bottom' if row['iPUF Type'] == '(k,k)' else 'top'
+                g.axes.flatten()[idx].text(row['k'], row['time_to_success_best'], ' %s ' % row['N_best_cat'], horizontalalignment=align_h, verticalalignment=align_v)
             ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
                      '20min': 20 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
                      '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,}
-            ax.set_xscale('log')
-            ax.set_yscale('log')
-            ax.set_yticks(list(ticks.values()))
-            ax.set_yticklabels(list(ticks.keys()))
-            ax.set_ylabel('Attack Time Until First Success')
-            ax.set_xticks([k for k in range(1, k_max + 1)])
-            ax.set_xticklabels([str(k) for k in range(1, k_max + 1)])
-            ax.set_xticklabels([], minor=True)
-            f.set_size_inches(5.5, 3.5)
-            f.suptitle('Attack Time for Noise-Free 64-bit Interpose PUFs by Number of XORs')
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
-            f.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
-            close(f)
+            for idx, ax in enumerate(g.axes.flat):
+                ax.set_xscale('log')
+                ax.set_yscale('log')
+                ax.set_yticks(list(ticks.values()))
+                ax.set_yticklabels(list(ticks.keys()))
+                ax.set_ylabel('Attack Time Until First Success')
+                ax.set_xticks([k for k in range(1, k_max + 1)])
+                ax.set_xticklabels([str(k) for k in range(1, k_max + 1)])
+                ax.set_xticklabels([], minor=True)
+            g.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
 
             """
             Table 1: Details on Optimal Attack Settings for n=64
@@ -690,8 +697,14 @@ class SplitAttackStudy(Study):
                 lambda row: self._time_cat(row['time_to_success_best']),
                 axis=1
             )
-            print(opt_data[opt_data['n'] == 64][['S', 'N_best_cat', 'reliability', 'memory_avg_gib',
-                                                 'time_to_success_best_cat', 'success_rate', 'num_total']])
+            table_1 = opt_data[opt_data['n'] == 64][['S', 'N_best_cat', 'reliability', 'memory_avg_gib',
+                                                     'time_to_success_best_cat', 'success_rate',
+                                                     'num_total']]
+            table_1 = table_1.copy()
+            table_1['memory_avg_gib'] = table_1['memory_avg_gib'].round(1)
+            table_1['success_rate'] = table_1['success_rate'].round(2)
+            table_1['num_total'] = table_1['num_total'].round(0)
+            print(table_1.to_latex(index=False))
 
     def _barplot(self, data, ax, hue, hues):
         barplot(
