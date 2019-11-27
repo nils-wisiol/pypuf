@@ -481,8 +481,8 @@ class SplitAttackStudy(Study):
                 # (4, 4, [20000, 50000, 100000, 200000]),
                 # (5, 5, [500000, 600000, 600000, 1000000]),
                 # (6, 6, [1*M, 2*M, 5*M, 10*M, 15*M]),  # max. 7.5GB
-                (7, 7, [40*M]),  # 20GB
-                # (8, 8, [300*M]),  # about 25 GB of training set size, needs ~37GB
+                # (7, 7, [40*M]),  # 20GB VmPeak / 12GB VmRSS
+                (8, 8, [300*M]),  # est. 90GB VmRSS
                 # (9, 9, 700000000),
                 # (9, 9, 800000000),  # nearly 50 GB of training set size, needs ~75 GB
                 # (1, 2, [2000, 5000, 10000, 20000, 50000, 100000]),
