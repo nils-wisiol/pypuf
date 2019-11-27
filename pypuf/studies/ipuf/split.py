@@ -468,7 +468,8 @@ class SplitAttackStudy(Study):
         M = 10**6
         return [
             SplitAttack(
-                progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-seed={seed}',
+                progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-noisiness={noisiness}-'
+                                  f'seed={seed}',
                 parameters=Parameters(
                     n=n, k_up=k_up, k_down=k_down, N=int(N * n/64), seed=seed, noisiness=noisiness,
                 )
