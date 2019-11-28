@@ -109,14 +109,19 @@ class SplitAttack(Experiment):
         self.simulation_noise_free = InterposePUF(
             **simulation_parameters,
         )
+        self.progress_logger.debug('Split Attack starting ...')
         self.training_set = TrainingSet(self.simulation, self.parameters.N, RandomState(self.parameters.seed))
         self.test_set = TrainingSet(self.simulation, 10**4, RandomState(self.parameters.seed + 1))
+        self.progress_logger.debug(f'Training set size: {self.training_set.challenges.nbytes / 1024**3:.2f}GiB')
 
     def run(self):
         self.progress_logger.debug('Creating initial training set down')
         training_set_down = self._interpose_crp_set_pm1(self.training_set)
         test_set_down = self._interpose_crp_set_pm1(self.test_set)
         self.progress_logger.debug('done')
+        self.progress_logger.debug(f'Training set size: {training_set_down.challenges.nbytes / 1024 ** 3:.2f}GiB')
+        self._att(training_set_down.challenges)  # transform training set in-situ to save memory
+        self._att(test_set_down.challenges)
 
         while True:
             self.progress_logger.debug('computing first down model')
@@ -146,6 +151,7 @@ class SplitAttack(Experiment):
                 break
 
         del training_set_down
+        del test_set_down
 
         # early stop?
         if .45 <= test_set_accuracy <= .55:
@@ -209,7 +215,7 @@ class SplitAttack(Experiment):
             t_set=xt_set,
             n=self.parameters.n + 1,
             k=self.parameters.k_down,
-            transformation=self.simulation.down.transform,
+            transformation=LTFArray.transform_id,  # note that we transformed the training set ourselves
             weights_prng=RandomState(self.parameters.seed + 271828 + self.first_rounds),
             logger=self.progress_logger,
             test_set=xtest_set,
@@ -218,6 +224,7 @@ class SplitAttack(Experiment):
         )
         model = self.learner_down.learn()
         self.iterations += self.learner_down.iteration_count
+        model.transform = LTFArray.transform_atf  # note that we transformed the training set ourselves
         return model
 
     def _get_next_model_down(self):
@@ -237,7 +244,11 @@ class SplitAttack(Experiment):
         self.learner_down.target_test_accuracy = None
         self.learner_down.test_set = test_set
         self.learner_down.training_set = training_set
+        self._att(training_set.challenges)  # transform training set in-situ to save memory
+        self._att(test_set.challenges)
+        self.model_down.transform = LTFArray.transform_id  # note that we transformed the training set ourselves
         model_down = self.learner_down.learn(init_weight_array=self.model_down.weight_array, refresh_updater=False)
+        model_down.transform = LTFArray.transform_atf  # note that we transformed the training set ourselves
         self._record_down_accuracy()
         self.iterations += self.learner_down.iteration_count
 
@@ -332,12 +343,14 @@ class SplitAttack(Experiment):
 
         # train the upper model
         self.progress_logger.debug('(re)training up model')
+        self._att(training_set_up.challenges)
+        self._att(test_set_up.challenges)
         if not self.learner_up:
             self.learner_up = LogisticRegression(
                 t_set=training_set_up,
                 n=self.parameters.n,
                 k=self.parameters.k_up,
-                transformation=self.simulation.up.transform,
+                transformation=LTFArray.transform_id,
                 weights_prng=RandomState(self.parameters.seed + 43),
                 logger=self.progress_logger,
                 test_set=test_set_up,
@@ -349,6 +362,7 @@ class SplitAttack(Experiment):
             self.learner_up.training_set = training_set_up
             self.learner_up.test_set = test_set_up
             model_up = self.learner_up.learn(init_weight_array=self.model_up.weight_array, refresh_updater=False)
+        model_up.transform = LTFArray.transform_atf
         self.accuracies_up.append(1 - approx_dist(model_up, self.simulation.up, 10 ** 4, RandomState(1)))
         self.progress_logger.debug(f'new up model accuracy: {self.accuracies_up[-1]:.2f}')
         self.iterations += self.learner_up.iteration_count
@@ -442,6 +456,15 @@ class SplitAttack(Experiment):
             self._interpose(crp_set.challenges[:, :], interpose_bits),
             crp_set.responses
         )
+
+    def _att(self, challenges):
+        """
+        Transformes the given challenges of shape (N, n) IN-SITU with the ATT transform.
+        Also see LTFArray.att.
+        """
+        N, n = challenges.shape
+        sub_challenges = challenges.reshape(N, 1, n)
+        LTFArray.att(sub_challenges)
 
 
 class SplitAttackStudy(Study):
