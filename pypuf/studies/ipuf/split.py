@@ -583,7 +583,7 @@ class SplitAttackStudy(Study):
         set_context('paper')
         with axes_style('whitegrid'):
             """
-            Plot 1: Expected time to success, comparing for different iPUF sizes, training set sizes, and levels of 
+            Plot 1: Expected time to success, comparing for different iPUF sizes, training set sizes, and levels of
             reliability. All 64 bit.
             """
             hues = ['reliability', 'Ncat']
@@ -600,7 +600,7 @@ class SplitAttackStudy(Study):
             close(f)
 
             """
-            Plot 2: Comparing expected time to success for different bit lengths and iPUF sizes (k,k) with k<=4. No 
+            Plot 2: Comparing expected time to success for different bit lengths and iPUF sizes (k,k) with k<=4. No
             noise.
             """
             opt_data = DataFrame(columns=['k_up', 'k_down', 'n', 'N_best', 'N_best_cat', 'reliability',
@@ -671,16 +671,12 @@ class SplitAttackStudy(Study):
                 legend='brief',
             )
             reliabilities = sorted(n_data_64['reliability'].unique())
-            for i, row in n_data_64.iterrows():
-                idx = reliabilities.index(row['reliability'])
-                align_h = 'right' if row['iPUF Type'] == '(k,k)' else 'left'
-                align_v = 'bottom' if row['iPUF Type'] == '(k,k)' else 'top'
-                g.axes.flatten()[idx].text(row['k'], row['time_to_success_best'], ' %s ' % row['N_best_cat'], horizontalalignment=align_h, verticalalignment=align_v)
             ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
                      '20min': 20 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
                      '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,}
+
             for idx, ax in enumerate(g.axes.flat):
-                ax.set_xscale('log')
+                #ax.set_xscale('log')
                 ax.set_yscale('log')
                 ax.set_yticks(list(ticks.values()))
                 ax.set_yticklabels(list(ticks.keys()))
@@ -688,6 +684,42 @@ class SplitAttackStudy(Study):
                 ax.set_xticks([k for k in range(1, k_max + 1)])
                 ax.set_xticklabels([str(k) for k in range(1, k_max + 1)])
                 ax.set_xticklabels([], minor=True)
+
+                ax2 = ax.twinx()
+                ax2.set(yscale="log")
+                D = n_data_64[n_data_64['reliability'] == reliabilities[idx]]
+
+                X = D[D["iPUF Type"] == '(k,k)']
+                t = ax2.bar(x=X['k'],
+                    height=X['N_best'],
+                    width=-0.2,
+                    align='edge',
+                    alpha=0.35,
+                    linestyle='--',
+                    edgecolor='black',
+                    linewidth=1,
+                    facecolor=None,
+                    )
+                for p in t.patches:
+                    p.set_x(p.get_x() - 0.05)
+
+                X = D[D["iPUF Type"] == '(1,k)']
+                t = ax2.bar(x=X['k'],
+                    height=X['N_best'],
+                    width=0.2,
+                    align='edge',
+                    alpha=0.35,
+                    linestyle='-',
+                    edgecolor='black',
+                    linewidth=1,
+                    facecolor=None,
+                    )
+                for p in t.patches:
+                    p.set_x(p.get_x() + 0.05)
+
+                ax2.set_ylabel('#CRP')
+
+
             g.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
 
             """
