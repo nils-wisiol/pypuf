@@ -108,18 +108,10 @@ class LTFArray(Simulation):
         :return:  array of shape(N,k,n)
                   Array of transformed challenges, data type is same as input.
         """
-        # Transform with ATF monomials
-        dtype = challenges.dtype
-        challenges = transpose(
-            array([
-                prod(challenges[:, i:], 1, dtype=dtype)
-                for i in range(len(challenges[0]))
-            ], dtype=dtype)
-        )
-
-        # Same challenge for all k Arbiters
-        res = cls.transform_id(challenges, k)
-        return res
+        N, n = challenges.shape
+        sub_challenges = cls.transform_id(challenges, 1).copy()
+        atf_sub_challenges = cls.att(sub_challenges)
+        return transpose(broadcast_to(transpose(atf_sub_challenges, axes=(1, 0, 2)), (k, N, n)), axes=(1, 0, 2))
 
     @classmethod
     def transform_lightweight_secure(cls, challenges, k):
