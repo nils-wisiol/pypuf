@@ -3,7 +3,7 @@ from typing import NamedTuple, List
 from uuid import UUID
 
 from matplotlib.pyplot import close, subplots
-from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, tile, copy, Inf, isnan, \
+from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, copy, Inf, isnan, \
     isinf
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
@@ -16,7 +16,7 @@ from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF, XORArbiterP
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.simulation.base import Simulation
 from pypuf.studies.base import Study
-from pypuf.tools import ChallengeResponseSet, TrainingSet, approx_dist, approx_dist_nonrandom, BIT_TYPE
+from pypuf.tools import ChallengeResponseSet, TrainingSet, approx_dist, approx_dist_nonrandom, BIT_TYPE, random_inputs
 
 
 class Parameters(NamedTuple):
@@ -445,10 +445,10 @@ class SplitAttack(Experiment):
     def _interpose_crp_set_pm1(self, crp_set: ChallengeResponseSet):
         return ChallengeResponseSet(
             challenges=self._interpose(
-                challenges=tile(A=crp_set.challenges, reps=(2, 1)),
-                bits=concatenate((ones(crp_set.N, dtype=BIT_TYPE), -ones(crp_set.N, dtype=BIT_TYPE)), axis=0),
+                challenges=crp_set.challenges,
+                bits=random_inputs(1, crp_set.N, RandomState(self.parameters.seed)),
             ),
-            responses=tile(A=crp_set.responses, reps=2),
+            responses=crp_set.responses,
         )
 
     def _interpose_crp_set(self, crp_set, interpose_bits):
