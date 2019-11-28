@@ -179,7 +179,7 @@ class LogisticRegression(Learner):
         # pylint: disable-msg=W0201
         self.__training_set = val
 
-    def gradient(self, model, challenges, responses, block_size=10**5):
+    def gradient(self, model, challenges, responses, block_size=10**6):
         """
         Compute the gradient of the given model.
         :param model: pypuf.simulation.arbiter_based.LTFArray
