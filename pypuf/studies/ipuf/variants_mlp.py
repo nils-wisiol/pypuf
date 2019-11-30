@@ -13,7 +13,6 @@ References:
                             pp. 2825-2830, 2011.
                             https://scikit-learn.org
 """
-import re
 from os import getpid
 from typing import NamedTuple, Iterable, List
 from uuid import UUID
@@ -38,14 +37,16 @@ from pypuf.studies.ipuf.split import SplitAttackStudy
 class Interpose3PUF(Simulation):
 
     def __init__(self, n: int, k_up: int, k_middle: int, k_down: int, seed: int) -> None:
-        seeds = RandomState(seed)
+        self.seed = seed
+        self.prng = RandomState(seed)
         self.n = n
         self.k = k_up
         self.k_up, self.k_middle, self.k_down = k_up, k_middle, k_down
-        self.up = XORArbiterPUF(n=n, k=k_up, seed=seeds.randint(0, 2 ** 32))
-        self.middle = XORArbiterPUF(n=n + 1, k=k_up, seed=seeds.randint(0, 2 ** 32))
-        self.down = XORArbiterPUF(n=n + 1, k=k_up, seed=seeds.randint(0, 2 ** 32))
+        self.up = XORArbiterPUF(n=n, k=k_up, seed=self.prng.randint(0, 2 ** 32))
+        self.middle = XORArbiterPUF(n=n + 1, k=k_up, seed=self.prng.randint(0, 2 ** 32))
+        self.down = XORArbiterPUF(n=n + 1, k=k_up, seed=self.prng.randint(0, 2 ** 32))
         self.interpose_pos = n // 2
+        self.size = f'n={n}, k_up={k_up}, k_middle={k_middle}, k_down={k_down}, pos={self.interpose_pos}'
 
     def challenge_length(self) -> int:
         return self.up.challenge_length()
@@ -73,14 +74,16 @@ class Interpose3PUF(Simulation):
 class InterposeBinaryTree(Simulation):
 
     def __init__(self, n: int, k_up: int, k_middle: int, k_down: int, seed: int) -> None:
-        seeds = RandomState(seed)
+        self.seed = seed
+        self.prng = RandomState(seed)
         self.n = n
         self.k = k_up
         self.k_up, self.k_middle, self.k_down = k_up, k_middle, k_down
-        self.up = XORArbiterPUF(n, k_up, seed=seeds.randint(0, 2 ** 32))
-        self.middle = [XORArbiterPUF(n + 1, k_middle, seed=seeds.randint(0, 2 ** 32)) for _ in range(2)]
-        self.down = [XORArbiterPUF(n + 1, k_down, seed=seeds.randint(0, 2 ** 32)) for _ in range(2)]
+        self.up = XORArbiterPUF(n, k_up, seed=self.prng.randint(0, 2 ** 32))
+        self.middle = [XORArbiterPUF(n + 1, k_middle, seed=self.prng.randint(0, 2 ** 32)) for _ in range(2)]
+        self.down = [XORArbiterPUF(n + 1, k_down, seed=self.prng.randint(0, 2 ** 32)) for _ in range(2)]
         self.interpose_pos = n // 2
+        self.size = f'n={n}, k_up={k_up}, k_middle={k_middle}, k_down={k_down}, pos={self.interpose_pos}'
 
     def challenge_length(self) -> int:
         return self.up.challenge_length()
@@ -89,9 +92,9 @@ class InterposeBinaryTree(Simulation):
         return self.down[0].response_length()
 
     def _interpose(self, challenges, bits):
-        ipos = self.interpose_pos
+        pos = self.interpose_pos
         return concatenate(
-            challenges[:, :ipos], bits, challenges[:, ipos:],
+            (challenges[:, :pos], bits.reshape(-1, 1), challenges[:, pos:]),
             axis=1,
         )
 
@@ -109,14 +112,16 @@ class InterposeBinaryTree(Simulation):
 class InterposeCascade(Simulation):
 
     def __init__(self, n: int, ks: List[int], seed: int) -> None:
-        seeds = RandomState(seed)
+        self.seed = seed
+        self.prng = RandomState(seed)
         self.n = n
         self.k = ks[0]
         self.ks = ks
         self.layers = [
-            XORArbiterPUF(n=n + 1 if i > 0 else n, k=k, seed=seeds.randint(0, 2 ** 32)) for i, k in enumerate(ks)
+            XORArbiterPUF(n=n + 1 if i > 0 else n, k=k, seed=self.prng.randint(0, 2 ** 32)) for i, k in enumerate(ks)
         ]
         self.interpose_pos = n // 2
+        self.size = f'n={n}, ks={str(ks)}, pos={self.interpose_pos}'
 
     def challenge_length(self) -> int:
         return self.layers[0].challenge_length()
@@ -125,9 +130,9 @@ class InterposeCascade(Simulation):
         return self.layers[-1].response_length()
 
     def _interpose(self, challenges, bits):
-        ipos = self.interpose_pos
+        pos = self.interpose_pos
         return concatenate(
-            challenges[:, :ipos], bits, challenges[:, ipos:],
+            (challenges[:, :pos], bits.reshape(-1, 1), challenges[:, pos:]),
             axis=1,
         )
 
@@ -141,12 +146,14 @@ class InterposeCascade(Simulation):
 class XORInterposePUF(Simulation):
 
     def __init__(self, n: int, k: int, seed: int) -> None:
-        seeds = RandomState(seed)
+        self.seed = seed
+        self.prng = RandomState(seed)
         self.n = n
         self.k = k
-        self.layers_up = [XORArbiterPUF(n=n, k=1, seed=seeds.randint(0, 2 ** 32)) for _ in range(k)]
-        self.layers_down = [XORArbiterPUF(n=n + 1, k=1, seed=seeds.randint(0, 2 ** 32)) for _ in range(k)]
+        self.layers_up = [XORArbiterPUF(n=n, k=1, seed=self.prng.randint(0, 2 ** 32)) for _ in range(k)]
+        self.layers_down = [XORArbiterPUF(n=n + 1, k=1, seed=self.prng.randint(0, 2 ** 32)) for _ in range(k)]
         self.interpose_pos = n // 2
+        self.size = f'n={n}, k={k}, pos={self.interpose_pos}'
 
     def challenge_length(self) -> int:
         return self.layers_up[0].challenge_length()
@@ -155,29 +162,34 @@ class XORInterposePUF(Simulation):
         return self.layers_down[0].response_length()
 
     def _interpose(self, challenges, bits):
-        ipos = self.interpose_pos
+        pos = self.interpose_pos
         return concatenate(
-            challenges[:, :ipos], bits, challenges[:, ipos:],
+            (challenges[:, :pos], bits.reshape(-1, 1), challenges[:, pos:]),
             axis=1,
         )
 
     def eval(self, challenges: ndarray) -> ndarray:
-        return prod([self.layers_down[i].eval(self._interpose(
-            challenges=challenges,
-            bits=self.layers_up[i].eval(challenges)
-        )) for i in range(self.k)])
+        return prod(
+            a=[self.layers_down[i].eval(self._interpose(
+                challenges=challenges,
+                bits=self.layers_up[i].eval(challenges)
+            )) for i in range(self.k)],
+            axis=0,
+        )
 
 
 class XORInterpose3PUF(Simulation):
 
     def __init__(self, n: int, k: int, seed: int) -> None:
-        seeds = RandomState(seed)
+        self.seed = seed
+        self.prng = RandomState(seed)
         self.n = n
         self.k = k
-        self.layers_up = [XORArbiterPUF(n=n, k=1, seed=seeds.randint(0, 2 ** 32)) for _ in range(k)]
-        self.layers_middle = [XORArbiterPUF(n=n + 1, k=1, seed=seeds.randint(0, 2 ** 32)) for _ in range(k)]
-        self.layers_down = [XORArbiterPUF(n=n + 1, k=1, seed=seeds.randint(0, 2 ** 32)) for _ in range(k)]
+        self.layers_up = [XORArbiterPUF(n=n, k=1, seed=self.prng.randint(0, 2 ** 32)) for _ in range(k)]
+        self.layers_middle = [XORArbiterPUF(n=n + 1, k=1, seed=self.prng.randint(0, 2 ** 32)) for _ in range(k)]
+        self.layers_down = [XORArbiterPUF(n=n + 1, k=1, seed=self.prng.randint(0, 2 ** 32)) for _ in range(k)]
         self.interpose_pos = n // 2
+        self.size = f'n={n}, k={k}, pos={self.interpose_pos}'
 
     def challenge_length(self) -> int:
         return self.layers_up[0].challenge_length()
@@ -186,20 +198,23 @@ class XORInterpose3PUF(Simulation):
         return self.layers_down[0].response_length()
 
     def _interpose(self, challenges, bits):
-        ipos = self.interpose_pos
+        pos = self.interpose_pos
         return concatenate(
-            challenges[:, :ipos], bits, challenges[:, ipos:],
+            (challenges[:, :pos], bits.reshape(-1, 1), challenges[:, pos:]),
             axis=1,
         )
 
     def eval(self, challenges: ndarray) -> ndarray:
-        return prod([self.layers_down[i].eval(self._interpose(
-            challenges=challenges,
-            bits=self.layers_middle[i].eval(self._interpose(
+        return prod(
+            a=[self.layers_down[i].eval(self._interpose(
                 challenges=challenges,
-                bits=self.layers_up[i].eval(challenges)
-            ))
-        )) for i in range(self.k)])
+                bits=self.layers_middle[i].eval(self._interpose(
+                    challenges=challenges,
+                    bits=self.layers_up[i].eval(challenges)
+                ))
+            )) for i in range(self.k)],
+            axis=0,
+        )
 
 
 class Parameters(NamedTuple):
@@ -225,6 +240,8 @@ class Result(NamedTuple):
     """
     name: str
     n: int
+    size: str
+    seed_simulation: int
     first_k: int
     experiment_id: UUID
     pid: int
@@ -307,6 +324,8 @@ class ExperimentMLPScikitLearn(Experiment):
         return Result(
             name=self.NAME,
             n=self.parameters.simulation.n,
+            size=self.parameters.simulation.size,
+            seed_simulation=self.parameters.simulation.seed,
             first_k=self.parameters.simulation.k,
             experiment_id=self.id,
             pid=getpid(),
@@ -325,52 +344,108 @@ class InterposeMLPStudy(Study):
     """
     SHUFFLE = True
 
-    ITERATION_LIMIT = 200
+    ITERATION_LIMIT = 100
     PATIENCE = ITERATION_LIMIT
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
     PRINT_LEARNING = False
-    SEED = 42
     LENGTH = 64
+    SEED = 42
 
-    SAMPLES_PER_POINT = 20
+    SAMPLES_PER_POINT = 10
 
-    N_CRPS = [
-        10 ** 5,
-        10 ** 6,
-        # 10 ** 7,
-    ]
+    N_CRPS = {
+        'small': [
+            10 * 1000,
+            50 * 1000,
+            200 * 1000,
+        ],
+        'medium': [
+            50 * 1000,
+            200 * 1000,
+            1000 * 1000,
+        ],
+        'large': [
+            200 * 1000,
+            1000 * 1000,
+            10000 * 1000,
+        ],
+    }
 
-    STRUCTURES = [
-        [2 ** 4] * 3,
-        [2 ** 6] * 3,
-        [2 ** 8] * 3,
-    ]
+    STRUCTURES = {
+        'small': [
+            [2 ** 3] * 3,
+            [2 ** 4] * 3,
+            [2 ** 3] * 4,
+        ],
+        'medium': [
+            [2 ** 5] * 3,
+            [2 ** 6] * 3,
+            [2 ** 5] * 4,
+        ],
+        'large': [
+            [2 ** 7] * 3,
+            [2 ** 8] * 3,
+            [2 ** 7] * 4,
+        ],
+    }
 
     LEARNING_RATES = [
         0.0002,
         0.002,
-        # 0.02,
+        0.02,
     ]
 
     BATCH_FRAC = [0.05]
 
     def experiments(self):
-        simulations = [
-            simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
-            [
-                Interpose3PUF(k_down=2, k_middle=1, k_up=1, n=self.LENGTH, seed=self.SEED + 1000 + i),
-                Interpose3PUF(k_down=2, k_middle=2, k_up=2, n=self.LENGTH, seed=self.SEED + 2000 + i),
-                Interpose3PUF(k_down=3, k_middle=1, k_up=1, n=self.LENGTH, seed=self.SEED + 3000 + i),
-                Interpose3PUF(k_down=3, k_middle=3, k_up=3, n=self.LENGTH, seed=self.SEED + 4000 + i),
-                Interpose3PUF(k_down=4, k_middle=1, k_up=1, n=self.LENGTH, seed=self.SEED + 5000 + i),
-                Interpose3PUF(k_down=4, k_middle=4, k_up=4, n=self.LENGTH, seed=self.SEED + 6000 + i),
-                # InterposeBinaryTree(k_down=1, k_middle=1, k_up=1, n=self.LENGTH, seed=self.SEED + 20000 + i),
-                # InterposeCascade(ks=[1] * 8, n=self.LENGTH, seed=self.SEED + 40000 + i),
-                # XORInterposePUF(k=4, n=self.LENGTH, seed=self.SEED + 60000 + i),
-                # XORInterpose3PUF(k=3, n=self.LENGTH, seed=self.SEED + 80000 + i),
-            ]
-        ]
+        simulations = {
+            'small': [
+                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
+                [
+                    Interpose3PUF(k_down=2, k_middle=1, k_up=1, n=self.LENGTH, seed=(self.SEED + 1000 + i) % 2 ** 32),
+                    Interpose3PUF(k_down=2, k_middle=2, k_up=2, n=self.LENGTH, seed=(self.SEED + 2000 + i) % 2 ** 32),
+                    InterposeBinaryTree(k_down=1, k_middle=1, k_up=1, n=self.LENGTH, seed=(self.SEED+20000+i) % 2**32),
+                    InterposeCascade(ks=[1] * 2, n=self.LENGTH, seed=(self.SEED + 40000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[2] * 2, n=self.LENGTH, seed=(self.SEED + 41000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 3, n=self.LENGTH, seed=(self.SEED + 42000 + i) % 2 ** 32),
+                    XORInterposePUF(k=2, n=self.LENGTH, seed=(self.SEED + 60000 + i) % 2 ** 32),
+                    XORInterpose3PUF(k=2, n=self.LENGTH, seed=(self.SEED + 80000 + i) % 2 ** 32),
+                ]
+            ],
+            'medium': [
+                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
+                [
+                    Interpose3PUF(k_down=3, k_middle=1, k_up=1, n=self.LENGTH, seed=(self.SEED + 3000 + i) % 2 ** 32),
+                    Interpose3PUF(k_down=3, k_middle=3, k_up=3, n=self.LENGTH, seed=(self.SEED + 4000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[2] * 3, n=self.LENGTH, seed=(self.SEED + 43000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 4, n=self.LENGTH, seed=(self.SEED + 44000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[2] * 4, n=self.LENGTH, seed=(self.SEED + 45000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 5, n=self.LENGTH, seed=(self.SEED + 46000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 6, n=self.LENGTH, seed=(self.SEED + 47000 + i) % 2 ** 32),
+                    XORInterposePUF(k=3, n=self.LENGTH, seed=(self.SEED + 61000 + i) % 2 ** 32),
+                    XORInterpose3PUF(k=3, n=self.LENGTH, seed=(self.SEED + 81000 + i) % 2 ** 32),
+                ]
+            ],
+            'large': [
+                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
+                [
+                    Interpose3PUF(k_down=4, k_middle=1, k_up=1, n=self.LENGTH, seed=(self.SEED + 5000 + i) % 2 ** 32),
+                    Interpose3PUF(k_down=4, k_middle=4, k_up=4, n=self.LENGTH, seed=(self.SEED + 6000 + i) % 2 ** 32),
+                    Interpose3PUF(k_down=5, k_middle=1, k_up=1, n=self.LENGTH, seed=(self.SEED + 7000 + i) % 2 ** 32),
+                    Interpose3PUF(k_down=5, k_middle=5, k_up=5, n=self.LENGTH, seed=(self.SEED + 8000 + i) % 2 ** 32),
+                    InterposeBinaryTree(k_down=2, k_middle=2, k_up=2, n=self.LENGTH, seed=(self.SEED+21000+i) % 2**32),
+                    InterposeCascade(ks=[2] * 5, n=self.LENGTH, seed=(self.SEED + 48000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[3] * 3, n=self.LENGTH, seed=(self.SEED + 49000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[4] * 2, n=self.LENGTH, seed=(self.SEED + 50000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[2] * 5, n=self.LENGTH, seed=(self.SEED + 51000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 7, n=self.LENGTH, seed=(self.SEED + 52000 + i) % 2 ** 32),
+                    InterposeCascade(ks=[1] * 8, n=self.LENGTH, seed=(self.SEED + 53000 + i) % 2 ** 32),
+                    XORInterposePUF(k=4, n=self.LENGTH, seed=(self.SEED + 62000 + i) % 2 ** 32),
+                    XORInterpose3PUF(k=4, n=self.LENGTH, seed=(self.SEED + 82000 + i) % 2 ** 32),
+                ]
+            ],
+        }
         return [
             ExperimentMLPScikitLearn(
                 progress_log_prefix=self.name(),
@@ -388,9 +463,10 @@ class InterposeMLPStudy(Study):
                     batch_size=int(N * batch_frac),
                 )
             )
-            for i, simulation in enumerate(simulations)
-            for N in self.N_CRPS
-            for layers in self.STRUCTURES
+            for group in self.N_CRPS.keys()
+            for i, simulation in enumerate(simulations[group])
+            for N in self.N_CRPS[group]
+            for layers in self.STRUCTURES[group]
             for learning_rate in self.LEARNING_RATES
             for batch_frac in self.BATCH_FRAC
         ]
@@ -398,14 +474,9 @@ class InterposeMLPStudy(Study):
     def plot(self):
         data = self.experimenter.results
         data['Ncat'] = data.apply(lambda row: SplitAttackStudy._Ncat(row['N']), axis=1)
-        data['size'] = data.apply(
-            func=lambda row: '%s: k=%i' % (str(re.search(r'<([^\s]+)\s', str(row['simulation'])).group(1)),
-                                           int(row['first_k'])),
-            axis=1,
-        )
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024 ** 3, axis=1)
         data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
-        data = data.sort_values(['size', 'layers'])
+        # data = data.sort_values(['size', 'layers'])
 
         with axes_style('whitegrid'):
             params = dict(
