@@ -412,7 +412,7 @@ class InterposeMLPStudy(Study):
     SEED = 42
     NOISINESS = 0.1
 
-    SAMPLES_PER_POINT = 1
+    SAMPLES_PER_POINT = 10
 
     N_CRPS = {
         'small': [
