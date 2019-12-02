@@ -403,7 +403,7 @@ class InterposeMLPStudy(Study):
     """
     SHUFFLE = True
 
-    ITERATION_LIMIT = 100
+    ITERATION_LIMIT = 400
     PATIENCE = ITERATION_LIMIT
     MAX_NUM_VAL = 10000
     MIN_NUM_VAL = 200
