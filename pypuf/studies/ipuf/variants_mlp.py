@@ -537,25 +537,19 @@ class InterposeMLPStudy(Study):
 
     def plot(self):
         data = self.experimenter.results
-        data['Ncat'] = data.apply(lambda row: SplitAttackStudy._Ncat(row['N']), axis=1)
-        data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024 ** 3, axis=1)
-        data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
-
-        with axes_style('whitegrid'):
-            params = dict(
-                data=data,
-                x='Ncat',
-                y='accuracy',
-                row='simulation',
-                kind='swarm',
-                aspect=2,
-                height=4,
-            )
-            for name, params_ind in {
-                'layer': dict(hue='layers', hue_order=[str([2 ** s] * 3) for s in range(2, 10)]),
-                'learning_rate': dict(hue='learning_rate'),
-            }.items():
-                f = catplot(**params, **params_ind)
-                f.axes.flatten()[0].set(ylim=(.45, 1.))
-                f.savefig(f'figures/{self.name()}.{name}.pdf')
-                close(f.fig)
+        data = data[data['iteration_limit'] == 400]
+        data = data.sort_values(['simulation', 'first_k'])
+        g = catplot(
+            data=data,
+            y='simulation',
+            x='accuracy',
+            hue='N',
+            aspect=.7,
+            height=20,
+            kind='boxen',
+        )
+        ax = g.axes.flatten()[0]
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+        ax.set_title('Model Accuracy for Deep Learning on Interpose PUF Variations')
+        ax.set_xlim((.45, 1))
+        g.savefig(f'figures/{self.name()}.pdf')
