@@ -4,11 +4,11 @@ from uuid import UUID
 
 from matplotlib.pyplot import close, subplots
 from numpy import concatenate, zeros, array, array2string, ones, ndarray, average, empty, ceil, copy, Inf, isnan, \
-    isinf
+    isinf, arange
 from numpy.random.mtrand import RandomState
 from pandas import DataFrame
 from scipy.stats import pearsonr
-from seaborn import axes_style, barplot, set_context, lineplot, relplot
+from seaborn import axes_style, barplot, set_context, lineplot, relplot, scatterplot, distplot
 
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.regression.logistic_regression import LogisticRegression
@@ -555,6 +555,15 @@ class SplitAttackStudy(Study):
                     return '%.2f%s' % (r, s)
         return '%i' % int(N)
 
+    @staticmethod
+    def _parse_array_of_float(a):
+        if isinstance(a, float):
+            return a
+        a = a.lstrip('[ ')
+        a = a.rstrip('] ')
+        sep = ',' if ',' in a else ' '
+        return [float(x.strip('[]')) for x in a.split(sep) if x.strip(' \n\t[]')]
+
     def plot(self):
         data = self.experimenter.results.dropna(how='all')
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024**3, axis=1)
@@ -563,6 +572,12 @@ class SplitAttackStudy(Study):
         data['size'] = data.apply(lambda row: '(%i,%i)' % (int(row['k_up']), int(row['k_down'])), axis=1)
         data['measured_time'] = data.apply(lambda row: round(row['measured_time']), axis=1)
         data['success'] = data.apply(lambda row: row['accuracy'] >= .95 * row['simulation_noise'], axis=1)
+        for field in ['accuracies_up', 'accuracies_down', 'accuracies', 'accuracies_down_flipped']:
+            data[field] = data.apply(lambda row: self._parse_array_of_float(row[field]), axis=1)
+            data[f'{field}_first'] = data.apply(
+                lambda row: max(1 - row[field][0], row[field][0]) if not isinstance(row[field], float) else row[field],
+                axis=1
+            )
         data = data.sort_values(['size'])
 
         groups = data.groupby(['N', 'k_up', 'k_down', 'n', 'noisiness'])
@@ -744,6 +759,48 @@ class SplitAttackStudy(Study):
 
 
             g.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
+
+            """
+            Plot 4: Accuracy distribution for initial training of the lower layer
+            """
+            data['initial_down_accuracy'] = data.apply(
+                lambda row: max([row[a] for a in ['accuracies_down_first', 'accuracies_down_flipped_first']]),
+                axis=1,
+            )
+            bin_width = .01
+            fig_data = opt_data[(opt_data['n'] == 64) & (opt_data['reliability'] == 1) & (opt_data['k_down'] >= 4)]
+            fig_data['cat'] = fig_data.apply(lambda row: '1k' if row['k_up'] == 1 else 'kk', axis=1)
+            fig, axes = subplots(nrows=2, ncols=1, sharex=True)
+            ax_1k = axes[0]
+            ax_kk = axes[1]
+            for cat, group in fig_data.groupby(['cat']):
+                ax = ax_1k if cat == '1k' else ax_kk
+                for _, row in group.iterrows():
+                    distplot(
+                        data[(data['n'] == 64) & (data['simulation_noise'] == 1) &
+                             (data['k_up'] == row['k_up']) & (data['k_down'] == row['k_down']) &
+                             (data['N'] == row['N_best'])]['initial_down_accuracy'],
+                        bins=arange(.5, 1 + bin_width, bin_width),
+                        norm_hist=True,
+                        kde=None,
+                        ax=ax,
+                    )
+                ax.legend(
+                    [
+                        f'({row["k_up"]:.0f}, {row["k_down"]:.0f}) with {row["N_best_cat"]} CRPs'
+                        for _, row in group.iterrows()
+                    ],
+                )
+                ax.set_xlim((.45, 1))
+                ax.set_xticks(arange(.5, 1.05, .05))
+                ax.set_yticks([])
+                ax.set_xlabel('')
+                ax.set_ylabel('Rel. Frequency')
+            axes[-1].set_xlabel('Initial Accuracy of the Lower Layer Model')
+            fig.suptitle('LR Modeling Attack on Randomly Interposed CRP Set')
+            fig.set_size_inches(w=5, h=1.8*len(axes))
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+            fig.savefig(f'figures/{self.name()}.initial.pdf')
 
             """
             Table 1: Details on Optimal Attack Settings for n=64
