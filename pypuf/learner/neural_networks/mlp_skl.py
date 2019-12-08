@@ -25,7 +25,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
     def __init__(self, n, k, training_set, validation_frac, transformation, preprocessing, layers=(10, 10),
                  activation='relu', domain_in=-1, learning_rate=0.001, penalty=0.0002, beta_1=0.9, beta_2=0.999,
                  tolerance=0.0025, patience=4, print_learning=False, iteration_limit=40, batch_size=1000,
-                 seed_model=0xc0ffee, logger=None):
+                 seed_model=0xc0ffee, logger=None, goal=0.99):
         """
         :param n:               int; positive, length of PUF (typically power of 2)
         :param k:               int; positive, width of PUF (typically between 1 and 8)
@@ -70,6 +70,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
         self.nn = None
         self.model = None
         self.log = logger
+        self.goal = goal if goal else 1.0
 
     def prepare(self):
         """
@@ -160,7 +161,7 @@ class MultiLayerPerceptronScikitLearn(Learner):
             tmp = accuracy(y_true=y_val, y_pred=self.model.eval(cs=x_val))
             self.accuracy_curve.append(tmp)
             self.log(f'epoch {epoch} accuracy {tmp}')
-            if tmp > 0.95:
+            if tmp > self.goal:
                 break
             if epoch < self.DELAY:
                 continue

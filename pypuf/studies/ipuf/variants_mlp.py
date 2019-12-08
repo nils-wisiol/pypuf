@@ -31,7 +31,6 @@ from pypuf.simulation.arbiter_based.arbiter_puf import XORArbiterPUF
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.simulation.base import Simulation
 from pypuf.studies.base import Study
-from pypuf.studies.ipuf.split import SplitAttackStudy
 
 
 class Interpose3PUF(Simulation):
@@ -42,6 +41,9 @@ class Interpose3PUF(Simulation):
         self.n = n
         self.k = k_up
         self.k_up, self.k_middle, self.k_down = k_up, k_middle, k_down
+        self.chains = k_up + k_middle + k_down
+        self.xors = k_up if k_up > 1 else 0 + k_middle if k_middle > 1 else 0 + k_down if k_down > 1 else 0
+        self.interposings = 3
         self.noisiness = noisiness
         seeds = [self.prng.randint(0, 2 ** 32) for _ in range(6)]
         self.up = XORArbiterPUF(n=n, k=k_up, seed=seeds[0], noisiness=noisiness, noise_seed=seeds[1])
@@ -84,7 +86,10 @@ class InterposeBinaryTree(Simulation):
         self.n = n
         self.ks = ks
         self.k = ks[0]
-        self.depth = len(ks)
+        self.depth = len(ks) - 1
+        self.chains = sum([k * (2 ** i) for i, k in enumerate(ks)])
+        self.xors = sum([k * 2 ** i if k > 1 else 0 for i, k in enumerate(ks)])
+        self.interposings = 2 ** (self.depth + 1) - 2
         self.noisiness = noisiness
         self.layers = [[
             XORArbiterPUF(
@@ -96,7 +101,7 @@ class InterposeBinaryTree(Simulation):
             )
             for _ in range(2 ** i)
         ]
-            for i in range(self.depth)
+            for i in range(self.depth + 1)
         ]
         self.interpose_pos = n // 2
 
@@ -133,6 +138,9 @@ class InterposeCascade(Simulation):
         self.n = n
         self.k = ks[0]
         self.ks = ks
+        self.chains = sum(ks)
+        self.xors = self.chains
+        self.interposings = len(ks)
         self.noisiness = noisiness
         seeds = [self.prng.randint(0, 2 ** 32) for _ in range(2 * len(ks))]
         self.layers = [
@@ -177,6 +185,9 @@ class XORInterposePUF(Simulation):
         self.prng = RandomState(seed)
         self.n = n
         self.k = k
+        self.chains = 2 * k
+        self.xors = k
+        self.interposings = k
         self.noisiness = noisiness
         seeds = [self.prng.randint(0, 2 ** 32) for _ in range(4 * k)]
         self.layers_up = [
@@ -222,6 +233,9 @@ class XORInterpose3PUF(Simulation):
         self.prng = RandomState(seed)
         self.n = n
         self.k = k
+        self.chains = 3 * k
+        self.xors = k
+        self.interposings = 2 * k
         self.noisiness = noisiness
         seeds = [self.prng.randint(0, 2 ** 32) for _ in range(6 * k)]
         self.layers_up = [
@@ -293,12 +307,17 @@ class Result(NamedTuple):
     name: str
     n: int
     first_k: int
+    num_chains: int
+    num_xors: int
+    num_interposings: int
     experiment_id: UUID
     pid: int
     measured_time: float
     iterations: int
     accuracy: float
+    accuracy_relative: float
     stability: float
+    stability_estimate: float
     loss_curve: Iterable[float]
     accuracy_curve: Iterable[float]
     max_memory: int
@@ -317,6 +336,7 @@ class ExperimentMLPScikitLearn(Experiment):
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.simulation = parameters.simulation
         self.stability = 1.0
+        self.stability_estimate = 1.0
         self.training_set = None
         self.learner = None
         self.model = None
@@ -331,6 +351,8 @@ class ExperimentMLPScikitLearn(Experiment):
             num=10 ** 4,
             random_instance=RandomState(seed=self.parameters.seed),
         )
+        self.stability = max(self.stability, 1 - self.stability)
+        self.stability_estimate = (1 + sqrt(2 * self.stability - 1)) / 2    # estimation of non-noisy vs. noisy
         self.progress_logger.debug(f'Gathering training set with {self.parameters.N} examples')
         self.training_set = tools.TrainingSet(
             instance=self.simulation,
@@ -357,6 +379,7 @@ class ExperimentMLPScikitLearn(Experiment):
             seed_model=self.parameters.seed,
             print_learning=False,
             logger=self.progress_logger.debug,
+            goal=0.95 * self.stability_estimate,
         )
         self.learner.prepare()
 
@@ -385,12 +408,17 @@ class ExperimentMLPScikitLearn(Experiment):
             name=self.NAME,
             n=self.parameters.simulation.n,
             first_k=self.parameters.simulation.k,
+            num_chains=self.parameters.simulation.chains,
+            num_xors=self.parameters.simulation.xors,
+            num_interposings=self.parameters.simulation.interposings,
             experiment_id=self.id,
             pid=getpid(),
             measured_time=self.measured_time,
             iterations=-1 if not self.model else self.learner.nn.n_iter_,
             accuracy=accuracy,
+            accuracy_relative=accuracy / self.stability_estimate,
             stability=self.stability,
+            stability_estimate=self.stability_estimate,
             loss_curve=[-1] if not self.model else [round(loss, 3) for loss in self.learner.nn.loss_curve_],
             accuracy_curve=[-1] if not self.model else [round(accuracy, 3) for accuracy in self.learner.accuracy_curve],
             max_memory=self.max_memory(),
