@@ -18,11 +18,11 @@ from typing import NamedTuple, Iterable, List
 from uuid import UUID
 from uuid import uuid4
 
-from matplotlib.pyplot import close
-from numpy import concatenate, prod
+from matplotlib.pyplot import subplots
+from numpy import concatenate, prod, sqrt
 from numpy.core._multiarray_umath import ndarray
 from numpy.random.mtrand import RandomState
-from seaborn import catplot, axes_style
+from seaborn import color_palette, lineplot, scatterplot, catplot
 
 from pypuf import tools
 from pypuf.experiments.experiment.base import Experiment
@@ -440,102 +440,87 @@ class InterposeMLPStudy(Study):
     SEED = 42
     NOISINESS = 0.1
 
-    SAMPLES_PER_POINT = 10
-
-    N_CRPS = {
-        'small': [
-            10 * 1000,
-            50 * 1000,
-            200 * 1000,
-        ],
-        'medium': [
-            50 * 1000,
-            200 * 1000,
-            1000 * 1000,
-        ],
-        'large': [
-            200 * 1000,
-            1000 * 1000,
-            10000 * 1000,
-        ],
-    }
-
-    STRUCTURES = {
-        'small': [
-            [2 ** 3] * 3,
-            [2 ** 4] * 3,
-            [2 ** 3] * 4,
-        ],
-        'medium': [
-            [2 ** 5] * 3,
-            [2 ** 6] * 3,
-            [2 ** 5] * 4,
-        ],
-        'large': [
-            [2 ** 7] * 3,
-            [2 ** 8] * 3,
-            [2 ** 7] * 4,
-        ],
-    }
-
-    LEARNING_RATES = [
-        0.0002,
-        0.002,
-        0.02,
-    ]
+    SAMPLES_PER_POINT = 30
 
     BATCH_FRAC = [0.05]
 
     def experiments(self):
-        simulations = {
-            'small': [
-                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
+        definitions = [
+                definition for i in range(self.SAMPLES_PER_POINT) for definition in
                 [
-                    Interpose3PUF(self.LENGTH, 2, 1, 1, (self.SEED + 1000 + i) % 2 ** 32, self.NOISINESS),
-                    Interpose3PUF(self.LENGTH, 2, 2, 2, (self.SEED + 2000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeBinaryTree(self.LENGTH, [1, 1, 1], (self.SEED + 20000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeBinaryTree(self.LENGTH, [1, 1, 2], (self.SEED + 21000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 2, (self.SEED + 40000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [2] * 2, (self.SEED + 41000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 3, (self.SEED + 42000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterposePUF(self.LENGTH, 2, (self.SEED + 60000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterpose3PUF(self.LENGTH, 2, (self.SEED + 80000 + i) % 2 ** 32, self.NOISINESS),
+                    (Interpose3PUF(self.LENGTH, 2, 1, 1, (self.SEED + 1000 + i) % 2 ** 32, self.NOISINESS),
+                     [200000, 400000], [[2 ** 4] * 3], [0.01, 0.02, 0.04]),
+                    (Interpose3PUF(self.LENGTH, 2, 2, 2, (self.SEED + 2000 + i) % 2 ** 32, self.NOISINESS),
+                     [200000, 400000], [[2 ** 4] * 3], [0.01, 0.02, 0.04]),
+                    (Interpose3PUF(self.LENGTH, 3, 1, 1, (self.SEED + 3000 + i) % 2 ** 32, self.NOISINESS),
+                     [2000000, 4000000], [[2 ** 6] * 3], [0.01, 0.03]),
+                    (Interpose3PUF(self.LENGTH, 3, 3, 3, (self.SEED + 4000 + i) % 2 ** 32, self.NOISINESS),
+                     [2000000, 4000000], [[2 ** 6] * 3], [0.01, 0.03]),
+                    (Interpose3PUF(self.LENGTH, 4, 1, 1, (self.SEED + 5000 + i) % 2 ** 32, self.NOISINESS),
+                     [20000000, 40000000], [[2 ** 7] * 3], [0.015, 0.075]),
+                    (Interpose3PUF(self.LENGTH, 4, 4, 4, (self.SEED + 6000 + i) % 2 ** 32, self.NOISINESS),
+                     [20000000, 40000000], [[2 ** 7] * 3], [0.012, 0.06]),
+                    (Interpose3PUF(self.LENGTH, 5, 1, 1, (self.SEED + 7000 + i) % 2 ** 32, self.NOISINESS),
+                     [50000000, 100000000], [[2 ** 8] * 3, [2 ** 9] * 3], [0.0004, 0.0012]),
+                    (Interpose3PUF(self.LENGTH, 5, 5, 5, (self.SEED + 8000 + i) % 2 ** 32, self.NOISINESS),
+                     [50000000, 100000000], [[2 ** 8] * 3, [2 ** 9] * 3], [0.0005, 0.0015]),
+
+                    (InterposeBinaryTree(self.LENGTH, [1, 1, 1], (self.SEED + 20000 + i) % 2 ** 32, self.NOISINESS),
+                     [50000, 500000], [[2 ** 6] * 3, [2 ** 7] * 3, [2 ** 8] * 3], [0.008, 0.04]),
+                    (InterposeBinaryTree(self.LENGTH, [2, 2, 2], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
+                     [50000, 500000, 5000000], [[2 ** 9] * 3, [2 ** 10] * 3], [0.001, 0.004]),
+                    (InterposeBinaryTree(self.LENGTH, [1, 1, 1, 1], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
+                     [50000, 500000, 5000000], [[2 ** 9] * 3, [2 ** 10] * 3], [0.001, 0.004]),
+
+                    (InterposeCascade(self.LENGTH, [1] * 2, (self.SEED + 40000 + i) % 2 ** 32, self.NOISINESS),
+                     [80000], [[2 ** 2] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 3, (self.SEED + 41000 + i) % 2 ** 32, self.NOISINESS),
+                     [120000], [[2 ** 3] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 4, (self.SEED + 42000 + i) % 2 ** 32, self.NOISINESS),
+                     [200000], [[2 ** 4] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 5, (self.SEED + 43000 + i) % 2 ** 32, self.NOISINESS),
+                     [400000], [[2 ** 5] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 6, (self.SEED + 44000 + i) % 2 ** 32, self.NOISINESS),
+                     [1000000], [[2 ** 6] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 7, (self.SEED + 45000 + i) % 2 ** 32, self.NOISINESS),
+                     [30000000], [[2 ** 7] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [1] * 8, (self.SEED + 46000 + i) % 2 ** 32, self.NOISINESS),
+                     [10000000], [[2 ** 8] * 3], [0.01]),
+                    (InterposeCascade(self.LENGTH, [2] * 2, (self.SEED + 47000 + i) % 2 ** 32, self.NOISINESS),
+                     [200000], [[2 ** 4] * 3], [0.02]),
+                    (InterposeCascade(self.LENGTH, [2] * 3, (self.SEED + 48000 + i) % 2 ** 32, self.NOISINESS),
+                     [500000], [[2 ** 5] * 3], [0.02]),
+                    (InterposeCascade(self.LENGTH, [2] * 4, (self.SEED + 49000 + i) % 2 ** 32, self.NOISINESS),
+                     [2000000], [[2 ** 6] * 3], [0.02]),
+                    (InterposeCascade(self.LENGTH, [2] * 5, (self.SEED + 50000 + i) % 2 ** 32, self.NOISINESS),
+                     [10000000], [[2 ** 7] * 3], [0.005]),
+                    (InterposeCascade(self.LENGTH, [3] * 2, (self.SEED + 51000 + i) % 2 ** 32, self.NOISINESS),
+                     [2000000], [[2 ** 7] * 3], [0.003]),
+                    (InterposeCascade(self.LENGTH, [3] * 3, (self.SEED + 52000 + i) % 2 ** 32, self.NOISINESS),
+                     [10000000], [[2 ** 7] * 3], [0.002]),
+                    (InterposeCascade(self.LENGTH, [4] * 2, (self.SEED + 53000 + i) % 2 ** 32, self.NOISINESS),
+                     [5000000], [[2 ** 8] * 3], [0.001]),
+                    (InterposeCascade(self.LENGTH, [5] * 2, (self.SEED + 54000 + i) % 2 ** 32, self.NOISINESS),
+                     [20000000], [[2 ** 8] * 3], [0.001]),
+
+                    (XORInterposePUF(self.LENGTH, 2, (self.SEED + 60000 + i) % 2 ** 32, self.NOISINESS),
+                     [100000], [[2 ** 4] * 3], [0.01]),
+                    (XORInterposePUF(self.LENGTH, 3, (self.SEED + 61000 + i) % 2 ** 32, self.NOISINESS),
+                     [400000], [[2 ** 5] * 3], [0.01]),
+                    (XORInterposePUF(self.LENGTH, 4, (self.SEED + 62000 + i) % 2 ** 32, self.NOISINESS),
+                     [10000000], [[2 ** 7] * 3], [0.005]),
+                    (XORInterposePUF(self.LENGTH, 5, (self.SEED + 63000 + i) % 2 ** 32, self.NOISINESS),
+                     [20000000], [[2 ** 8] * 3, [2 ** 9] * 3], [0.001, 0.01]),
+
+                    (XORInterpose3PUF(self.LENGTH, 2, (self.SEED + 80000 + i) % 2 ** 32, self.NOISINESS),
+                     [200000], [[2 ** 4] * 3], [0.01]),
+                    (XORInterpose3PUF(self.LENGTH, 3, (self.SEED + 81000 + i) % 2 ** 32, self.NOISINESS),
+                     [2000000], [[2 ** 5] * 3], [0.01]),
+                    (XORInterpose3PUF(self.LENGTH, 4, (self.SEED + 82000 + i) % 2 ** 32, self.NOISINESS),
+                     [20000000], [[2 ** 8] * 3, [2 ** 9] * 3], [0.001, 0.01]),
                 ]
-            ],
-            'medium': [
-                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
-                [
-                    Interpose3PUF(self.LENGTH, 3, 1, 1, (self.SEED + 3000 + i) % 2 ** 32, self.NOISINESS),
-                    Interpose3PUF(self.LENGTH, 3, 3, 3, (self.SEED + 4000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [2] * 3, (self.SEED + 43000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 4, (self.SEED + 44000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [2] * 4, (self.SEED + 45000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 5, (self.SEED + 46000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 6, (self.SEED + 47000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterposePUF(self.LENGTH, 3, (self.SEED + 61000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterpose3PUF(self.LENGTH, 3, (self.SEED + 81000 + i) % 2 ** 32, self.NOISINESS),
-                ]
-            ],
-            'large': [
-                simulation for i in range(self.SAMPLES_PER_POINT) for simulation in
-                [
-                    Interpose3PUF(self.LENGTH, 4, 1, 1, (self.SEED + 5000 + i) % 2 ** 32, self.NOISINESS),
-                    Interpose3PUF(self.LENGTH, 4, 4, 4, (self.SEED + 6000 + i) % 2 ** 32, self.NOISINESS),
-                    Interpose3PUF(self.LENGTH, 5, 1, 1, (self.SEED + 7000 + i) % 2 ** 32, self.NOISINESS),
-                    Interpose3PUF(self.LENGTH, 5, 5, 5, (self.SEED + 8000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeBinaryTree(self.LENGTH, [2, 2, 2], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeBinaryTree(self.LENGTH, [1, 1, 1, 1], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [2] * 5, (self.SEED + 48000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [3] * 3, (self.SEED + 49000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [4] * 2, (self.SEED + 50000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [2] * 5, (self.SEED + 51000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 7, (self.SEED + 52000 + i) % 2 ** 32, self.NOISINESS),
-                    InterposeCascade(self.LENGTH, [1] * 8, (self.SEED + 53000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterposePUF(self.LENGTH, 4, (self.SEED + 62000 + i) % 2 ** 32, self.NOISINESS),
-                    XORInterpose3PUF(self.LENGTH, 4, (self.SEED + 82000 + i) % 2 ** 32, self.NOISINESS),
-                ]
-            ],
-        }
+            ]
+
         return [
             ExperimentMLPScikitLearn(
                 progress_log_prefix=self.name(),
@@ -555,22 +540,92 @@ class InterposeMLPStudy(Study):
                     batch_size=int(N * batch_frac),
                 )
             )
-            for group in self.N_CRPS.keys()
-            for i, simulation in enumerate(simulations[group])
-            for N in self.N_CRPS[group]
-            for layers in self.STRUCTURES[group]
-            for learning_rate in self.LEARNING_RATES
+            for i, (simulation, Ns, structures, learning_rates) in enumerate(definitions)
+            for N in Ns
+            for layers in structures
+            for learning_rate in learning_rates
             for batch_frac in self.BATCH_FRAC
         ]
 
     def plot(self):
+        pass
+        # self.plot_param_dependency(name='ipuf_variants_mlp', param_x='learning_rate', param_1='N', param_2='layers')
+        # self.plot_overview()
+
+    def plot_param_dependency(self, param_x, param_1, param_2=None):
+        param_y = 'accuracy_relative'
+        df = self.experimenter.results
+        # use an estimate of the non-noisy/noisy stability derived from noisy/noisy stability
+        if 'stability_estimate' not in df.columns:
+            df['stability_estimate'] = (1 + sqrt(2 * df['stability'] - 1)) / 2
+        # use the accuray relative to the estimated non-noisy/noisy stability
+        if 'accuracy_relative' not in df.columns:
+            df['accuracy_relative'] = df['accuracy'] / df['stability_estimate']
+        df = df[df['iteration_limit'] == 400]
+        df = df.sort_values(['simulation', 'first_k', 'layers'])
+        ncols = 13
+        nrows = 5
+        fig, axes = subplots(ncols=ncols, nrows=nrows)
+        fig.set_size_inches(9 * ncols, 4 * nrows)
+        axes = axes.reshape((nrows, ncols))
+        alpha_scatter = 0.3
+        alpha_lines = 0.7
+        structures = ['Interpose3PUF', 'InterposeBinaryTree', 'InterposeCascade', 'XORInterposePUF', 'XORInterpose3PUF']
+        for i, structure in enumerate(structures):
+            df_structure = df[df['simulation'].str.startswith(structure)]
+            simulations = df_structure['simulation'].unique()
+            for j, simulation in enumerate(simulations):
+                df_simulation = df_structure[(df_structure['simulation'] == simulation)]
+                palette = color_palette(palette='plasma', n_colors=len(df_simulation['N'].unique()))
+                lineplot(
+                    x=param_x,
+                    y=param_y,
+                    hue=param_1,
+                    style=param_2,
+                    data=df_simulation,
+                    ax=axes[i][j],
+                    legend=False,
+                    estimator='mean',
+                    ci=None,
+                    alpha=alpha_lines,
+                    palette=palette,
+                )
+                scatterplot(
+                    x=param_x,
+                    y=param_y,
+                    hue=param_1,
+                    style=param_2,
+                    data=df_simulation,
+                    ax=axes[i][j],
+                    legend='full',
+                    alpha=alpha_scatter,
+                    palette=palette,
+                )
+                size = simulation.split(f'{structure}, ')[1]
+                axes[i][j].set_title(f'{size.split(", pos=32")[0]}\n\n#experiments: {len(df_simulation)}\n')
+                handles, labels = axes[i][j].get_legend_handles_labels()
+                labels = [f'{label.split("000.0")[0]}k' if label.endswith('000.0') else label for label in labels]
+                labels = [f'[{label.split("[")[1].split("]")[0].split(",")[0]}] * '
+                          f'{len(label.split("[")[1].split("]")[0].split(","))}'
+                          if label.startswith('[') else label for label in labels]
+                labels = [f'{label.split("000k")[0]}M' if label.count('0') > 2 else label for label in labels]
+                axes[i][j].legend(handles=handles, labels=labels, loc='upper right', bbox_to_anchor=(1.2, 1.03))
+        for ax, row in zip(axes[:, 0], structures):
+            ax.set_ylabel(f'{row}\n\naccuracy_relative\n', rotation=90, fontsize=16)
+        fig.tight_layout()
+        fig.subplots_adjust(hspace=0.8, wspace=0.5)
+        title = fig.suptitle(t='Model Accuracy for Deep Learning on Interpose PUF Variations', fontsize=30)
+        title.set_position([.5, 1.05])
+        fig.savefig(f'figures/{self.name()}.pdf', bbox_inches='tight', dpi=300, pad_inches=.5)
+
+    def plot_overview(self):
         data = self.experimenter.results
         data = data[data['iteration_limit'] == 400]
         data = data.sort_values(['simulation', 'first_k'])
         g = catplot(
             data=data,
             y='simulation',
-            x='accuracy',
+            x='accuracy_relative',
             hue='N',
             aspect=.7,
             height=20,
@@ -580,4 +635,4 @@ class InterposeMLPStudy(Study):
         ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
         ax.set_title('Model Accuracy for Deep Learning on Interpose PUF Variations')
         ax.set_xlim((.45, 1))
-        g.savefig(f'figures/{self.name()}.pdf')
+        g.savefig(f'figures/{self.name()}_overview.pdf')
