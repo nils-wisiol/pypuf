@@ -45,7 +45,8 @@ class Result(NamedTuple):
     correlation_up: object
     training_set_up_accuracy: List[float]
     training_set_down_accuracy: List[float]
-    training_set_down_sizes: List[int]
+    training_set_down_flipped_accuracy: List[float]
+    training_set_up_sizes: List[int]
     rounds: int
     first_rounds: int
     simulation_noise: float
@@ -68,7 +69,8 @@ class SplitAttack(Experiment):
     n2: int
     training_set_up_accuracy: List[float]
     training_set_down_accuracy: List[float]
-    training_set_down_sizes: List[int]
+    training_set_down_flipped_accuracy: List[float]
+    training_set_up_sizes: List[int]
     accuracies: List[float]
     accuracies_up: List[float]
     accuracies_down: List[float]
@@ -83,7 +85,8 @@ class SplitAttack(Experiment):
         self.n2 = self.parameters.n // 2
         self.training_set_up_accuracy = []
         self.training_set_down_accuracy = []
-        self.training_set_down_sizes = []
+        self.training_set_down_flipped_accuracy = []
+        self.training_set_up_sizes = []
         self.accuracies = []
         self.accuracies_up = []
         self.accuracies_down = []
@@ -188,7 +191,7 @@ class SplitAttack(Experiment):
             if done():
                 break
 
-            self.model_down = self._get_next_model_down()
+            self._get_next_model_down()
             self._update_model()
             self.rounds += 1
             if done():
@@ -207,7 +210,9 @@ class SplitAttack(Experiment):
         # analysis: model accuracy
         self.accuracies.append(1 - approx_dist(self.model, self.simulation, 10**4, RandomState(1)))
         self.progress_logger.debug(f'current accuracy up: {self.accuracies_up[-1]:.2f}, '
-                                   f'down: {self.accuracies_down[-1]:.2f}, total: {self.accuracies[-1]}')
+                                   f'down: {self.accuracies_down[-1]:.2f}, '
+                                   f'down flipped: {self.accuracies_down_flipped[-1]:.2f}, '
+                                   f'total: {self.accuracies[-1]}')
 
     def _get_first_model_down(self, xt_set, xtest_set):
         self.progress_logger.debug('initially training down model')
@@ -237,7 +242,11 @@ class SplitAttack(Experiment):
         self.training_set_down_accuracy.append(average(
             self.simulation.down.eval(training_set.challenges) == training_set.responses,
         ))
-        self.progress_logger.debug(f'new down training set accuracy: {self.training_set_down_accuracy[-1]:.2f}')
+        self.training_set_down_flipped_accuracy.append(average(
+            self._flip_model(self.simulation.down).eval(training_set.challenges) == training_set.responses,
+        ))
+        self.progress_logger.debug(f'new down training set accuracy: {self.training_set_down_accuracy[-1]:.2f}, '
+                                   f'flipped: {self.training_set_down_flipped_accuracy[-1]:.2f}')
 
         # model training
         self.progress_logger.debug('re-training down model')
@@ -246,13 +255,10 @@ class SplitAttack(Experiment):
         self.learner_down.training_set = training_set
         self._att(training_set.challenges)  # transform training set in-situ to save memory
         self._att(test_set.challenges)
-        self.model_down.transform = LTFArray.transform_id  # note that we transformed the training set ourselves
-        model_down = self.learner_down.learn(init_weight_array=self.model_down.weight_array, refresh_updater=False)
-        model_down.transform = LTFArray.transform_atf  # note that we transformed the training set ourselves
+        self.model_down = self.learner_down.learn(init_weight_array=self.model_down.weight_array, refresh_updater=False)
+        self.model_down.transform = LTFArray.transform_atf  # note that we transformed the training set ourselves
         self._record_down_accuracy()
         self.iterations += self.learner_down.iteration_count
-
-        return model_down
 
     def _get_model_up(self):
         # create a training set for the upper PUF, based on the lower layer model
@@ -322,7 +328,7 @@ class SplitAttack(Experiment):
                                        f'{filled + unequal}')
 
         # cut off selected_challenges and selected_responses to the correct size
-        self.training_set_down_sizes.append(filled)
+        self.training_set_up_sizes.append(filled)
         if filled < 50:
             raise NoTrainingSetException
         test_set_size = int(min(10**4, max(.05 * filled, 1)))
@@ -401,7 +407,8 @@ class SplitAttack(Experiment):
             ),
             training_set_up_accuracy=self.training_set_up_accuracy,
             training_set_down_accuracy=self.training_set_down_accuracy,
-            training_set_down_sizes=self.training_set_down_sizes,
+            training_set_down_flipped_accuracy=self.training_set_down_flipped_accuracy,
+            training_set_up_sizes=self.training_set_up_sizes,
             accuracies=self.accuracies,
             accuracies_up=self.accuracies_up,
             accuracies_down=self.accuracies_down,
