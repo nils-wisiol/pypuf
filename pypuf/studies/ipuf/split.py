@@ -95,6 +95,7 @@ class SplitAttack(Experiment):
         self.first_rounds = 0
         self.iterations = 0
         self.learner_up = None
+        self.max_rounds = 5 if max(self.parameters.k_down, self.parameters.k_up) < 5 else 1
 
     def prepare(self):
         simulation_parameters = dict(
@@ -173,7 +174,7 @@ class SplitAttack(Experiment):
         # iteratively train up, down, up, down, ...
         while True:
             def done():
-                return self.rounds > 5 or 1 - approx_dist_nonrandom(self.model, self.test_set) >= .95
+                return self.rounds > self.max_rounds or 1 - approx_dist_nonrandom(self.model, self.test_set) >= .95
 
             try:
                 self.model_up = self._get_model_up()
