@@ -26,6 +26,7 @@ class Parameters(NamedTuple):
     N: int
     seed: int
     noisiness: float
+    batch_size: int
 
 
 class Result(NamedTuple):
@@ -78,6 +79,7 @@ class SplitAttack(Experiment):
     iterations: int
     learner_up: LogisticRegression
     learner_down: LogisticRegression
+    batch_size: int
 
     def __init__(self, progress_log_name, parameters):
         super().__init__(progress_log_name, parameters)
@@ -96,6 +98,7 @@ class SplitAttack(Experiment):
         self.iterations = 0
         self.learner_up = None
         self.max_rounds = 5 if max(self.parameters.k_down, self.parameters.k_up) < 5 else 1
+        self.batch_size = self.parameters.batch_size
 
     def prepare(self):
         simulation_parameters = dict(
@@ -360,6 +363,8 @@ class SplitAttack(Experiment):
                 transformation=LTFArray.transform_id,
                 weights_prng=RandomState(self.parameters.seed + 43),
                 logger=self.progress_logger,
+                minibatch_size=self.batch_size,
+                shuffle=False,
                 test_set=test_set_up,
                 convergence_decimals=2,
                 min_iterations=10,
@@ -502,18 +507,24 @@ class SplitAttackStudy(Study):
                 progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-noisiness={noisiness}-'
                                   f'seed={seed}',
                 parameters=Parameters(
-                    n=n, k_up=k_up, k_down=k_down, N=int(N * n/64), seed=seed, noisiness=noisiness,
+                    n=n,
+                    k_up=k_up,
+                    k_down=k_down,
+                    N=int(N * n/64),
+                    seed=seed,
+                    noisiness=noisiness,
+                    batch_size=int(N * batch_frac),
                 )
             )
             for k_up, k_down, Ns in [
                 # (1, 1, [1000, 2000, 5000, 10000]),
                 # (2, 2, [10000, 20000, 50000, 100000]),
-                # (3, 3, [10000, 20000, 50000, 100000]),
-                # (4, 4, [20000, 50000, 100000, 200000]),
-                # (5, 5, [500000, 600000, 600000, 1000000]),
+                (3, 3, [40000, 160000, 640000]),
+                (4, 4, [60000, 240000, 960000]),
+                (5, 5, [80000, 320000, 1280000]),
                 # (6, 6, [1*M, 2*M, 5*M, 10*M, 15*M]),  # max. 7.5GB
                 # (7, 7, [40*M]),  # 20GB VmPeak / 12GB VmRSS
-                (8, 8, [300*M]),  # est. 68 GB VmRSS peak
+                # (8, 8, [300*M]),  # est. 68 GB VmRSS peak
                 # (9, 9, [350*M]),  # est. ??? GB VmRSS peak
                 # (9, 9, 800000000),  # nearly 50 GB of training set size, needs ~75 GB
                 # (1, 2, [2000, 5000, 10000, 20000, 50000, 100000]),
@@ -530,7 +541,8 @@ class SplitAttackStudy(Study):
             for N in Ns
             for n in self._bit_lengths(k_up, k_down)
             for noisiness in self._noise_levels(n, k_up, k_down)
-            for seed in range(100)
+            for seed in range(10)
+            for batch_frac in [0.005, 0.02, 0.1, 1.0]
         ]
 
     @classmethod
