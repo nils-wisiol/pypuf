@@ -317,7 +317,7 @@ class Result(NamedTuple):
     accuracy: float
     accuracy_relative: float
     stability: float
-    stability_estimate: float
+    reliability: float
     loss_curve: Iterable[float]
     accuracy_curve: Iterable[float]
     max_memory: int
@@ -336,7 +336,7 @@ class ExperimentMLPScikitLearn(Experiment):
         super().__init__(progress_log_name=progress_log_name, parameters=parameters)
         self.simulation = parameters.simulation
         self.stability = 1.0
-        self.stability_estimate = 1.0
+        self.reliability = 1.0
         self.training_set = None
         self.learner = None
         self.model = None
@@ -352,7 +352,7 @@ class ExperimentMLPScikitLearn(Experiment):
             random_instance=RandomState(seed=self.parameters.seed),
         )
         self.stability = max(self.stability, 1 - self.stability)
-        self.stability_estimate = (1 + sqrt(2 * self.stability - 1)) / 2    # estimation of non-noisy vs. noisy
+        self.reliability = (1 + sqrt(2 * self.stability - 1)) / 2    # estimation of non-noisy vs. noisy
         self.progress_logger.debug(f'Gathering training set with {self.parameters.N} examples')
         self.training_set = tools.TrainingSet(
             instance=self.simulation,
@@ -379,7 +379,7 @@ class ExperimentMLPScikitLearn(Experiment):
             seed_model=self.parameters.seed,
             print_learning=False,
             logger=self.progress_logger.debug,
-            goal=0.95 * self.stability_estimate,
+            goal=0.95 * self.reliability,
         )
         self.learner.prepare()
 
@@ -416,9 +416,9 @@ class ExperimentMLPScikitLearn(Experiment):
             measured_time=self.measured_time,
             iterations=-1 if not self.model else self.learner.nn.n_iter_,
             accuracy=accuracy,
-            accuracy_relative=accuracy / self.stability_estimate,
+            accuracy_relative=accuracy / self.reliability,
             stability=self.stability,
-            stability_estimate=self.stability_estimate,
+            reliability=self.reliability,
             loss_curve=[-1] if not self.model else [round(loss, 3) for loss in self.learner.nn.loss_curve_],
             accuracy_curve=[-1] if not self.model else [round(accuracy, 3) for accuracy in self.learner.accuracy_curve],
             max_memory=self.max_memory(),
@@ -449,13 +449,13 @@ class InterposeMLPStudy(Study):
                 definition for i in range(self.SAMPLES_PER_POINT) for definition in
                 [
                     (Interpose3PUF(self.LENGTH, 2, 1, 1, (self.SEED + 1000 + i) % 2 ** 32, self.NOISINESS),
-                     [200000, 400000], [[2 ** 4] * 3], [0.01, 0.02, 0.04]),
+                     [400000], [[2 ** 4] * 3], [0.02]),
                     (Interpose3PUF(self.LENGTH, 2, 2, 2, (self.SEED + 2000 + i) % 2 ** 32, self.NOISINESS),
-                     [200000, 400000], [[2 ** 4] * 3], [0.01, 0.02, 0.04]),
+                     [400000], [[2 ** 4] * 3], [0.02]),
                     (Interpose3PUF(self.LENGTH, 3, 1, 1, (self.SEED + 3000 + i) % 2 ** 32, self.NOISINESS),
-                     [2000000, 4000000], [[2 ** 6] * 3], [0.01, 0.03]),
+                     [2000000], [[2 ** 6] * 3], [0.01]),
                     (Interpose3PUF(self.LENGTH, 3, 3, 3, (self.SEED + 4000 + i) % 2 ** 32, self.NOISINESS),
-                     [2000000, 4000000], [[2 ** 6] * 3], [0.01, 0.03]),
+                     [2000000], [[2 ** 6] * 3], [0.01]),
                     (Interpose3PUF(self.LENGTH, 4, 1, 1, (self.SEED + 5000 + i) % 2 ** 32, self.NOISINESS),
                      [20000000, 40000000], [[2 ** 7] * 3], [0.015, 0.075]),
                     (Interpose3PUF(self.LENGTH, 4, 4, 4, (self.SEED + 6000 + i) % 2 ** 32, self.NOISINESS),
@@ -466,11 +466,11 @@ class InterposeMLPStudy(Study):
                      [50000000, 100000000], [[2 ** 8] * 3, [2 ** 9] * 3], [0.0005, 0.0015]),
 
                     (InterposeBinaryTree(self.LENGTH, [1, 1, 1], (self.SEED + 20000 + i) % 2 ** 32, self.NOISINESS),
-                     [50000, 500000], [[2 ** 6] * 3, [2 ** 7] * 3, [2 ** 8] * 3], [0.008, 0.04]),
+                     [500000], [[2 ** 7] * 3], [0.008]),
                     (InterposeBinaryTree(self.LENGTH, [2, 2, 2], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
-                     [50000, 500000, 5000000], [[2 ** 9] * 3, [2 ** 10] * 3], [0.001, 0.004]),
+                     [5000000], [[2 ** 9] * 3], [0.004]),
                     (InterposeBinaryTree(self.LENGTH, [1, 1, 1, 1], (self.SEED + 22000 + i) % 2 ** 32, self.NOISINESS),
-                     [50000, 500000, 5000000], [[2 ** 9] * 3, [2 ** 10] * 3], [0.001, 0.004]),
+                     [5000000], [[2 ** 9] * 3], [0.004]),
 
                     (InterposeCascade(self.LENGTH, [1] * 2, (self.SEED + 40000 + i) % 2 ** 32, self.NOISINESS),
                      [80000], [[2 ** 2] * 3], [0.01]),
@@ -548,29 +548,29 @@ class InterposeMLPStudy(Study):
         ]
 
     def plot(self):
-        pass
-        # self.plot_param_dependency(name='ipuf_variants_mlp', param_x='learning_rate', param_1='N', param_2='layers')
-        # self.plot_overview()
+        # self.plot_param_dependency(param_x='learning_rate', param_1='N', param_2='layers')
+        self.plot_overview()
 
     def plot_param_dependency(self, param_x, param_1, param_2=None):
         param_y = 'accuracy_relative'
         df = self.experimenter.results
-        # use an estimate of the non-noisy/noisy stability derived from noisy/noisy stability
-        if 'stability_estimate' not in df.columns:
-            df['stability_estimate'] = (1 + sqrt(2 * df['stability'] - 1)) / 2
-        # use the accuray relative to the estimated non-noisy/noisy stability
+        # use an estimate of the non-noisy/noisy reliability derived from noisy/noisy stability
+        if 'reliability' not in df.columns:
+            df['reliability'] = (1 + sqrt(2 * df['stability'] - 1)) / 2
+        # use the accuray relative to the estimated non-noisy/noisy reliability
         if 'accuracy_relative' not in df.columns:
-            df['accuracy_relative'] = df['accuracy'] / df['stability_estimate']
+            df['accuracy_relative'] = df['accuracy'] / df['reliability']
         df = df[df['iteration_limit'] == 400]
         df = df.sort_values(['simulation', 'first_k', 'layers'])
-        ncols = 13
-        nrows = 5
+        structures = ['Interpose3PUF', 'InterposeBinaryTree', 'InterposeCascade', 'XORInterposePUF', 'XORInterpose3PUF']
+        ncols = max([len(df[df['simulation'].str.startswith(structure)]['simulation'].unique())
+                     for structure in structures])
+        nrows = sum([1 if len(df['simulation'].str.startswith(structure)) > 0 else 0 for structure in structures])
         fig, axes = subplots(ncols=ncols, nrows=nrows)
         fig.set_size_inches(9 * ncols, 4 * nrows)
         axes = axes.reshape((nrows, ncols))
         alpha_scatter = 0.3
         alpha_lines = 0.7
-        structures = ['Interpose3PUF', 'InterposeBinaryTree', 'InterposeCascade', 'XORInterposePUF', 'XORInterpose3PUF']
         for i, structure in enumerate(structures):
             df_structure = df[df['simulation'].str.startswith(structure)]
             simulations = df_structure['simulation'].unique()
@@ -626,10 +626,10 @@ class InterposeMLPStudy(Study):
             data=data,
             y='simulation',
             x='accuracy_relative',
-            hue='N',
             aspect=.7,
             height=20,
-            kind='boxen',
+            kind='strip',
+            alpha=0.3,
         )
         ax = g.axes.flatten()[0]
         ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
