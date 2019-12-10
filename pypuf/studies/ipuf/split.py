@@ -586,6 +586,7 @@ class SplitAttackStudy(Study):
 
     def plot(self):
         data = self.experimenter.results.dropna(how='all')
+
         data['max_memory_gb'] = data.apply(lambda row: row['max_memory'] / 1024**3, axis=1)
         data['Ne6'] = data.apply(lambda row: row['N'] / 1e6, axis=1)
         data['Ncat'] = data.apply(lambda row: self._Ncat(row['N']), axis=1)
@@ -726,13 +727,13 @@ class SplitAttackStudy(Study):
                 ci=None,
                 aspect=3,
                 height=2.5,
-                legend='brief',
+                facet_kws={"legend_out":False}
             )
             reliabilities = sorted(n_data_64['reliability'].unique())
+
             ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
                      '20min': 20 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
                      '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,}
-
             for idx, ax in enumerate(g.axes.flat):
                 #ax.set_xscale('log')
                 ax.set_yscale('log')
@@ -745,6 +746,7 @@ class SplitAttackStudy(Study):
 
                 ax2 = ax.twinx()
                 ax2.set(yscale="log")
+                ax2.grid(False)
                 D = n_data_64[n_data_64['reliability'] == reliabilities[idx]]
 
                 X = D[D["iPUF Type"] == '(k,k)']
@@ -776,7 +778,6 @@ class SplitAttackStudy(Study):
                     p.set_x(p.get_x() + 0.05)
 
                 ax2.set_ylabel('#CRP')
-
 
             g.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
 
