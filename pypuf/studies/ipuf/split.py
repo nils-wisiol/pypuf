@@ -678,22 +678,27 @@ class SplitAttackStudy(Study):
                     ignore_index=True,
                 )
             opt_data = opt_data.sort_values(['k_up', 'k_down', 'n', 'reliability'])
+            opt_data['iPUF Type'] = opt_data.apply(lambda row: '(%.0f, %.0f)' % (row['k_up'], row['k_down']), axis=1)
             opt_data['S'] = opt_data.apply(lambda row: '(%.0f, %.0f)' % (row['k_up'], row['k_down']), axis=1)
             n_set = list(map(int, opt_data['n'].unique()))
             stable_opt_data = opt_data[opt_data['reliability'] == 1]
-            nonempty_sizes = [l for (l, f) in stable_opt_data.groupby(['S']) if len(f) > 1]
+            nonempty_sizes = [l for (l, f) in stable_opt_data.groupby(['iPUF Type']) if len(f) > 1]
+
+            print(stable_opt_data)
+
             ax = lineplot(
-                data=stable_opt_data[stable_opt_data['S'].isin(nonempty_sizes)],
+                data=stable_opt_data[stable_opt_data['iPUF Type'].isin(nonempty_sizes)],
                 x='n',
                 y='time_to_success_best',
-                style='S',
+                style='iPUF Type',
                 markers=True,
                 ci=None,
                 legend='brief',
             )
             f = ax.get_figure()
             ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
-                     '20min': 20 * 60, '40min': 40 * 60, '1h': 60 * 60}
+                     '20min': 20 * 60, '40min': 40 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
+                     '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,'1w': 7 * 24 * 60**2,}
             ax.set_xscale('log')
             ax.set_yscale('log')
             ax.set_yticks(list(ticks.values()))
@@ -703,8 +708,29 @@ class SplitAttackStudy(Study):
             ax.set_xticklabels([str(n) for n in n_set])
             ax.set_xticklabels([], minor=True)
             f.set_size_inches(5.5, 3.5)
-            f.suptitle('Attack Time for Noise-Free S-Interpose PUFs by Challenge Length n')
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+            f.suptitle('Attack Time for Noise-Free Interpose PUFs by Challenge Length n')
+            ax.legend(loc=0, borderaxespad=0.)
+
+            plottrainsetsize = False
+            if plottrainsetsize:
+                #Trainsetsize
+                ax2 = ax.twinx()
+                ax2.set(yscale="log")
+                ax2.grid(False)
+
+                X = stable_opt_data
+                t = ax2.bar(x=X['n'],
+                    height=X['N_best'],
+                    #width=0.2,
+                    align='edge',
+                    alpha=0.35,
+                    linestyle='--',
+                    edgecolor='black',
+                    linewidth=1,
+                    facecolor=None,
+                    )
+
+            ax.tick_params(axis='y', which='minor', left=False)
             f.savefig(f'figures/{self.name()}.n.pdf', bbox_inches='tight',)
             close(f)
 
