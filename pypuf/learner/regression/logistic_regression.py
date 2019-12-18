@@ -342,7 +342,9 @@ class LogisticRegression(Learner):
         converged = False
         self.iteration_count = 0
         log_state(0)
-        number_of_batches = (self.training_set.N + 1) // (self.minibatch_size or self.training_set.N)
+        number_of_batches = ceil(self.training_set.N / (self.minibatch_size or self.training_set.N))
+        self.logger.debug(f'using {self.training_set.N} examples with batches of size '
+                          f'{self.minibatch_size}, i.e. {number_of_batches} batches')
         efba_challenge_batches = []
         response_batches = []
         if not self.shuffle:
