@@ -733,16 +733,23 @@ class SplitAttackStudy(Study):
 
             ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
                      '20min': 20 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
-                     '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,}
+                     '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,'1w': 7 * 24 * 60**2,}
+
+            from matplotlib.lines import Line2D
+            custom_lines = [Line2D([0], [0], color='black', lw=1.2, ls='-'),
+                            Line2D([0], [0], color='black', lw=1.2, ls='--')]
+            g.axes.flat[0].legend(custom_lines[:2], ['(1,k)', '(k,k)'], title='iPUF Type')
+
             for idx, ax in enumerate(g.axes.flat):
                 #ax.set_xscale('log')
                 ax.set_yscale('log')
-                ax.set_yticks(list(ticks.values()))
+                ax.set_yticks(list(ticks.values()), minor=False)
                 ax.set_yticklabels(list(ticks.keys()))
                 ax.set_ylabel('Attack Time Until First Success')
                 ax.set_xticks([k for k in range(1, k_max + 1)])
                 ax.set_xticklabels([str(k) for k in range(1, k_max + 1)])
                 ax.set_xticklabels([], minor=True)
+
 
                 ax2 = ax.twinx()
                 ax2.set(yscale="log")
@@ -776,6 +783,9 @@ class SplitAttackStudy(Study):
                     )
                 for p in t.patches:
                     p.set_x(p.get_x() + 0.05)
+
+
+                ax.tick_params(axis='y', which='minor', left=False)
 
                 ax2.set_ylabel('#CRP')
 
