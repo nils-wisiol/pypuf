@@ -402,5 +402,6 @@ class LogisticRegression(Learner):
                 if converged:
                     break
 
+        self.efba_sub_challenges = None  # del ref to training set memory to allow GC if the t-set is also dereferenced
         self.converged = converged
         return model
