@@ -696,18 +696,18 @@ class SplitAttackStudy(Study):
                 legend='brief',
             )
             f = ax.get_figure()
-            ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
-                     '20min': 20 * 60, '40min': 40 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
-                     '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,'1w': 7 * 24 * 60**2,}
+            ticks = {'1min': 60, '5min': 5 * 60,
+                     '20min': 20 * 60, '1h': 60 * 60,
+                     '4h': 4 * 60**2, '1d': 24 * 60**2,'1w': 7 * 24 * 60**2,}
             ax.set_xscale('log')
             ax.set_yscale('log')
             ax.set_yticks(list(ticks.values()))
             ax.set_yticklabels(list(ticks.keys()))
-            ax.set_ylabel('Attack Time Until First Success')
+            ax.set_ylabel('Time Until First Success')
             ax.set_xticks([n for n in n_set])
             ax.set_xticklabels([str(n) for n in n_set])
             ax.set_xticklabels([], minor=True)
-            f.set_size_inches(5.5, 3.5)
+            f.set_size_inches(5.5 * 1.2, 2.0 * 1.2)
             f.suptitle('Attack Time for Noise-Free Interpose PUFs by Challenge Length n')
             ax.legend(loc=0, borderaxespad=0.)
 
@@ -737,7 +737,9 @@ class SplitAttackStudy(Study):
             """
             Plot 3: Comparing expected time to success for different (1,k) and (k,k) sizes, full reliability assumed.
             """
-            n_data_64 = opt_data[(opt_data['n'] == 64) & (opt_data['reliability'] >= .8)].sort_values(
+            n_data_64 = opt_data[(opt_data['n'] == 64) &
+                                 ((opt_data['reliability'] == .8) | (opt_data['reliability'] == 1)) &
+                                 ((opt_data['k_up'] >= 3) | (opt_data['k_down'] >= 3))].sort_values(
                 ['n', 'k_down', 'reliability'])
             n_data_64['iPUF Type'] = n_data_64.apply(lambda row: '(1,k)' if row['k_up'] == 1 else '(k,k)', axis=1)
             n_data_64['k'] = n_data_64['k_down']
@@ -752,14 +754,14 @@ class SplitAttackStudy(Study):
                 style='iPUF Type',
                 ci=None,
                 aspect=3,
-                height=2.5,
+                height=2.0,
                 facet_kws={"legend_out":False}
             )
             reliabilities = sorted(n_data_64['reliability'].unique())
 
-            ticks = {'1min': 60, '2min': 2 * 60, '5min': 5 * 60, '10min': 10 * 60,
-                     '20min': 20 * 60, '1h': 60 * 60, '2h': 2 * 60**2,
-                     '4h': 4 * 60**2, '8h': 8 * 60**2, '1d': 24 * 60**2,'1w': 7 * 24 * 60**2,}
+            ticks = {'5min': 5 * 60,
+                     '20min': 20 * 60, '2h': 2 * 60**2,
+                     '8h': 8 * 60**2, '2d': 2 * 24 * 60**2, '1w': 7 * 24 * 60**2, }
 
             from matplotlib.lines import Line2D
             custom_lines = [Line2D([0], [0], color='black', lw=1.2, ls='-'),
@@ -767,11 +769,10 @@ class SplitAttackStudy(Study):
             g.axes.flat[0].legend(custom_lines[:2], ['(1,k)', '(k,k)'], title='iPUF Type')
 
             for idx, ax in enumerate(g.axes.flat):
-                #ax.set_xscale('log')
+                ax.set_xscale('log')
                 ax.set_yscale('log')
                 ax.set_yticks(list(ticks.values()), minor=False)
                 ax.set_yticklabels(list(ticks.keys()))
-                ax.set_ylabel('Attack Time Until First Success')
                 ax.set_xticks([k for k in range(1, k_max + 1)])
                 ax.set_xticklabels([str(k) for k in range(1, k_max + 1)])
                 ax.set_xticklabels([], minor=True)
@@ -813,7 +814,12 @@ class SplitAttackStudy(Study):
 
                 ax.tick_params(axis='y', which='minor', left=False)
 
-                ax2.set_ylabel('#CRP')
+                if idx == len(g.axes.flat) // 2:
+                    ax.set_ylabel('Time Until First Success')
+                    ax2.set_ylabel('#CRP')
+                else:
+                    ax.set_ylabel('')
+                    ax2.set_ylabel('')
 
             g.savefig(f'figures/{self.name()}.size.pdf', bbox_inches='tight',)
 
@@ -825,9 +831,10 @@ class SplitAttackStudy(Study):
                 axis=1,
             )
             bin_width = .01
-            fig_data = opt_data[(opt_data['n'] == 64) & (opt_data['reliability'] == 1) & (opt_data['k_down'] >= 4)]
+            fig_data = opt_data[(opt_data['n'] == 64) & (opt_data['reliability'] == 1) & (opt_data['k_down'] >= 4) &
+                                (opt_data['num_total'] >= 10)]
             fig_data['cat'] = fig_data.apply(lambda row: '1k' if row['k_up'] == 1 else 'kk', axis=1)
-            fig, axes = subplots(nrows=2, ncols=1, sharex=True)
+            fig, axes = subplots(nrows=1, ncols=2, sharex=True)
             ax_1k = axes[0]
             ax_kk = axes[1]
             for cat, group in fig_data.groupby(['cat']):
@@ -847,15 +854,17 @@ class SplitAttackStudy(Study):
                         f'({row["k_up"]:.0f}, {row["k_down"]:.0f}) with {row["N_best_cat"]} CRPs'
                         for _, row in group.iterrows()
                     ],
+                    loc='upper left',
+                    bbox_to_anchor=(.1, 1),
                 )
-                ax.set_xlim((.45, 1))
-                ax.set_xticks(arange(.5, 1.05, .05))
+                ax.set_xlim((.49, 1))
+                ax.set_xticks(arange(.5, 1.01, .1))
                 ax.set_yticks([])
                 ax.set_xlabel('')
                 ax.set_ylabel('Rel. Frequency')
-            axes[-1].set_xlabel('Initial Accuracy of the Lower Layer Model')
-            fig.suptitle('LR Modeling Attack on Randomly Interposed CRP Set')
-            fig.set_size_inches(w=5, h=1.8*len(axes))
+            fig.suptitle('Accuracy of Lower Layer Model after Linearization Attack')
+            scale = 2.5
+            fig.set_size_inches(w=3*scale, h=.8*scale)
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
             fig.savefig(f'figures/{self.name()}.initial.pdf')
 
