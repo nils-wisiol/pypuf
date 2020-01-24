@@ -28,13 +28,19 @@ class ReliabilityAttackStudy(Study):
                 )
             )
             for n in [64]
-            for k in [4]
-            for transform in ['fixed_permutation']
-            for noisiness in [.25]
-            for N in [150*10**3]
-            for R in [11]
-            for pop_size in [20]
-            for seed in [1]
+            for k in [4, 5, 6, 7, 8]
+            for transform in ['atf']
+            for noisiness in [0.05, 0.1, 0.2]
+            for N in {
+                4: [150 * 10**3],
+                5: [180 * 10**3],
+                6: [215 * 10**3],
+                7: [255 * 10**3],
+                8: [300 * 10**3],
+            }[k]
+            for R in [3, 11]
+            for pop_size in [20, 40]
+            for seed in list(range(10))
         ]
 
     """
