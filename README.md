@@ -16,6 +16,8 @@ Some operations base on an additional module that has been written in C (see ins
 
 pypuf is used in the following projects:
 
+- 2020, Wisiol et al.: [Short Paper: XOR Arbiter PUFs have Systematic Response Bias](https://eprint.iacr.org/2019/1091):
+  Empirical and theoretical study of XOR Arbiter PUF response bias for unbiased arbiter chains. [Details](pypuf/studies/bias/README.md)
 - 2019, Wisiol et al.: [Breaking the Lightweight Secure PUF: Understanding the Relation of Input Transformations and Machine Learning Resistance](https://eprint.iacr.org/2019/799):
   An advanced machine learning attack on the Lightweight Secure PUF. [Details](pypuf/studies/breaking_lightweight_secure/README.md)
 - 2019, Wisiol et al.: [Why Attackers Lose: Design and Security Analysis of Arbitrarily Large XOR Arbiter PUFs](https://doi.org/10.1007/s13389-019-00204-8):
