@@ -4,14 +4,13 @@
     PUFs". The learning algorithm applies Covariance Matrix Adaptation Evolution
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
-from .cmaes.cma import CMA
+from cma import CMA
 import numpy as np
 import tensorflow as tf
 
 from scipy.stats import pearsonr, mode
 
-from pypuf.tools import approx_dist, transform_challenge_11_to_01,transform_challenge_01_to_11
-from pypuf.bipoly import BiPoly
+from pypuf.tools import approx_dist, transform_challenge_11_to_01
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
@@ -25,9 +24,10 @@ def reliabilities_PUF(response_bits):
     """
     # Convert to 0/1 from 1/-1
     response_bits = np.array(response_bits, dtype=np.int8)
-    if (-1 in response_bits):
+    if -1 in response_bits:
         response_bits = transform_challenge_11_to_01(response_bits)
     return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
+
 
 def reliabilities_MODEL(delay_diffs, EPSILON=3):
     """
@@ -37,15 +37,17 @@ def reliabilities_MODEL(delay_diffs, EPSILON=3):
     res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), EPSILON)
     return tf.cast(res, tf.double)
 
+
 def tf_pearsonr(x, y):
     centered_x = x - tf.reduce_mean(x, axis=0)
-    centered_y = y - tf.reduce_mean(y) #can be precomp
+    centered_y = y - tf.reduce_mean(y)  #can be precomp
     cov_xy = tf.tensordot(centered_y, centered_x, axes=1)
     auto_cov = tf.sqrt(tf.reduce_sum(centered_x**2, axis=0) * tf.reduce_sum(centered_y**2))
     corr = cov_xy / auto_cov
     return corr
 
 # ============================ Learner class ============================ #
+
 
 class ReliabilityBasedCMAES(Learner):
     """
@@ -81,6 +83,7 @@ class ReliabilityBasedCMAES(Learner):
         self.transform = transform
         self.combiner = combiner
         self.abort_delta = abort_delta
+        self.current_challenges = None
         self.prng = np.random.RandomState(random_seed)
         self.chains_learned = np.zeros((self.k, self.n))
         self.num_iterations = 0
@@ -94,21 +97,18 @@ class ReliabilityBasedCMAES(Learner):
         self.linearized_challenges = self.transform(self.training_set.challenges,
                                                     k=self.k)
 
-
     def print_accs(self, es):
         w = es.best.x[:-1]
-        #print(es.fit.hist)
         a = [
             1 - approx_dist(
-                LTFArray(v[:self.n].reshape(1,self.n), self.transform, self.combiner),
-                LTFArray(w[:self.n].reshape(1,self.n) ,self.transform, self.combiner),
+                LTFArray(v[:self.n].reshape(1, self.n), self.transform, self.combiner),
+                LTFArray(w[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 10000,
                 np.random.RandomState(12345)
             )
             for v in self.training_set.instance.weight_array
             ]
         print(np.array(a), self.objective(es.best.x))
-
 
     def objective(self, state):
         """
@@ -135,9 +135,9 @@ class ReliabilityBasedCMAES(Learner):
             whether the chains need to be flipped.
         """
         # Since responses can be noisy, we perform majority vote on response bits
-        Y_true = mode(self.training_set.responses, axis=1)[0].T
-        Y_test = model.eval(self.training_set.challenges)
-        return np.mean(Y_true == Y_test)
+        y_true = mode(self.training_set.responses, axis=1)[0].T
+        y_test = model.eval(self.training_set.challenges)
+        return np.mean(y_true == y_test)
 
     def learn(self):
         """
@@ -146,19 +146,19 @@ class ReliabilityBasedCMAES(Learner):
         """
         # pool: collection of learned chains, meta_data: information about learning
         meta_data, pool = {}, []
-        meta_data['discard_count'] = {i : [] for i in range(self.k)}
-        meta_data['iteration_count'] = {i : [] for i in range(self.k)}
+        meta_data['discard_count'] = {i: [] for i in range(self.k)}
+        meta_data['iteration_count'] = {i: [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
             print("Attempting to learn chain", n_chain)
             self.current_challenges = np.array(
                     self.linearized_challenges[:, n_chain, :],
-                    dtype=np.float64) # tensorflow needs floats
+                    dtype=np.float64)   # tensorflow needs floats
 
             tf.random.set_seed(self.prng.randint(low=0, high=2**32-1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
-            init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
+            init_state = np.array(init_state)   # weights = normal_dist; epsilon = 2
             cma = CMA(
                     initial_solution=init_state,
                     initial_step_size=1.0,
@@ -166,7 +166,7 @@ class ReliabilityBasedCMAES(Learner):
                     termination_no_effect=self.abort_delta)
 
             # Learn the chain the GPU
-            with tf.device('/GPU:0'):
+            with tf.device('/CPU:0'):
                 w, _ = cma.search()
 
             # Update meta data about how many iterations it took to find a solution
@@ -178,13 +178,12 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(pool):
-                if (tf.abs(pearsonr(w, v)[0]) > 0.5):
+                if tf.abs(pearsonr(w, v)[0]) > 0.5:
                     meta_data['discard_count'][n_chain].append(i)
                     break
             else:
                 pool.append(w)
                 n_chain += 1
-
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(np.array(pool), self.transform, self.combiner)
@@ -193,4 +192,3 @@ class ReliabilityBasedCMAES(Learner):
             model = LTFArray(np.array(pool), self.transform, self.combiner)
 
         return model, meta_data
-

@@ -27,8 +27,8 @@ class ReliabilityAttackStudy(Study):
             )
             for n in [64]
             for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
-            for noisiness in [.1, .25,]
-            for k, N in [(1, 20*10**3),(2, 100*10**3),(4, 150*10**3),(6, 200*10**3),(8, 300*10**3)]
+            for noisiness in [.1, .25]
+            for k, N in [(1, 20*10**3), (2, 100*10**3), (4, 150*10**3), (6, 200*10**3), (8, 300*10**3)]
             for R in [3, 5, 11, 19, 49]
             for seed in [1, 42, 1337]
         ]
@@ -49,7 +49,7 @@ class ReliabilityAttackStudy(Study):
         data['reps__noisiness'] = data.apply(
             lambda row: f'{row["reps"]}__{row["noisiness"]}', axis=1)
         data['accuracy1'] = data.apply(lambda row: max(row['accuracy'],
-            1 - row['accuracy']), axis=1)
+                                                       1 - row['accuracy']), axis=1)
         for hue in ['', 'reps', 'noisiness']:
             grid = catplot(
                 x='num',

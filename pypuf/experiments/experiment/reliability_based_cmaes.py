@@ -10,7 +10,6 @@ from os import getpid
 from typing import NamedTuple
 from uuid import UUID
 
-import numpy as np
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
 
@@ -47,7 +46,6 @@ class Result(NamedTuple):
     iteration_count: dict
 
 
-
 class ExperimentReliabilityBasedCMAES(Experiment):
     """
         This class implements an experiment for executing the reliability based CMAES
@@ -77,6 +75,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             parameters)
         self.prng_i = RandomState(seed=self.parameters.seed_instance)
         self.prng_c = RandomState(seed=self.parameters.seed_challenges)
+        self.learning_meta_data = None
         self.training_set = None
         self.instance = None
         self.learner = None
@@ -123,7 +122,6 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
 
-
     def analyze(self):
         """
             Analyze the results and return the Results object.
@@ -131,20 +129,18 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         n = self.parameters.n
 
         # Accuracy of the learned model using 10000 random samples.
-        empirical_accuracy     = 1 - approx_dist(self.instance, self.model,
-                                    10000, RandomState(1902380))
+        empirical_accuracy = 1 - approx_dist(self.instance, self.model, 10000, RandomState(1902380))
 
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is Noisy.
-        best_empirical_accuracy = 1 - approx_dist(self.instance,
-                                    LTFArray(
+        best_empirical_accuracy = 1 - approx_dist(self.instance, LTFArray(
                                         weight_array=self.instance.weight_array[:, :n],
                                         transform=self.parameters.transform,
                                         combiner=self.parameters.combiner),
                                     10000, RandomState(12346))
         # Correl. of the learned model and the base line LTF using pearson for all chains
         cross_model_correlation = [[pearsonr(v[:n], w[:n])[0]
-                                        for w in self.model.weight_array]
-                                        for v in self.training_set.instance.weight_array]
+                                    for w in self.model.weight_array]
+                                   for v in self.training_set.instance.weight_array]
 
         return Result(
             experiment_id=self.id,
