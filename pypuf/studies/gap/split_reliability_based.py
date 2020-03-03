@@ -518,7 +518,7 @@ class SplitAttackStudy(Study):
 
     def experiments(self):
         M = 10 ** 6
-        return [[
+        return [
             SplitAttack(
                 progress_log_name=f'{self.name()}-n={n}-k_up={k_up}-k_down={k_down}-N={N}-noisiness={noisiness}-'
                                   f'seed={seed}',
@@ -549,7 +549,10 @@ class SplitAttackStudy(Study):
                 # (9, 9, 800000000),  # nearly 50 GB of training set size, needs ~75 GB
                 # (1, 2, [100000]),
                 # (1, 3, [10000, 20000, 50000, 100000]),
-                (2, 4, [500000]),  # [10000, 20000, 50000, 100000]
+                (1, 3, [100000, 1 * M, 10 * M]),
+                (3, 3, [100000, 1 * M, 10 * M]),
+                (1, 4, [500000, 5 * M, 50 * M]),  # [10000, 20000, 50000, 100000]
+                (4, 4, [500000, 5 * M, 50 * M]),
                 # (1, 5, [200000, 500000, 600000, 1000000]),
                 # (1, 6, [500000, 1000000, 2000000, 5000000]),
                 # (1, 7, [20*M]),  # 2.5 GB peak memory usage
@@ -562,13 +565,13 @@ class SplitAttackStudy(Study):
             for N in Ns
             # for n in self._bit_lengths(k_up, k_down)
             for noisiness in self._noise_levels(n, k_up, k_down)
-            for reps in [11]
+            for reps in [23]
             for pop_size in [32]
             for abort_delta in [0.005]
             for abort_iter in [10]
             for seed in range(10)
             for batch_frac in self._batch_fracs()
-        ][5]]
+        ]
 
     @classmethod
     def _Ncat(cls, N):
