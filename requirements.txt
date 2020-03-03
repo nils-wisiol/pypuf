@@ -8,3 +8,5 @@ matplotlib~=3.0.0
 pandas~=0.24.1
 seaborn~=0.9.0
 cma~=2.7.0
+cma-es~=1.3.0
+tensorflow~=2.1.0

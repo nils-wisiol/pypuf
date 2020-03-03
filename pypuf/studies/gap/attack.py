@@ -22,49 +22,39 @@ class ReliabilityAttackStudy(Study):
                     noisiness=noisiness,
                     num=N,
                     reps=R,
-                    pop_size=pop_size,
-                    abort_delta=0.005,
-                    abort_iter=10,
+                    abort_delta=0.005
                 )
             )
             for n in [64]
-            for k in [4, 5, 6, 7, 8]
-            for transform in ['atf']
-            for noisiness in [0.05, 0.1, 0.2]
-            for N in {
-                4: [150 * 10**3],
-                5: [180 * 10**3],
-                6: [215 * 10**3],
-                7: [255 * 10**3],
-                8: [300 * 10**3],
-            }[k]
-            for R in [3, 11]
-            for pop_size in [20, 40]
-            for seed in list(range(10))
+            for transform in ['atf', 'lightweight_secure', 'fixed_permutation']
+            for noisiness in [.1, .25]
+            for k, N in [(1, 20*10**3), (2, 100*10**3), (4, 150*10**3), (6, 200*10**3), (8, 300*10**3)]
+            for R in [3, 5, 11, 19, 49]
+            for seed in [1, 42, 1337]
         ]
 
     """
-        for n in [64]
-        for k in [1, 2, 3, 4, 5, 6]
-        for transform in ['atf', 'id', 'lightweight_secure', 'fixed_permutation']
-        for noisiness in [.01, .1, .25, .5]
-        for N in [10**4, 10**5, 5 * 10**5, 10**6]
-        for R in [3, 5, 11, 19, 49]
-        for pop_size in [20, 50, 90]
-        for seed in range(10)
+
+            for n in [64]
+            for k in [4]
+            for transform in ['atf']
+            for noisiness in [.25]
+            for N in [150*10**3]
+            for R in [11]
+            for seed in [1]
     """
 
     def plot(self):
         data = self.experimenter.results.copy()
-        data['pop_size__reps__noisiness'] = data.apply(
-            lambda row: f'{row["pop_size"]}__{row["reps"]}__{row["noisiness"]}', axis=1)
+        data['reps__noisiness'] = data.apply(
+            lambda row: f'{row["reps"]}__{row["noisiness"]}', axis=1)
         data['accuracy1'] = data.apply(lambda row: max(row['accuracy'],
-            1 - row['accuracy']), axis=1)
-        for hue in ['', 'pop_size', 'reps', 'noisiness']:
+                                                       1 - row['accuracy']), axis=1)
+        for hue in ['', 'reps', 'noisiness']:
             grid = catplot(
                 x='num',
                 y='accuracy1',
-                hue=hue or 'pop_size__reps__noisiness',
+                hue=hue or 'reps__noisiness',
                 col='k',
                 row='transform',
                 data=data,

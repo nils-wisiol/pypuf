@@ -436,7 +436,7 @@ class TrainingSet(ChallengeResponseSet):
         for i in range(reps):
             responses[:, i] = instance.eval(challenges[:, :]).T
         if reps == 1:
-            responses = squeeze(responses, axis=0)
+            responses = squeeze(responses, axis=1)
         self.reps = reps
         super().__init__(
             challenges=challenges,
