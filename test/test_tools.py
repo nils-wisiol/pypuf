@@ -168,8 +168,8 @@ class TestInputFunctions(unittest.TestCase):
         f.flush()
 
         loaded = parse_file(f.name, n, in_11_notation=True)
-        assert_array_equal(original.challenges, loaded.challenges)
-        assert_array_equal(original.responses, loaded.responses)
+        assert_array_equal(original.challenges, loaded[0])
+        assert_array_equal(original.responses, loaded[1].flatten())
         f.close()
 
     def check_multi_dimensional_array(self, arr, arr_size, sub_arr_size, arr_type):

@@ -7,7 +7,7 @@ from test.utility import get_functions_with_prefix
 from numpy.testing import assert_array_equal
 from numpy import shape, dot, array, around, array_equal, reshape, zeros
 from numpy.random import RandomState
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray, SimulationMajorityLTFArray, CRCPuf
 from pypuf import tools
 
 
@@ -883,3 +883,47 @@ class TestSimulationMajorityLTFArray(unittest.TestCase):
         biased_responses = biased_ltf_array.eval(challenges)
         responses = ltf_array.eval(challenges)
         self.assertFalse(array_equal(biased_responses, responses))
+
+
+class TestCRCPuf(unittest.TestCase):
+    """This class tests the transformation function belonging to CRC-PUF."""
+
+    def test_apply(self):
+        """
+        This method tests the CRC-PUF transformation with predefined input and output for an
+        n=64, m=4 CRC-PUF.
+        """
+        challenges = array([
+            [1, -1, 1, 1, -1, -1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1,
+             -1, -1, -1, -1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, 1, 1,
+             1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
+             1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ], dtype=tools.BIT_TYPE)
+        generators = array([
+            [-1, -1, 1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 1, 1, 1,
+             1, 1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1,
+             1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1,
+             -1, 1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1]
+        ], dtype=tools.BIT_TYPE)
+
+        assert_array_equal(
+            CRCPuf.apply(challenges, generators, 4),
+            [
+                [1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1, -1, 1, -1, -1, 1,
+                 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, 1, 1, -1, 1,
+                 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1, 1,
+                 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, 1],
+                [1, 1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1, -1, 1, -1, -1,
+                 1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, 1, 1, -1,
+                 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1,
+                 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1],
+                [1, 1, 1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1, -1, 1, -1,
+                 -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, 1, 1,
+                 -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1,
+                 -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1],
+                [1, 1, 1, 1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1, -1, 1,
+                 -1, -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, 1,
+                 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, -1,
+                 -1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1]
+            ]
+        )

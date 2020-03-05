@@ -3,7 +3,7 @@ This module provides several different implementations of arbiter PUF simulation
 model is the core of each simulation class.
 """
 from numpy import prod, shape, sign, array, transpose, concatenate, swapaxes, sqrt, amax, append
-from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum
+from numpy import sum as np_sum, ones, ndarray, zeros, reshape, broadcast_to, einsum, dot, mod, roll
 from numpy.random import RandomState
 
 from pypuf import tools
@@ -594,13 +594,14 @@ class LTFArray(Simulation):
         def transform(challenges, k):
             """
             Method as described in generate_concatenated_transform doc string.
-            :param challenges: array of shape(N,n)
+            :param challenges: array of int8 shape(N,n)
                                Array of challenges which should be evaluated by the simulation.
             :param k: int
                      Number of LTFArray PUFs
             :return: A function: array of int with shape(N,n), int number of PUFs k -> shape(N,k,n)
                      A function that can perform the desired transformation.
             """
+            tools.assert_result_type(challenges)
             (_, n) = challenges.shape
             assert k == kk and n == nn, \
                 'Permutations Input Transform cannot be used for LTFArrays with size other than defined'
@@ -1008,3 +1009,72 @@ class SimulationMajorityLTFArray(LTFArray):
 
         # Majority vote (i.e., sign(sum(·))) along the first axis
         return sign(np_sum(sign(evaled_inputs + noise), axis=0))
+
+
+class CRCPuf():
+    """
+    This class contains an input transformation for the CRC-PUF construction introduced by
+    Dubrova et al. 2019.
+    It is different from a regular input transformation in that it requires an additional
+    list of generator polynomials.
+    """
+
+    @classmethod
+    def _rotate_lfsr(cls, challenge, g, num):
+        """
+        Clocks the LFSR defined by g loaded with challenge exactly num times.
+        :param challenge: array of shape(n)
+                          Initial state.
+        :param g: array of shape(n)
+                  Generator polynomial.
+                  The LFSR has a tap in position i iff g[i] is set.
+        :param num: int
+                    Number of times to clock.
+        """
+        for _ in range(num):
+            # bitwise AND the challenge and g, take the odd parity of the result
+            lsb = mod(dot(challenge, g), 2)
+
+            # shift challenge array right and update the left-most bit
+            challenge = roll(challenge, 1)
+            challenge[0] = lsb
+
+        return challenge
+
+    @classmethod
+    def apply(cls, challenges, generators, m):
+        """
+        This input transformation interprets a challenge c as a polynomial of degree at most n - 1.
+        The challenge c_i is loaded into a fibonacci LFSR defined by generator polynomial g_i.
+        The LFSR is rotated n + m - 1 times. The last m states each forms a challenges.
+        :param challenges: array of shape(N, n)
+                           Array of challenges which should be evaluated by the simulation.
+        :param generators: array of shape(N, n)
+                           Array of generator polynomials.
+        :param m: int
+                  Amount of challenges to expand from each original challenge.
+                  This should equal the number of response bits.
+        :return: array of shape(N * m, n)
+                 Array of transformed challenges.
+        """
+        assert challenges.shape == generators.shape, \
+            'The challenges and generator vectors have a different shape'
+
+        N = len(challenges)
+        n = len(challenges[0])
+        challenges = array([tools.transform_challenge_11_to_01(c) for c in challenges])
+        generators = array([tools.transform_challenge_11_to_01(c) for c in generators])
+        result = []
+
+        for (challenge, generator) in zip(challenges, generators):
+            # discard the output of the first n-1 clocks
+            challenge = cls._rotate_lfsr(challenge, generator, n - 1)
+
+            # save the output of the next m clocks
+            for _ in range(m):
+                challenge = cls._rotate_lfsr(challenge, generator, 1)
+                result.append(challenge)
+
+        result = array([tools.transform_challenge_01_to_11(c) for c in result], dtype=tools.BIT_TYPE)
+        assert result.shape == (N * m, n), 'The resulting challenges have not the desired shape'
+        return result

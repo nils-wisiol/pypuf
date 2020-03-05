@@ -178,6 +178,8 @@ pypuf is primarily designed as an API. However, it provides a subset of its feat
 For simulation and learning, a couple of parameters can be chosen on the command line.
 Start `sim_learn` without parameters to get detailed usage information.
 
+`crp_learn` is similar to `sim_learn` but loads existing challenge-response pairs. It supports the [CRC-PUF](https://sci-hub.se/10.1109/eurospw.2019.00036) construction.
+
 `mv_num_of_votes` is a command line interface that allows to compute the minimum number of required votes in a Majority Vote XOR Arbiter PUF
 such that a certain stability is achieved.
 For details, please refer to [Why Attackers Lose](https://eprint.iacr.org/2017/932.pdf).

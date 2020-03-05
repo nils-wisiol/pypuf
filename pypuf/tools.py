@@ -301,7 +301,7 @@ def assert_result_type(arr):
     assert arr.dtype == dtype(BIT_TYPE), 'Must be an array of {0}. Got array of {1}'.format(BIT_TYPE, arr.dtype)
 
 
-def parse_file(filename, n, start=1, num=0, in_11_notation=False):
+def parse_file(filename, n, m=1, start=1, num=0, in_11_notation=False):
     """
     Reads challenge-response pairs from a file.
     The format is one pair per line, first all n inputs (challenge) separated
@@ -310,6 +310,8 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
                      Path of the file to read the challenge-response pairs from
     :param n: int
               Challenge bits
+    :param m: int
+              Response bits
     :param start: int
                   First line to read
     :param num: int
@@ -317,8 +319,9 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
     :param in_11_notation: bool
                            Format the file is in
                            True for -1,1 notation, False for 0,1
-    :return: tools.TrainingSet
-             A TraningSet with the num challenges and responses that were read
+    :return: tuple of two arrays of shape(N,n)
+             The first array is of shape (N,n) and contains the challenges, and
+             the second array is of shape(N,m) and containts the responses
     """
     if num == 0:
         stop = float('inf')
@@ -334,14 +337,14 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
         for ln, line in enumerate(f):
             if start <= ln + 1 < stop:
                 vals = line.split()
-                assert len(vals) == n + 1, \
+                assert len(vals) == n + m, \
                     'Line {} contains {} values, expected {}' \
-                    .format(ln + 1, len(vals), n + 1)
+                    .format(ln + 1, len(vals), n + m)
                 assert set(vals).issubset(allowed_vals), \
                     'Line {} contains an invalid value: {}' \
                     .format(ln + 1, next(iter(set(vals).difference(allowed_vals))))
                 challenges.append(vals[:n])
-                responses.append(vals[n])
+                responses.append(vals[n:])
 
     if num == 0:
         num = len(challenges)
@@ -356,7 +359,7 @@ def parse_file(filename, n, start=1, num=0, in_11_notation=False):
         challenges = transform_challenge_01_to_11(challenges)
         responses = transform_challenge_01_to_11(responses)
 
-    return ChallengeResponseSet(challenges, responses)
+    return challenges, responses
 
 
 class ChallengeResponseSet:
