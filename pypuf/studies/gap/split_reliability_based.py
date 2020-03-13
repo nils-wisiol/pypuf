@@ -498,18 +498,10 @@ class SplitAttackStudy(Study):
 
     @staticmethod
     def _noise_levels(n, k_up, k_down):
-        if n != 64:
-            return [0, 0.05, 0.1, 0.2]
-        if k_down == 1:
-            return [0, .1, .2]
-        if k_up <= 4 and k_down <= 4:
-            return [.1, .2, .5]
-        return [0, .02, .05, .1]
+        return [.1]
 
     @staticmethod
     def _bit_lengths(k_up, k_down):
-        if k_up <= 4 and k_down <= 4:
-            return [32, 48, 56, 64, 72, 96, 128]
         return [64]
 
     @staticmethod
@@ -549,10 +541,10 @@ class SplitAttackStudy(Study):
                 # (9, 9, 800000000),  # nearly 50 GB of training set size, needs ~75 GB
                 # (1, 2, [100000]),
                 # (1, 3, [10000, 20000, 50000, 100000]),
-                (1, 3, [100000, 1 * M, 10 * M]),
+                # (1, 3, [100000, 1 * M, 10 * M]),
                 (3, 3, [100000, 1 * M, 10 * M]),
-                (1, 4, [500000, 5 * M, 50 * M]),  # [10000, 20000, 50000, 100000]
-                (4, 4, [500000, 5 * M, 50 * M]),
+                # (1, 4, [500000, 5 * M, 50 * M]),  # [10000, 20000, 50000, 100000]
+                # (4, 4, [500000, 5 * M, 50 * M]),
                 # (1, 5, [200000, 500000, 600000, 1000000]),
                 # (1, 6, [500000, 1000000, 2000000, 5000000]),
                 # (1, 7, [20*M]),  # 2.5 GB peak memory usage
@@ -561,12 +553,11 @@ class SplitAttackStudy(Study):
                 # (1, 9, 350000000),  # ~32 GB
                 # (1, 9, 450000000),  # ~42 GB
             ]
-            for n in [64]
+            for n in self._bit_lengths(k_up=k_up, k_down=k_down)
             for N in Ns
-            # for n in self._bit_lengths(k_up, k_down)
-            for noisiness in self._noise_levels(n, k_up, k_down)
-            for reps in [23]
-            for pop_size in [32]
+            for noisiness in self._noise_levels(n=n, k_up=k_up, k_down=k_down)
+            for reps in [49]
+            for pop_size in [100]
             for abort_delta in [0.005]
             for abort_iter in [10]
             for seed in range(10)
