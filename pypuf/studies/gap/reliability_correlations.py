@@ -1,17 +1,9 @@
 from numpy.random import RandomState
-from numpy import array, ndarray, concatenate, zeros, ones, sign, sum as np_sum, expand_dims, append
+from numpy import array, ndarray, concatenate, zeros, ones, sign, sum as np_sum, copy
 from pandas import DataFrame, concat
 
 from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
 from pypuf.tools import sample_inputs, BIT_TYPE
-
-ns = [64, 128]
-ks = [1, 2, 4, 8]
-noisinesses = [0.05, 0.1, 0.2, 0.4, 0.8]
-epsilons = [0.9, 1.0]
-N = 10000
-num = 100
-reps = 100
 
 
 def is_reliable(simulation, challenges, epsilon):
@@ -19,16 +11,16 @@ def is_reliable(simulation, challenges, epsilon):
     return (abs(responses.sum(axis=0)) / reps) >= epsilon
 
 
-def interpose(challenges, bits, n2):
+def interpose(challenges, bits, position):
     if isinstance(bits, ndarray):
         N = challenges.shape[0]
-        return concatenate((challenges[:, :n2], bits.reshape(N, 1), challenges[:, n2:]), axis=1)
+        return concatenate((challenges[:, :position], bits.reshape(N, 1), challenges[:, position:]), axis=1)
     else:
         return concatenate(
             (
-                challenges[:, :n2],
+                challenges[:, :position],
                 zeros(shape=(challenges.shape[0], 1), dtype=BIT_TYPE) + bits,
-                challenges[:, n2:]
+                challenges[:, position:]
             ), axis=1
         )
 
@@ -45,11 +37,16 @@ def truth_to_dec(truth_values):
     return sum([int(truth_values[i]) * 2 ** (length - i - 1) for i in range(length)])
 
 
-# l_plus reliable       l_minus reliable        u_plus      u reliable      s reliable
-columns = ['num', '00000', '00001', '00010', '00011', '00100', '00101', '00110', '00111', '01000', '01001', '01010',
-           '01011', '01100', '01101', '01110', '01111', '10000', '10001', '10010', '10011', '10100', '10101', '10110',
-           '10111', '11000', '11001', '11010', '11011', '11100', '11101', '11110', '11111']
+ns = [64]
+ks = [8]
+noisinesses = [0.1]
+epsilons = [0.9, 1.0]
+N = 100000
+num = 100
+reps = 100
 
+
+columns = ['l_plus', 'l_minus', 'u', 'u_plus', 's', 'l_swap_plus', 'l_swap_minus', 'u_swap', 'u_swap_plus', 's_swap']
 df = DataFrame(data=None, index=None, columns=columns, dtype=float)
 
 for a, n in enumerate(ns):
@@ -66,22 +63,77 @@ for a, n in enumerate(ns):
                     noise_seed=d + 1000000,
                 )
                 cs = sample_inputs(n=n, num=N, random_instance=RandomState(d + 2000000))
-                cs_plus = interpose(cs, +ones(shape=(N, 1), dtype=BIT_TYPE), n // 2)
-                cs_minus = interpose(cs, -ones(shape=(N, 1), dtype=BIT_TYPE), n // 2)
+                pos = n // 2
+                cs_swap = copy(cs)
+                cs_swap[:, pos - 1:pos] = -cs_swap[:, pos - 1:pos]
+                cs_plus = interpose(challenges=cs, bits=+ones(shape=(N, 1), dtype=BIT_TYPE), position=pos)
+                cs_minus = interpose(challenges=cs, bits=-ones(shape=(N, 1), dtype=BIT_TYPE), position=pos)
+                cs_swap_plus = interpose(challenges=cs_swap, bits=+ones(shape=(N, 1), dtype=BIT_TYPE), position=pos)
+                cs_swap_minus = interpose(challenges=cs_swap, bits=-ones(shape=(N, 1), dtype=BIT_TYPE), position=pos)
+
                 for e, eps in enumerate(epsilons):
-                    cases = zeros(shape=32)
-                    l_plus = is_reliable(simulation=ipuf.down, challenges=cs_plus, epsilon=eps)
-                    l_minus = is_reliable(simulation=ipuf.down, challenges=cs_minus, epsilon=eps)
-                    u = is_reliable(simulation=ipuf.up, challenges=cs, epsilon=eps)
-                    u_plus = majority_vote(simulation=ipuf.up, challenges=cs, repetitions=99)
-                    s = is_reliable(simulation=ipuf, challenges=cs, epsilon=eps)
-                    for count in range(N):
-                        cases[truth_to_dec([l_plus[count], l_minus[count], u[count], u_plus[count], s[count]])] += 1
-                    line = DataFrame(
-                        data=append([[d]], expand_dims(a=cases, axis=0) / N, axis=1),
-                        index=[f'n={n}, k={k}, noisiness={noisiness}, eps={eps}'],
-                        columns=columns,
-                        dtype=float,
+                    s = is_reliable(
+                        simulation=ipuf,
+                        challenges=cs,
+                        epsilon=eps,
                     )
-                    df = concat(objs=[df, line])
-                    df.to_csv(path_or_buf=f'results/ipuf_reliability_correlations.csv')
+                    s_swap = is_reliable(
+                        simulation=ipuf,
+                        challenges=cs_swap,
+                        epsilon=eps,
+                    )
+                    l_plus = is_reliable(
+                        simulation=ipuf.down,
+                        challenges=cs_plus,
+                        epsilon=eps,
+                    )
+                    l_minus = is_reliable(
+                        simulation=ipuf.down,
+                        challenges=cs_minus,
+                        epsilon=eps,
+                    )
+                    u = is_reliable(
+                        simulation=ipuf.up,
+                        challenges=cs,
+                        epsilon=eps,
+                    )
+                    u_plus = majority_vote(
+                        simulation=ipuf.up,
+                        challenges=cs,
+                        repetitions=reps,
+                    )
+                    l_swap_plus = is_reliable(
+                        simulation=ipuf.down,
+                        challenges=cs_swap_plus,
+                        epsilon=eps,
+                    )
+                    l_swap_minus = is_reliable(
+                        simulation=ipuf.down,
+                        challenges=cs_swap_minus,
+                        epsilon=eps,
+                    )
+                    u_swap = is_reliable(
+                        simulation=ipuf.up,
+                        challenges=cs_swap,
+                        epsilon=eps,
+                    )
+                    u_swap_plus = majority_vote(
+                        simulation=ipuf.up,
+                        challenges=cs_swap,
+                        repetitions=reps,
+                    )
+                    for j in range(N):
+                        unequal = s[j] == s_swap[j]
+                        events = array(
+                            [[l_plus[j], l_minus[j], u[j], u_plus[j], s[j], l_swap_plus[j], l_swap_minus[j], u_swap[j],
+                              u_swap_plus[j], s_swap[j]]],
+                            dtype=bool,
+                        )
+                        line = DataFrame(
+                            data=events,
+                            index=[f'n={n}, k={k}, noisiness={noisiness}, eps={eps}, ipuf={d}, num={j}'],
+                            columns=columns,
+                            dtype=bool,
+                        )
+                        df = concat(objs=[df, line])
+                    df.to_csv(path_or_buf=f'results/raw_ipuf_reliability_correlations_swap.csv')
