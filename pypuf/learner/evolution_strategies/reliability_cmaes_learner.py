@@ -94,7 +94,7 @@ class ReliabilityBasedCMAES(Learner):
         self.num_iterations = 0
         self.stops = ''
         self.logger = logger
-        self.gpu_id = gpu_id
+        self.gpu_id = 1  # gpu_id
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
