@@ -149,6 +149,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Caching
         trainset_cache_fn = '/tmp/trainset.cache'
         if os.path.exists(trainset_cache_fn):
+            print('WARNING: USING CACHED TRAINING SET!')
             with open(trainset_cache_fn, 'rb') as f:
                 self.ts = pickle.load(f)
         else:
