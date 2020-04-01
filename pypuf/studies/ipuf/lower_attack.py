@@ -29,7 +29,7 @@ class LowerIPUFAttackStudy(Study):
             for n in [64]
             for noisiness in [0.15]
             for k, N in [(8, 1000000)]
-            for R in [11]
+            for R in [5]
             for seed in range(10)
         ]
 
