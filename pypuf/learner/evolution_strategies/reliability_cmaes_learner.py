@@ -158,6 +158,16 @@ class ReliabilityBasedCMAES(Learner):
         Y_test = model.eval(self.training_set.challenges)
         return np.mean(Y_true == Y_test)
 
+    def logging_function(self, cma, logger):
+        if cma.generation % 10 == 0:
+            fitness = cma.best_fitness()
+            logger.info(f'Generation {cma.generation} - fitness {fitness}')
+
+        if cma.termination_criterion_met or cma.generation == 500:
+            sol = cma.best_solution()
+            fitness = cma.best_fitness()
+            logger.info(f'Final solution at gen {cma.generation}: {sol} (fitness: {fitness})')
+
     def learn(self):
         """
             Start learning and return optimized LTFArray and count of failed learning
@@ -179,10 +189,12 @@ class ReliabilityBasedCMAES(Learner):
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
             cma = CMA(
-                    initial_solution=init_state,
-                    initial_step_size=1.0,
-                    fitness_function=self.objective,
-                    termination_no_effect=self.abort_delta)
+                initial_solution=init_state,
+                initial_step_size=1.0,
+                fitness_function=self.objective,
+                termination_no_effect=self.abort_delta,
+                callback_function=self.logging_function,
+            )
 
             # Learn the chain (on the GPU)
             #with tf.device('/GPU:%d' % self.gpu_id):
