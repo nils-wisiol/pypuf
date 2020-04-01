@@ -27,10 +27,10 @@ class LowerIPUFAttackStudy(Study):
                 )
             )
             for n in [64]
-            for noisiness in [0.05]
-            for k, N in [(4, 500*10**3)]
-            for R in [11]
-            for seed in [2]
+            for noisiness in [0.10]
+            for k, N in [(8, 1000000)]
+            for R in [51]
+            for seed in range(10)
         ]
 
         """
