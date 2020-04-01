@@ -185,8 +185,8 @@ class ReliabilityBasedCMAES(Learner):
                     termination_no_effect=self.abort_delta)
 
             # Learn the chain (on the GPU)
-            with tf.device('/GPU:%d' % self.gpu_id):
-                w, score = cma.search()
+            #with tf.device('/GPU:%d' % self.gpu_id):
+            w, score = cma.search()
 
             # Update meta data about how many iterations it took to find a solution
             meta_data['iteration_count'][n_chain].append(cma.generation)
