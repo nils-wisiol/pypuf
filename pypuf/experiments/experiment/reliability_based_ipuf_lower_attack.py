@@ -82,7 +82,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
     def generate_unreliable_challenges_for_upper_puf(self):
         """Analysis outside of attacker model"""
         chosen_total = sum(~self.s & self.s_swap)
-        responses = self.responses[~self.s & self.s_swap]
+        responses = self.eval_repeat(self.ipuf.up, self.challenges[~self.s & self.s_swap], 11)
         chosen_unrel = sum(~self.is_reliable(responses))
         print(f'Out of {chosen_total} chosen challenges, {chosen_unrel} ({chosen_unrel/chosen_total*100:.2f}%) '
               f'are actually unreliable on the upper layer.')
@@ -92,7 +92,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
     def generate_reliable_challenges_for_upper_puf(self):
         """Analysis outside of attacker model"""
         chosen_total = sum(self.s & ~self.s_swap)
-        responses = self.responses[self.s & ~self.s_swap]
+        responses = self.eval_repeat(self.ipuf.up, self.challenges[self.s & ~self.s_swap], 11)
         chosen_rel = sum(self.is_reliable(responses))
         print(f'Out of {chosen_total} chosen challenges, {chosen_rel} ({chosen_rel/chosen_total*100:.2f}%) '
               f'are actually reliable on the upper layer.')
