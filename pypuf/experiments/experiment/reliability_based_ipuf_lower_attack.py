@@ -80,76 +80,24 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         self.model = None
 
     def generate_unreliable_challenges_for_upper_puf(self):
-        print("Generating unreliable challenges for the upper PUF.")
-        ts = TrainingSet(self.ipuf,
-                         self.parameters.num,
-                         random_instance=self.prng,
-                         reps=self.parameters.reps)
-        resps = np.int8(ts.responses)
-        # Find unreliable challenges on whole IPUF
-        unrels = isUnreliable(resps)
-        unrel_chals = ts.challenges[unrels]
-        unrel_resps = ts.responses[unrels]
-        """print("Found %d unreliable challenges." % np.sum(unrels))"""
-        # Flip middle bits of these challenges
-        flipped_chals = unrel_chals.copy()
-        flipped_chals[:,self.parameters.n//2 - 1] *= -1
-        flipped_chals[:,self.parameters.n//2] *= -1
-        flipped_resps = np.zeros(resps[unrels].shape)
-        # Find reliable challenges among these flipped challenges
-        for i in range(self.parameters.reps):
-            flipped_resps[:, i] = self.ipuf.eval(flipped_chals).T
-        flipped_rels = ~isUnreliable(flipped_resps)
-        candidate_chals = unrel_chals[flipped_rels]
-        candidate_resps = unrel_resps[flipped_rels]
-        """print("-> Among those, %d are reliable when c is flipped." % np.sum(flipped_rels))"""
-
         """Analysis outside of attacker model"""
-        chosen_total = sum(flipped_rels)
-        responses = np.zeros((chosen_total, self.parameters.reps))
-        for i in range(self.parameters.reps):
-            responses[:, i] = self.ipuf.up.eval(candidate_chals[:, :]).T
-        chosen_unrel = sum(isUnreliable(responses))
+        chosen_total = sum(~self.s & self.s_swap)
+        responses = self.responses[~self.s & self.s_swap]
+        chosen_unrel = sum(~self.is_reliable(responses))
         print(f'Out of {chosen_total} chosen challenges, {chosen_unrel} ({chosen_unrel/chosen_total*100:.2f}%) '
               f'are actually unreliable on the upper layer.')
 
-        return candidate_chals, candidate_resps
+        return self.challenges[~self.s & self.s_swap], self.responses[~self.s & self.s_swap]
 
     def generate_reliable_challenges_for_upper_puf(self):
-        print("Generating reliable challenges for the upper PUF.")
-        ts = TrainingSet(self.ipuf,
-                         self.parameters.num,
-                         random_instance=self.prng,
-                         reps=self.parameters.reps)
-        resps = np.int8(ts.responses)
-        # Find reliable challenges on whole IPUF
-        rels = ~isUnreliable(resps)
-        rel_chals = ts.challenges[rels]
-        rel_resps = ts.responses[rels]
-        """print("Found %d reliable challenges." % np.sum(unrels))"""
-        # Flip middle bits of these challenges
-        flipped_chals = rel_chals.copy()
-        flipped_chals[:,self.parameters.n//2 - 1] *= -1
-        flipped_chals[:,self.parameters.n//2] *= -1
-        flipped_resps = np.zeros(resps[rels].shape)
-        # Find unreliable challenges among these flipped challenges
-        for i in range(self.parameters.reps):
-            flipped_resps[:, i] = self.ipuf.eval(flipped_chals).T
-        flipped_unrels = isUnreliable(flipped_resps)
-        candidate_chals = rel_chals[flipped_unrels]
-        candidate_resps = rel_resps[flipped_unrels]
-        """print("-> Among those, %d are reliable when c is flipped." % np.sum(flipped_rels))"""
-
         """Analysis outside of attacker model"""
-        chosen_total = sum(flipped_unrels)
-        responses = np.zeros((chosen_total, self.parameters.reps))
-        for i in range(self.parameters.reps):
-            responses[:, i] = self.ipuf.up.eval(candidate_chals[:, :]).T
-        chosen_rel = sum(~isUnreliable(responses))
+        chosen_total = sum(self.s & ~self.s_swap)
+        responses = self.responses[self.s & ~self.s_swap]
+        chosen_rel = sum(self.is_reliable(responses))
         print(f'Out of {chosen_total} chosen challenges, {chosen_rel} ({chosen_rel/chosen_total*100:.2f}%) '
               f'are actually reliable on the upper layer.')
 
-        return candidate_chals, candidate_resps
+        return self.challenges[self.s & ~self.s_swap], self.responses[self.s & ~self.s_swap]
 
     def run(self):
         """
@@ -298,12 +246,13 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         return np.abs(np.mean(responses, axis=1)) >= eps  # TODO verify eps implementation
 
     def generate_challenge_statistics(self, N):
-        challenges = random_inputs(self.parameters.n, N, RandomState(1))
+        challenges = random_inputs(self.parameters.n, N, self.prng)
         challenges_swapped = challenges.copy()
         challenges_swapped[:, self.ipuf.interpose_pos // 2 - 1] *= -1
         challenges_swapped[:, self.ipuf.interpose_pos // 2] *= -1
 
-        s = self.is_reliable(self.eval_repeat(self.ipuf, challenges))
+        responses = self.eval_repeat(self.ipuf, challenges)
+        s = self.is_reliable(responses)
         s_swap = self.is_reliable(self.eval_repeat(self.ipuf, challenges_swapped))
         u = self.is_reliable(self.eval_repeat(self.ipuf.up, challenges))
         # u_swap = self.is_reliable(self.eval_repeat(self.ipuf.up, challenges_swapped))
@@ -323,3 +272,8 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             pr_condition = sum(condition) / N
             pr_event_and_condition = sum(event & condition) / N
             print(f'{label}: {pr_event_and_condition/pr_condition:.4f}')
+
+        self.challenges = challenges
+        self.responses = responses
+        self.s = s
+        self.s_swap = s_swap
