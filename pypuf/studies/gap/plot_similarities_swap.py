@@ -68,8 +68,7 @@ def plot_conditional_probs():
         axes.set_ylabel('target event')
         axes.set_title(
             label=f'Matrix of conditional probabilities of events regarding reliability (epsilon={eps})'
-                  '\nusing 5 different 64-bit (8, 8)-iPUFs with 100k challenges per iPUF evaluated each 100 times.'
-                  '\nNote, that the diagonal shows the relative number of cases where the event is true.',
+                  '\nusing 5 different 64-bit (8, 8)-iPUFs with 100k challenges per iPUF evaluated each 100 times.',
             fontsize=14,
         )
         fig.savefig(f'figures/conditional_probs_eps={eps}.png', dpi=300)
