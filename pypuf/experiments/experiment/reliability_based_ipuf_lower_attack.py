@@ -14,12 +14,12 @@ from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 from scipy.special import erfinv
 
 import pickle
 import os.path
+
 
 class Parameters(NamedTuple):
     n: int
@@ -45,8 +45,9 @@ class Result(NamedTuple):
     iteration_count: dict
 
 
-def isUnreliable(responses):
+def is_unreliable(responses):
     return np.abs(np.mean(responses, axis=1)) < 0.8
+
 
 class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
     """
@@ -78,6 +79,13 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         self.instance = None
         self.learner = None
         self.model = None
+        self.ipuf = None
+        self.ts = None
+        self.learning_meta_data = None
+        self.challenges = None
+        self.responses = None
+        self.s = None
+        self.s_swap = None
 
     def generate_unreliable_challenges_for_upper_puf(self):
         """Analysis outside of attacker model"""
@@ -125,29 +133,27 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         else:
             self.generate_challenge_statistics(self.parameters.num)
             # Build training Set for learning the lower chains of the IPUF
-            unrel_chals, unrel_resps = self.generate_unreliable_challenges_for_upper_puf()
-            rel_chals, rel_resps = self.generate_reliable_challenges_for_upper_puf()
-            training_chals = np.vstack((unrel_chals, rel_chals))
-            training_resps = np.vstack((unrel_resps, rel_resps))
+            cs_unreliable, rs_unreliable = self.generate_unreliable_challenges_for_upper_puf()
+            cs_reliable, rs_reliable = self.generate_reliable_challenges_for_upper_puf()
+            cs_train = np.vstack((cs_unreliable, cs_reliable))
+            rs_train = np.vstack((rs_unreliable, rs_reliable))
             # Hacky: create TrainingSet and then change the member variables
             self.ts = TrainingSet(self.instance, 1, self.prng, self.parameters.reps)
-            #self.ipuf.down.weight_array = np.delete(self.ipuf.down.weight_array, self.ipuf.interpose_pos, axis=1)
+            # self.ipuf.down.weight_array = np.delete(self.ipuf.down.weight_array, self.ipuf.interpose_pos, axis=1)
             self.ts.instance = self.ipuf
-            self.ts.challenges = training_chals
-            self.ts.responses = training_resps
-            self.ts.N = training_chals.shape[0]
+            self.ts.challenges = cs_train
+            self.ts.responses = rs_train
+            self.ts.N = cs_train.shape[0]
             print("Generated Training Set: Reliables: %d Unreliables (lower): %d TrainSetSize: %d"
-                  % (rel_chals.shape[0], unrel_chals.shape[0], training_chals.shape[0]))
+                  % (cs_reliable.shape[0], cs_unreliable.shape[0], cs_train.shape[0]))
             with open(trainset_cache_fn, 'wb+') as f:
                 pickle.dump(self.ts, f)
 
-
         # DEBUGGING: Unique challenges
-        lin_chals = self.instance.transform(self.ts.challenges,
-                                            k=self.parameters.k)
-        W_down = np.array(self.ts.instance.up.weight_array[:, :-1])
-        delay_diffs = W_down.dot(lin_chals.T[:, 0, :])
-        thresh = np.sqrt(2) * 0.05 * erfinv(2*0.7-1)
+        cs_lin = self.instance.transform(self.ts.challenges, k=self.parameters.k)
+        w_down = np.array(self.ts.instance.up.weight_array[:, :-1])
+        delay_diffs = w_down.dot(cs_lin.T[:, 0, :])
+        thresh = np.sqrt(2) * 0.05 * erfinv(2 * 0.7 - 1)
         uc = np.abs(delay_diffs) < thresh
         overlaps = np.sum(uc, axis=0) > 1
         print("Unreliable Challenges", np.sum(uc, axis=1))
@@ -181,7 +187,6 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
 
-
     def analyze(self):
         """
             Analyze the results and return the Results object.
@@ -189,13 +194,10 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         n = self.parameters.n + 1 + 1
 
         # Accuracy of the learned model using 10000 random samples.
-        empirical_accuracy     = 1 - approx_dist(self.ipuf.up,
-                                    self.model,
-                                    10000, RandomState(1902380))
+        empirical_accuracy = 1 - approx_dist(self.ipuf.up, self.model, 10000, RandomState(1902380))
 
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is Noisy.
-        best_empirical_accuracy = 1 - approx_dist(self.instance, self.instance,
-                                    10000, RandomState(12346))
+        best_empirical_accuracy = 1 - approx_dist(self.instance, self.instance, 10000, RandomState(12346))
         # Correl. of the learned model and the base line LTF using pearson for all chains
         """
         cross_model_correlation = [[pearsonr(v[:n], w[:n])[0]
@@ -204,16 +206,15 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         """
         cross_model_correlation_lower = [[]]
         cross_model_correlation_upper = [[round(pearsonr(v, w)[0], 4)
-                                        for w in self.ts.instance.up.weight_array]
-                                        for v in self.model.weight_array]
+                                          for w in self.ts.instance.up.weight_array]
+                                         for v in self.model.weight_array]
 
-
-        print(np.array(self.ts.instance.up.weight_array[:,:-1]).shape)
+        print(np.array(self.ts.instance.up.weight_array[:, :-1]).shape)
         print(self.ts.challenges.T.shape)
-        W_down = np.array(self.ts.instance.up.weight_array[:,:-1])
-        delay_diffs = W_down.dot(self.ts.challenges.T)
+        w_down = np.array(self.ts.instance.up.weight_array[:, :-1])
+        delay_diffs = w_down.dot(self.ts.challenges.T)
         from scipy.special import erfinv
-        thresh = np.sqrt(2) * 0.05 * erfinv(2*0.8-1)
+        thresh = np.sqrt(2) * 0.05 * erfinv(2 * 0.8 - 1)
         unreliable_chals = delay_diffs < thresh
         print(np.sum(unreliable_chals, axis=1))
 
@@ -242,7 +243,8 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
     def interpose(self, challenges, bit):
         return np.insert(challenges, self.ipuf.interpose_pos, bit, axis=1)
 
-    def is_reliable(self, responses, eps=.8):
+    @staticmethod
+    def is_reliable(responses, eps=.8):
         return np.abs(np.mean(responses, axis=1)) >= eps  # TODO verify eps implementation
 
     def generate_challenge_statistics(self, N):

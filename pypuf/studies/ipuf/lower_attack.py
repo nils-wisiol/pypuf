@@ -1,10 +1,10 @@
+import os
 from matplotlib.pyplot import close
 from seaborn import catplot
-
-from pypuf.experiments.experiment.reliability_based_ipuf_lower_attack import ExperimentReliabilityBasedLowerIPUFLearning, Parameters
 from pypuf.studies.base import Study
+from pypuf.experiments.experiment.reliability_based_ipuf_lower_attack import \
+    ExperimentReliabilityBasedLowerIPUFLearning, Parameters
 
-import os
 
 class LowerIPUFAttackStudy(Study):
 
@@ -33,21 +33,11 @@ class LowerIPUFAttackStudy(Study):
             for seed in range(10)
         ]
 
-        """
-            for n in [64]
-            for noisiness in [.1, .25,]
-            for k, N in [(1, 20*10**3),(2, 100*10**3),(4, 150*10**3),(6, 300*10**3),(8, 500*10**3)]
-            for R in [11]
-            for seed in [1, 42, 1337]
-        """
-
-
     def plot(self):
         data = self.experimenter.results.copy()
         data['reps__noisiness'] = data.apply(
             lambda row: f'{row["reps"]}__{row["noisiness"]}', axis=1)
-        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'],
-            1 - row['accuracy']), axis=1)
+        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'], 1 - row['accuracy']), axis=1)
         for hue in ['', 'reps', 'noisiness']:
             grid = catplot(
                 x='num',
