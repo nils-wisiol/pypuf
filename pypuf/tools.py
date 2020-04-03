@@ -16,7 +16,6 @@ from numpy import sum as np_sum
 from numpy.random import RandomState
 
 from pypuf.simulation.base import Simulation
-from pypuf.studies.base import Study
 
 BIT_TYPE = int8
 
@@ -520,6 +519,8 @@ def find_study_class(name):
     :param name: Module name with our without prefix, containting exactly one descendant to Study.
     :return: Study class
     """
+    from pypuf.studies.base import Study
+
     if not name.startswith('pypuf.studies'):
         name = 'pypuf.studies.' + name
 
