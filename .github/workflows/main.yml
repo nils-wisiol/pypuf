@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.7'
+
+    - name: Install Requirements
+      run: pip3 install -r requirements.txt
+
+    - name: Python Unit Tests
+      run: python3 -m unittest
+
+    - name: Python Linter
+      run: python3 linter.py
+
+    - name: Python Doctests
+      run: |
+        python3 -m doctest pypuf/bipoly.py
