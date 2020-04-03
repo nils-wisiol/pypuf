@@ -4,18 +4,15 @@
     PUFs". The learning algorithm applies Covariance Matrix Adaptation Evolution
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
-from .cmaes.cma import CMA
+from cma import CMA
 import numpy as np
 import tensorflow as tf
 
 from scipy.stats import pearsonr, mode
 
-from pypuf.tools import approx_dist, transform_challenge_11_to_01,transform_challenge_01_to_11
-from pypuf.bipoly import BiPoly
+from pypuf.tools import approx_dist, transform_challenge_11_to_01
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
-
-
 
 
 # ==================== Reliability for PUF and MODEL ==================== #
@@ -27,17 +24,19 @@ def reliabilities_PUF(response_bits):
     """
     # Convert to 0/1 from 1/-1
     response_bits = np.array(response_bits, dtype=np.int8)
-    if (-1 in response_bits):
+    if -1 in response_bits:
         response_bits = transform_challenge_11_to_01(response_bits)
     return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
 
-def reliabilities_MODEL(delay_diffs, EPSILON=3):
+
+def reliabilities_MODEL(delay_diffs, epsilon=3):
     """
         Computes 'Hypothical Reliabilities' according to [Becker].
         :param delay_diffs: Array with shape [num_challenges]
     """
-    res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), EPSILON)
+    res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), epsilon)
     return tf.cast(res, tf.double)
+
 
 def tf_pearsonr(x, y):
     """
@@ -52,6 +51,7 @@ def tf_pearsonr(x, y):
     auto_cov = tf.sqrt(tf.tensordot(tf.reduce_sum(centered_x**2, axis=0), tf.reduce_sum(centered_y**2, axis=0), axes=0))
     corr = cov_xy / auto_cov
     return corr
+
 
 # ============================ Learner class ============================ #
 
@@ -100,25 +100,21 @@ class ReliabilityBasedCMAES(Learner):
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
 
         # Linearize challenges for faster LTF computation (shape=(N,k,n))
-        self.linearized_challenges = self.transform(self.training_set.challenges,
-                                                    k=self.k)
-
-
+        self.linearized_challenges = self.transform(self.training_set.challenges, k=self.k)
 
     def print_accs(self, es):
         w = es.best.x[:-1]
-        #print(es.fit.hist)
+        # print(es.fit.hist)
         a = [
             1 - approx_dist(
-                LTFArray(v[:self.n].reshape(1,self.n), self.transform, self.combiner),
-                LTFArray(w[:self.n].reshape(1,self.n) ,self.transform, self.combiner),
+                LTFArray(v[:self.n].reshape(1, self.n), self.transform, self.combiner),
+                LTFArray(w[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 10000,
-                np.random.RandomState(12345)
+                np.random.RandomState(12345),
             )
             for v in self.training_set.instance.weight_array
-            ]
+        ]
         print(np.array(a), self.objective(es.best.x))
-
 
     def objective(self, state):
         """
@@ -129,7 +125,7 @@ class ReliabilityBasedCMAES(Learner):
         weights = state[:, :self.n]
         epsilon = state[:, -1]
         delay_diffs = tf.linalg.matmul(weights, self.current_challenges.T)
-        model_reliabilities = reliabilities_MODEL(delay_diffs, EPSILON=epsilon)
+        model_reliabilities = reliabilities_MODEL(delay_diffs, epsilon=epsilon)
 
         # Calculate pearson coefficient
         x = tf.Variable(model_reliabilities, tf.double)
@@ -163,10 +159,11 @@ class ReliabilityBasedCMAES(Learner):
             fitness = cma.best_fitness()
             logger.info(f'Generation {cma.generation} - fitness {fitness}')
 
-        if cma.termination_criterion_met or cma.generation == 500:
+        if cma.termination_criterion_met or cma.generation == 1000:
             sol = cma.best_solution()
             fitness = cma.best_fitness()
             logger.info(f'Final solution at gen {cma.generation}: {sol} (fitness: {fitness})')
+            logger.info(f'Termination: {cma.should_terminate(return_details=True)[1]}')
 
     def learn(self):
         """
@@ -175,19 +172,19 @@ class ReliabilityBasedCMAES(Learner):
         """
         # pool: collection of learned chains, meta_data: information about learning
         meta_data, self.pool = {}, []
-        meta_data['discard_count'] = {i : [] for i in range(self.k)}
-        meta_data['iteration_count'] = {i : [] for i in range(self.k)}
+        meta_data['discard_count'] = {i: [] for i in range(self.k)}
+        meta_data['iteration_count'] = {i: [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
             print("Attempting to learn chain", n_chain)
             self.current_challenges = np.array(
                     self.linearized_challenges[:, n_chain, :],
-                    dtype=np.float64) # tensorflow needs floats
+                    dtype=np.float64)   # tensorflow needs floats
 
-            tf.random.set_seed(self.prng.randint(low=0, high=2**32-1))
+            tf.random.set_seed(self.prng.randint(low=0, high=2 ** 32 - 1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
-            init_state = np.array(init_state) # weights = normal_dist; epsilon = 2
+            init_state = np.array(init_state)   # weights = normal_dist; epsilon = 2
             cma = CMA(
                 initial_solution=init_state,
                 initial_step_size=1.0,
@@ -197,8 +194,8 @@ class ReliabilityBasedCMAES(Learner):
             )
 
             # Learn the chain (on the GPU)
-            #with tf.device('/GPU:%d' % self.gpu_id):
-            w, score = cma.search()
+            # with tf.device('/GPU:%d' % self.gpu_id):
+            w, score = cma.search(max_generations=1000)
 
             # Update meta data about how many iterations it took to find a solution
             meta_data['iteration_count'][n_chain].append(cma.generation)
@@ -209,7 +206,7 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(self.pool):
-                if (tf.abs(pearsonr(w, v)[0]) > 0.5):
+                if tf.abs(pearsonr(w, v)[0]) > 0.5:
                     meta_data['discard_count'][n_chain].append(i)
                     break
             else:
@@ -223,4 +220,3 @@ class ReliabilityBasedCMAES(Learner):
             model = LTFArray(np.array(self.pool), self.transform, self.combiner)
 
         return model, meta_data
-

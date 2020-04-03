@@ -18,18 +18,19 @@ class LowerIPUFAttackStudy(Study):
                 progress_log_name=None,
                 parameters=Parameters(
                     n=n,
-                    k=k,
+                    k_up=k_up,
+                    k_down=k_down,
                     seed=seed,
                     noisiness=noisiness,
-                    num=N,
-                    reps=R,
-                    abort_delta=0.005
+                    N=N,
+                    R=R,
+                    abort_delta=0.00001,
                 )
             )
             for n in [64]
-            for noisiness in [0.15]
-            for k, N in [(8, 1000000)]
-            for R in [5]
+            for noisiness in [0.1]
+            for k_up, k_down, N in [(2, 2, 100000)]
+            for R in [7]
             for seed in range(10)
         ]
 
