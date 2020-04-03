@@ -2,24 +2,22 @@
 Learn the lower XOR Arbiter PUF of an IPUF.
 """
 
+import os.path
+import pickle
 from os import getpid
 from typing import NamedTuple
 from uuid import UUID
 
 import numpy as np
 from numpy.random.mtrand import RandomState
+from scipy.special import erfinv
 from scipy.stats import pearsonr
 
-from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.arbiter_puf import InterposePUF
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.tools import approx_dist, TrainingSet, random_inputs
 
-from scipy.special import erfinv
-
-import pickle
-import os.path
 
 class Parameters(NamedTuple):
     n: int
@@ -84,7 +82,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         chosen_total = sum(~self.s & self.s_swap)
         responses = self.eval_repeat(self.ipuf.up, self.challenges[~self.s & self.s_swap], 11)
         chosen_unrel = sum(~self.is_reliable(responses))
-        print(f'Out of {chosen_total} chosen challenges, {chosen_unrel} ({chosen_unrel/chosen_total*100:.2f}%) '
+        self.progress_logger.debug(f'Out of {chosen_total} chosen challenges, {chosen_unrel} ({chosen_unrel/chosen_total*100:.2f}%) '
               f'are actually unreliable on the upper layer.')
 
         return self.challenges[~self.s & self.s_swap], self.responses[~self.s & self.s_swap]
@@ -94,7 +92,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         chosen_total = sum(self.s & ~self.s_swap)
         responses = self.eval_repeat(self.ipuf.up, self.challenges[self.s & ~self.s_swap], 11)
         chosen_rel = sum(self.is_reliable(responses))
-        print(f'Out of {chosen_total} chosen challenges, {chosen_rel} ({chosen_rel/chosen_total*100:.2f}%) '
+        self.progress_logger.debug(f'Out of {chosen_total} chosen challenges, {chosen_rel} ({chosen_rel/chosen_total*100:.2f}%) '
               f'are actually reliable on the upper layer.')
 
         return self.challenges[self.s & ~self.s_swap], self.responses[self.s & ~self.s_swap]
@@ -104,6 +102,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             Initialize the instance, the training set and the learner
             to then run the Reliability based CMAES with the given parameters.
         """
+        self.progress_logger.debug(self.parameters)
 
         # Instantiate the baseline Noisy IPUF from which the lower chains shall be learned
         self.ipuf = InterposePUF(n=self.parameters.n,
@@ -119,7 +118,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Caching
         trainset_cache_fn = '/tmp/trainset.cache'
         if os.path.exists(trainset_cache_fn) and False:
-            print('WARNING: USING CACHED TRAINING SET!')
+            self.progress_logger.debug('WARNING: USING CACHED TRAINING SET!')
             with open(trainset_cache_fn, 'rb') as f:
                 self.ts = pickle.load(f)
         else:
@@ -136,7 +135,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             self.ts.challenges = training_chals
             self.ts.responses = training_resps
             self.ts.N = training_chals.shape[0]
-            print("Generated Training Set: Reliables: %d Unreliables (lower): %d TrainSetSize: %d"
+            self.progress_logger.debug("Generated Training Set: Reliables: %d Unreliables (lower): %d TrainSetSize: %d"
                   % (rel_chals.shape[0], unrel_chals.shape[0], training_chals.shape[0]))
             with open(trainset_cache_fn, 'wb+') as f:
                 pickle.dump(self.ts, f)
@@ -150,8 +149,6 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         thresh = np.sqrt(2) * 0.05 * erfinv(2*0.7-1)
         uc = np.abs(delay_diffs) < thresh
         overlaps = np.sum(uc, axis=0) > 1
-        print("Unreliable Challenges", np.sum(uc, axis=1))
-        print("Overlapping Unreliable Challenges", np.sum(uc[:, overlaps], axis=1))
 
         """
         W_down = np.array(self.ts.instance.down.weight_array[:,:-1])
@@ -180,6 +177,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
 
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
+        self.progress_logger.debug(self.learning_meta_data)
 
 
     def analyze(self):
@@ -208,16 +206,16 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
                                         for v in self.model.weight_array]
 
 
-        print(np.array(self.ts.instance.up.weight_array[:,:-1]).shape)
-        print(self.ts.challenges.T.shape)
+        self.progress_logger.debug(np.array(self.ts.instance.up.weight_array[:,:-1]).shape)
+        self.progress_logger.debug(self.ts.challenges.T.shape)
         W_down = np.array(self.ts.instance.up.weight_array[:,:-1])
         delay_diffs = W_down.dot(self.ts.challenges.T)
         from scipy.special import erfinv
         thresh = np.sqrt(2) * 0.05 * erfinv(2*0.8-1)
         unreliable_chals = delay_diffs < thresh
-        print(np.sum(unreliable_chals, axis=1))
+        self.progress_logger.debug(np.sum(unreliable_chals, axis=1))
 
-        return Result(
+        res = Result(
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
@@ -230,6 +228,8 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count']
         )
+        self.progress_logger.debug(res)
+        return res
 
     def eval_repeat(self, instance, challenges, reps=None):
         if reps is None:
@@ -271,7 +271,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         ]:
             pr_condition = sum(condition) / N
             pr_event_and_condition = sum(event & condition) / N
-            print(f'{label}: {pr_event_and_condition/pr_condition:.4f}')
+            self.progress_logger.debug(f'{label}: {pr_event_and_condition/pr_condition:.4f}')
 
         self.challenges = challenges
         self.responses = responses

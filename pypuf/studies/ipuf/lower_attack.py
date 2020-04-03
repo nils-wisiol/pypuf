@@ -7,6 +7,7 @@ from pypuf.studies.base import Study
 import os
 
 class LowerIPUFAttackStudy(Study):
+    SHUFFLE = True
 
     def __init__(self):
         super().__init__(gpu_limit=2)
@@ -27,10 +28,10 @@ class LowerIPUFAttackStudy(Study):
                 )
             )
             for n in [64]
-            for noisiness in [0.15]
-            for k, N in [(8, 1000000)]
+            for noisiness in [.05, .10, 0.15]
+            for k, N in [(8, 1*10**6), (8, 2*10**6), (8, 5*10**6), (12, 10*10**6)]
             for R in [5]
-            for seed in range(10)
+            for seed in range(100)
         ]
 
         """

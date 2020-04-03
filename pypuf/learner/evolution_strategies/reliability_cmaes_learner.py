@@ -167,6 +167,7 @@ class ReliabilityBasedCMAES(Learner):
             sol = cma.best_solution()
             fitness = cma.best_fitness()
             logger.info(f'Final solution at gen {cma.generation}: {sol} (fitness: {fitness})')
+            logger.info(f'Termination: {cma.should_terminate(return_details=True)[1]}')
 
     def learn(self):
         """
