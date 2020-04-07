@@ -7,10 +7,9 @@ import os.path
 from typing import NamedTuple
 from uuid import UUID
 import pickle
-from numpy import logical_and, vstack, sqrt, array, zeros, insert, mean, abs as abs_np, sum as sum_np
+from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
-from scipy.special import erfinv
 
 from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
@@ -26,6 +25,7 @@ class Parameters(NamedTuple):
     noisiness: float
     N: int
     R: int
+    eps: float
     abort_delta: float
 
 
@@ -44,19 +44,14 @@ class Result(NamedTuple):
 
 
 class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
-    """
-        This class implements an experiment for executing the reliability based CMAES
-        learner for XOR LTF arrays.
-        Furthermore, the learning results are being logged into csv files.
+    """ This class implements an experiment for executing the reliability based CMAES learner for XOR LTF arrays.
+    Furthermore, the learning results are being logged into csv files.
     """
 
     def __init__(self, progress_log_name, parameters: Parameters):
-        """
-            Initialize an Experiment using the Reliability based CMAES Learner for
-            modeling LTF Arrays.
-            :param progress_log_name:   Log name, Prefix of the name of the experiment log
-                                        file
-            :param parameters:          Parameters object for this experiment
+        """ Initialize an Experiment using the Reliability based CMAES Learner for modeling LTF Arrays.
+        :param progress_log_name:   Log name, Prefix of the name of the experiment log file
+        :param parameters:          Parameters object for this experiment
         """
 
         super().__init__(
@@ -74,40 +69,49 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         self.responses = None
         self.s = None
         self.s_swap = None
+        self.eps = self.parameters.eps
 
     def generate_unreliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
-        # chosen_total = sum(~self.s & ~self.s_swap)
-        # responses = self.eval_repeat(self.simulation.down, self.challenges[~self.s & ~self.s_swap], self.parameters.R)
-        # chosen_unrel = sum(~self.is_reliable(responses))
-        # print(f'Out of {chosen_total} chosen challenges, {chosen_unrel} ({chosen_unrel/chosen_total*100:.2f}%) '
-        #       f'are actually unreliable on the upper layer.')
-        return self.challenges[~self.s & ~self.s_swap], self.responses[~self.s & ~self.s_swap]
+        idx_unreliable = logical_and(~self.s, ~self.s_swap)
+        chosen_total = sum_np(idx_unreliable)
+        num_unreliable = sum_np(~self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
+            repetitions=self.parameters.R,
+            epsilon=self.eps,
+        ))
+        print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({num_unreliable / chosen_total * 100:.2f}%) '
+              f'are actually unreliable on the lower layer.')
+        return self.challenges[idx_unreliable], self.responses[idx_unreliable]
 
     def generate_reliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
-        # chosen_total = sum(self.s & self.s_swap)
-        # responses = self.eval_repeat(self.simulation.down, self.challenges[self.s & self.s_swap], self.parameters.R)
-        # chosen_rel = sum(self.is_reliable(responses))
-        # print(f'Out of {chosen_total} chosen challenges, {chosen_rel} ({chosen_rel/chosen_total*100:.2f}%) '
-        #       f'are actually reliable on the upper layer.')
-        return self.challenges[self.s & self.s_swap], self.responses[self.s & self.s_swap]
+        idx_reliable = logical_and(self.s, self.s_swap)
+        chosen_total = sum_np(idx_reliable)
+        num_reliable = sum_np(self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
+            repetitions=self.parameters.R,
+            epsilon=self.eps,
+        ))
+        print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({num_reliable/chosen_total*100:.2f}%) '
+              f'are actually reliable on the lower layer.')
+        return self.challenges[idx_reliable], self.responses[idx_reliable]
 
     def run(self):
+        """ Initialize the instance, the training set and the learner to then run the Reliability based CMAES with the
+        given parameters.
         """
-            Initialize the instance, the training set and the learner
-            to then run the Reliability based CMAES with the given parameters.
-        """
-
-        # Instantiate the baseline Noisy iPUF from which the lower chains shall be learned
+        # Instantiate the baseline noisy iPUF from which the lower chains shall be learned
         self.simulation = InterposePUF(
             n=self.parameters.n,
             k_up=self.parameters.k_up,
             k_down=self.parameters.k_down,
             transform='atf',
-            seed=self.prng.randint(2**32),
+            seed=self.prng.randint(2 ** 32),
             noisiness=self.parameters.noisiness,
-            noise_seed=self.prng.randint(2**32),
+            noise_seed=self.prng.randint(2 ** 32),
         )
         self.ts = TrainingSet(self.simulation, 1, self.prng, self.parameters.R)
 
@@ -128,7 +132,6 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
             cs_train = vstack((cs_train_p, cs_train_m))
             rs_train = vstack((rs_train, rs_train))
-            # self.ipuf.down.weight_array = np.delete(self.ipuf.down.weight_array, self.ipuf.interpose_pos, axis=1)
             self.ts.instance = self.simulation
             self.ts.challenges = cs_train
             self.ts.responses = rs_train
@@ -146,7 +149,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             transform=self.simulation.down.transform,
             combiner=self.simulation.down.combiner,
             abort_delta=self.parameters.abort_delta,
-            random_seed=self.prng.randint(2**32) + 1,
+            random_seed=self.prng.randint(2 ** 32),
             logger=self.progress_logger,
             gpu_id=self.gpu_id,
         )
@@ -161,16 +164,11 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         n = self.parameters.n + 1 + 1
 
         # Accuracy of the learned model using 10000 random samples.
-        empirical_accuracy = 1 - approx_dist(self.simulation.down, self.model, 10000, RandomState(1902380))
+        empirical_accuracy = 1 - approx_dist(self.simulation.down, self.model, 10000, self.prng)
 
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is noisy.
-        best_empirical_accuracy = 1 - approx_dist(self.simulation.down, self.simulation.down, 10000, RandomState(12346))
+        best_empirical_accuracy = 1 - approx_dist(self.simulation.down, self.simulation.down, 10000, self.prng)
         # Correl. of the learned model and the base line LTF using pearson for all chains
-        """
-        cross_model_correlation = [[pearsonr(v[:n], w[:n])[0]
-                                        for w in self.model.weight_array]
-                                        for v in self.ts.instance.down.weight_array]
-        """
         cross_model_correlation_lower = [[round(pearsonr(v, w)[0], 4)
                                           for w in self.ts.instance.down.weight_array]
                                          for v in self.model.weight_array]
@@ -189,23 +187,17 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             cross_model_correlation_lower=cross_model_correlation_lower,
             cross_model_correlation_upper=cross_model_correlation_upper,
             discard_count=self.learning_meta_data['discard_count'],
-            iteration_count=self.learning_meta_data['iteration_count']
+            iteration_count=self.learning_meta_data['iteration_count'],
         )
-
-    def eval_repeat(self, simulation, challenges, repetitions=None):
-        if repetitions is None:
-            repetitions = self.parameters.R
-        responses = zeros((challenges.shape[0], repetitions))
-        for i in range(repetitions):
-            responses[:, i] = simulation.eval(challenges[:, :]).T
-        return responses
 
     def interpose(self, challenges, bit):
         return insert(challenges, self.simulation.interpose_pos, bit, axis=1)
 
     @staticmethod
-    def is_reliable(responses, epsilon=0.8):
-        return abs_np(mean(responses, axis=1)) >= epsilon  # TODO verify eps implementation
+    def is_reliable(simulation, challenges, repetitions=11, epsilon=0.9):
+        responses = array([simulation.eval(challenges=challenges) for _ in range(repetitions)])
+        axis = 0
+        return abs_np(sum_np(responses, axis=axis)) / (2 * responses.shape[axis]) + 0.5 >= epsilon
 
     def generate_crp_set(self, N):
         cs = random_inputs(self.parameters.n, N, self.prng)
@@ -213,13 +205,12 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         cs_swap[:, self.simulation.interpose_pos // 2 - 1] *= -1
         cs_swap[:, self.simulation.interpose_pos // 2] *= -1
 
-        rs = self.eval_repeat(self.simulation, cs)
-        s = self.is_reliable(rs)
-        s_swap = self.is_reliable(self.eval_repeat(self.simulation, cs_swap))
-        l_p = self.is_reliable(self.eval_repeat(self.simulation.down, self.interpose(cs, 1)))
-        l_p_swap = self.is_reliable(self.eval_repeat(self.simulation.down, self.interpose(cs_swap, 1)))
-        l_m = self.is_reliable(self.eval_repeat(self.simulation.down, self.interpose(cs, -1)))
-        l_m_swap = self.is_reliable(self.eval_repeat(self.simulation.down, self.interpose(cs_swap, -1)))
+        s = self.is_reliable(self.simulation, cs, self.parameters.R, self.eps)
+        s_swap = self.is_reliable(self.simulation, cs_swap, self.parameters.R, self.eps)
+        l_p = self.is_reliable(self.simulation.down, self.interpose(cs, 1), self.parameters.R, self.eps)
+        l_p_swap = self.is_reliable(self.simulation.down, self.interpose(cs_swap, 1), self.parameters.R, self.eps)
+        l_m = self.is_reliable(self.simulation.down, self.interpose(cs, -1), self.parameters.R, self.eps)
+        l_m_swap = self.is_reliable(self.simulation.down, self.interpose(cs_swap, -1), self.parameters.R, self.eps)
 
         for label, event, condition in [
             ('l_p|s', l_p, s),
@@ -252,6 +243,6 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             print(f'{label}: {coincidences/count_condition:.4f} (total: {coincidences})')
 
         self.challenges = cs
-        self.responses = rs
+        self.responses = array([self.simulation.eval(challenges=cs) for _ in range(self.parameters.R)]).T
         self.s = s
         self.s_swap = s_swap

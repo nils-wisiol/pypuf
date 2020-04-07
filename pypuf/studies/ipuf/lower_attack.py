@@ -24,13 +24,15 @@ class LowerIPUFAttackStudy(Study):
                     noisiness=noisiness,
                     N=N,
                     R=R,
+                    eps=eps,
                     abort_delta=0.00001,
                 )
             )
             for n in [64]
-            for noisiness in [0.1]
-            for k_up, k_down, N in [(2, 2, 100000)]
-            for R in [7]
+            for noisiness in [0.05]
+            for k_up, k_down, N in [(1, 4, 800000)]
+            for R in [11]
+            for eps in [0.8, 1.0]
             for seed in range(10)
         ]
 
