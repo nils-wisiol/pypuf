@@ -14,24 +14,54 @@ def similarity(dframe):
     return DataFrame(data=matrix, columns=cols, index=cols, dtype=float)
 
 
-def conditional_probs(df, n, k, noisiness, eps):
-    name = f'n={n}, k={k}, noisiness={noisiness}, eps={eps}'
+def conditional_probs(df, n, ks, noisiness, eps):
+    name = f'n={n}, ks={ks}, noisiness={noisiness}, eps={eps}'
     data = df[df['index'].str.startswith(name)]
-    targets = ['l_plus', 'l_minus', 'l_swap_plus', 'l_swap_minus', 'u', 'u_swap']
-    columns = ['condition'] + targets
-    conditions = ['s', 'not s', 's_swap', 'not s_swap', '00: s, s_swap', '01: s, s_swap', '10: s, s_swap',
-                  '11: s, s_swap']
+    N = len(data)
+    conditions = [
+        (a, b, c, d, e, f)
+        for a in range(2)
+        for b in range(2)
+        for c in range(2)
+        for d in range(2)
+        for e in range(2)
+        for f in range(2)
+    ]
+    swaps = ['', '_inner', '_outer', '_left', '_right', '_big']
+    targets = [prefix + swap
+               for prefix in ['l_plus', 'l_minus', 'u']
+               for swap in swaps]
+    columns = ['condition'] + targets + ['frequency']
     result = DataFrame(columns=columns)
     for condition in conditions:
-        line = ['00' if condition.startswith('00') else '01' if condition.startswith('01') else
-                '10' if condition.startswith('10') else '11' if condition.startswith('11') else condition] + \
-        [len(data[(data[target] == 1) & (data[condition.split('not ')[1]] == 0)]) /
-         len(data[data[condition.split('not ')[1]] == 0]) if condition.startswith('not')
-         else (len(data[(data[target] == 1) & (data[condition] == 1)]) / len(data[data[condition] == 1]))
-         for target in targets]
+        string = ''
+        for value in condition:
+            string += str(value)
+        frequency = (len(data[
+                         (data['s' + swaps[0]] == condition[0])
+                         & (data['s' + swaps[1]] == condition[1])
+                         & (data['s' + swaps[2]] == condition[2])
+                         & (data['s' + swaps[3]] == condition[3])
+                         & (data['s' + swaps[4]] == condition[4])
+                         & (data['s' + swaps[5]] == condition[5])
+                     ]))
+        line = [len(data[
+                        (data[target] == 1)
+                        & (data['s' + swaps[0]] == condition[0])
+                        & (data['s' + swaps[1]] == condition[1])
+                        & (data['s' + swaps[2]] == condition[2])
+                        & (data['s' + swaps[3]] == condition[3])
+                        & (data['s' + swaps[4]] == condition[4])
+                        & (data['s' + swaps[5]] == condition[5])
+                    ]) / frequency
+                for target in targets
+                ]
+        line = [string] + line + [frequency / N]
         line_df = DataFrame(data=array([line]), columns=columns)
         result = concat(objs=[result, line_df])
-    result.to_csv(path_or_buf=f'results/conditional_probs_eps={eps}.csv', index=False)
+    result.to_csv(path_or_buf=f'results/diverse_swaps_conditional_probs_noise={noisiness}_eps={eps}_ks={ks}.csv',
+                  index=False,
+                  )
 
 
 def plot_similarities(df, n, k, noisiness, eps):
@@ -59,31 +89,38 @@ def plot_similarities(df, n, k, noisiness, eps):
 def plot_conditional_probs():
     set(style="white")
     for eps in [0.9, 1.0]:
-        df = read_csv(filepath_or_buffer=f'results/conditional_probs_eps={eps}.csv', index_col=0)
+        for ks in [(1, 8), (8, 8)]:
+            for noisiness in [0.05, 0.1]:
+                df = read_csv(filepath_or_buffer=
+                              f'results/diverse_swaps_conditional_probs_noise={noisiness}_eps={eps}_ks={ks}.csv',
+                              index_col=0,
+                              )
+                df['frequency'] *= 100
 
-        fig, axes = subplots(nrows=1, ncols=1, figsize=(12, 8))
-        subplots_adjust(bottom=0.1, top=0.9, left=0.15, right=1.03)
-        heatmap(data=df.T, ax=axes, cmap='RdYlGn', annot=True, vmin=0.0, vmax=1.0, linewidths=.5)
-        yticks(rotation=0)
-        axes.set_ylabel('target event')
-        axes.set_title(
-            label=f'Matrix of conditional probabilities of events regarding reliability (epsilon={eps})'
-                  '\nusing 5 different 64-bit (8, 8)-iPUFs with 100k challenges per iPUF evaluated each 100 times.',
-            fontsize=14,
-        )
-        fig.savefig(f'figures/conditional_probs_eps={eps}.png', dpi=300)
+                fig, axes = subplots(nrows=1, ncols=1, figsize=(48, 18))
+                subplots_adjust(bottom=0.1, top=0.9, left=0.15, right=1.03)
+                heatmap(data=df.T, ax=axes, cmap='RdYlGn', annot=True, vmin=0.0, vmax=1.0, linewidths=.5)
+                yticks(rotation=0)
+                axes.set_ylabel('target event')
+                axes.set_title(
+                    label=f'Matrix of conditional probabilities of events regarding reliability (epsilon={eps})'
+                          '\nusing 5 different 64-bit (8, 8)-iPUFs with 100k challenges per iPUF'
+                          'evaluated each 100 times.',
+                    fontsize=14,
+                )
+                fig.savefig(f'figures/diverse_swaps_conditional_probs_noise={noisiness}_eps={eps}_ks={ks}.png', dpi=300)
 
 
 for p1, p2, p3, p4 in [
-    (n, k, noisiness, eps)
+    (n, ks, noisiness, epsilon)
     for n in [64]
-    for k in [8]
-    for noisiness in [0.1]
-    for eps in [0.9, 1.0]
+    for ks in [(1, 8), (8, 8)]
+    for noisiness in [0.05, 0.1]
+    for epsilon in [0.9, 1.0]
 ]:
-    # p0 = read_csv(filepath_or_buffer=f'results/raw_ipuf_reliability_similarities_swap.csv')
+    # p0 = read_csv(filepath_or_buffer=f'results/diverse_swaps_raw_rel_similarities.csv')
     # plot_similarities(df=p0, n=p1, k=p2, noisiness=p3, eps=p4)
-    # conditional_probs(df=p0, n=p1, k=p2, noisiness=p3, eps=p4)
+    # conditional_probs(df=p0, n=p1, ks=p2, noisiness=p3, eps=p4)
     pass
 
 plot_conditional_probs()

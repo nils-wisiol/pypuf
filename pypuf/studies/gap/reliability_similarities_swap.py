@@ -123,4 +123,4 @@ for a, n in enumerate(ns):
                         dtype=bool,
                     )
                     df = concat(objs=[df, block])
-                    df.to_csv(path_or_buf=f'results/raw_rel_similarities_swap_diverse.csv')
+                    df.to_csv(path_or_buf=f'results/diverse_swaps_raw_rel_similarities.csv')
