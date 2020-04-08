@@ -5,8 +5,9 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-import numpy as np
+from numpy import array, int8, abs as abs_np, sum as sum_np, zeros, mean, float64
 import tensorflow as tf
+from numpy.random.mtrand import RandomState
 
 from scipy.stats import pearsonr, mode
 
@@ -23,10 +24,10 @@ def reliabilities_PUF(response_bits):
         :param response_bits: Array with shape [num_challenges, num_measurements]
     """
     # Convert to 0/1 from 1/-1
-    response_bits = np.array(response_bits, dtype=np.int8)
+    response_bits = array(response_bits, dtype=int8)
     if -1 in response_bits:
         response_bits = transform_challenge_11_to_01(response_bits)
-    return np.abs(response_bits.shape[1]/2 - np.sum(response_bits, axis=1))
+    return abs_np(response_bits.shape[1]/2 - sum_np(response_bits, axis=1))
 
 
 def reliabilities_MODEL(delay_diffs, epsilon=3):
@@ -89,8 +90,8 @@ class ReliabilityBasedCMAES(Learner):
         self.transform = transform
         self.combiner = combiner
         self.abort_delta = abort_delta
-        self.prng = np.random.RandomState(random_seed)
-        self.chains_learned = np.zeros((self.k, self.n))
+        self.prng = RandomState(random_seed)
+        self.chains_learned = zeros((self.k, self.n))
         self.num_iterations = 0
         self.stops = ''
         self.logger = logger
@@ -110,11 +111,11 @@ class ReliabilityBasedCMAES(Learner):
                 LTFArray(v[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 LTFArray(w[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 10000,
-                np.random.RandomState(12345),
+                RandomState(12345),
             )
             for v in self.training_set.instance.weight_array
         ]
-        print(np.array(a), self.objective(es.best.x))
+        print(array(a), self.objective(es.best.x))
 
     def objective(self, state):
         """
@@ -135,7 +136,7 @@ class ReliabilityBasedCMAES(Learner):
         # MOD: Calculate correlation with already learned chains
         corr2 = 0
         if len(self.pool) > 0:
-            corr2 = tf.abs(tf_pearsonr(np.array(self.pool).T, tf.transpose(weights)))
+            corr2 = tf.abs(tf_pearsonr(array(self.pool).T, tf.transpose(weights)))
             mask = tf.math.greater(corr2, 0.25)
             corr2 = tf.where(mask, corr2 - 0.25, tf.zeros_like(corr2))
             corr2 = corr2**2
@@ -152,7 +153,7 @@ class ReliabilityBasedCMAES(Learner):
         # Since responses can be noisy, we perform majority vote on response bits
         Y_true = mode(self.training_set.responses, axis=1)[0].T
         Y_test = model.eval(self.training_set.challenges)
-        return np.mean(Y_true == Y_test)
+        return mean(Y_true == Y_test)
 
     def logging_function(self, cma, logger):
         if cma.generation % 10 == 0:
@@ -178,13 +179,13 @@ class ReliabilityBasedCMAES(Learner):
         n_chain = 0
         while n_chain < self.k:
             print("Attempting to learn chain", n_chain)
-            self.current_challenges = np.array(
+            self.current_challenges = array(
                     self.linearized_challenges[:, n_chain, :],
-                    dtype=np.float64)   # tensorflow needs floats
+                    dtype=float64)   # tensorflow needs floats
 
             tf.random.set_seed(self.prng.randint(low=0, high=2 ** 32 - 1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
-            init_state = np.array(init_state)   # weights = normal_dist; epsilon = 2
+            init_state = array(init_state)   # weights = normal_dist; epsilon = 2
             cma = CMA(
                 initial_solution=init_state,
                 initial_step_size=1.0,
@@ -214,9 +215,9 @@ class ReliabilityBasedCMAES(Learner):
                 n_chain += 1
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
-        model = LTFArray(np.array(self.pool), self.transform, self.combiner)
+        model = LTFArray(array(self.pool), self.transform, self.combiner)
         if self.test_model(model) < 0.5:
             self.pool[0] = - self.pool[0]
-            model = LTFArray(np.array(self.pool), self.transform, self.combiner)
+            model = LTFArray(array(self.pool), self.transform, self.combiner)
 
         return model, meta_data

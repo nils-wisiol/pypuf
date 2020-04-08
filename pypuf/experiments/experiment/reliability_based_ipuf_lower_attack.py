@@ -6,7 +6,7 @@ from os import getpid
 import os.path
 from typing import NamedTuple
 from uuid import UUID
-import pickle
+from pickle import load, dump
 from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
@@ -120,7 +120,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         if os.path.exists(trainset_cache_fn) and False:
             print('WARNING: USING CACHED TRAINING SET!')
             with open(trainset_cache_fn, 'rb') as f:
-                self.ts = pickle.load(f)
+                self.ts = load(f)
         else:
             self.generate_crp_set(self.parameters.N)
             # Build training Set for learning the lower chains of the IPUF
@@ -139,7 +139,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}'
                   f'Unreliables (lower): {cs_unreliable.shape[0]} TrainSetSize: {cs_train.shape[0]}')
             with open(trainset_cache_fn, 'wb+') as f:
-                pickle.dump(self.ts, f)
+                dump(self.ts, f)
 
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
