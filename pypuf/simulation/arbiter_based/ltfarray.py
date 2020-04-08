@@ -828,7 +828,11 @@ class LTFArray(Simulation):
             'Sub-challenges given to ltf_eval had shape {}, but shape (N, k, n) = (N, {}, {}) was expected.'.format(
                 sub_challenges.shape, self.k, self.n
             )
-        return self.core_eval(self.efba_bit(sub_challenges))
+        if (self.weight_array[:, -1] == 0).all():
+            # no bias, skip the expensive efba operation
+            return self.core_eval(sub_challenges)
+        else:
+            return self.core_eval(self.efba_bit(sub_challenges))
 
     def core_eval(self, efba_sub_challenges):
         """
