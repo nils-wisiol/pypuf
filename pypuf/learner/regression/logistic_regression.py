@@ -313,6 +313,7 @@ class LogisticRegression(Learner):
         seterr(all='raise')
 
         # Prepare challenges
+        self.logger.debug(f'Challenge bit type {self.training_set.challenges.dtype}')
         self.logger.debug(f'Transforming {len(self.training_set.challenges)} given {self.n}-bit '
                           f'challenges using {self.transformation.__name__} for k={self.k} ...')
         transformed_challenges = self.transformation(self.training_set.challenges, self.k)
