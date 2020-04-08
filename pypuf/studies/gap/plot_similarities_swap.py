@@ -31,20 +31,35 @@ def conditional_probs(df, n, ks, noisiness, eps):
     targets = [prefix + swap
                for prefix in ['l_plus', 'l_minus', 'u']
                for swap in swaps]
-    columns = ['condition'] + targets + ['frequency']
+    columns = ['condition'] + targets + ['frequency\nin %']
     result = DataFrame(columns=columns)
-    for condition in conditions:
-        string = ''
+    for condition in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+        string = '~'
         for value in condition:
             string += str(value)
-        frequency = (len(data[
+        frequency = len(data[
+                            (data['s'] == condition[0]) & (data['s_inner'] == condition[1])
+                            ])
+        line = [len(data[
+                        (data[target] == 1) & (data['s'] == condition[0]) & (data['s_inner'] == condition[1])
+                        ]) / frequency
+                for target in targets
+                ]
+        line = [string] + line + [frequency / N]
+        line_df = DataFrame(data=array([line]), columns=columns)
+        result = concat(objs=[result, line_df])
+    for condition in conditions:
+        string = '~'
+        for value in condition:
+            string += str(value)
+        frequency = len(data[
                          (data['s' + swaps[0]] == condition[0])
                          & (data['s' + swaps[1]] == condition[1])
                          & (data['s' + swaps[2]] == condition[2])
                          & (data['s' + swaps[3]] == condition[3])
                          & (data['s' + swaps[4]] == condition[4])
                          & (data['s' + swaps[5]] == condition[5])
-                     ]))
+                     ])
         line = [len(data[
                         (data[target] == 1)
                         & (data['s' + swaps[0]] == condition[0])
@@ -91,21 +106,21 @@ def plot_conditional_probs():
     for eps in [0.9, 1.0]:
         for ks in [(1, 8), (8, 8)]:
             for noisiness in [0.05, 0.1]:
-                df = read_csv(filepath_or_buffer=
-                              f'results/diverse_swaps_conditional_probs_noise={noisiness}_eps={eps}_ks={ks}.csv',
+                df = read_csv(filepath_or_buffer=f'results/diverse_swaps_conditional_probs_noise={noisiness}'
+                                                 f'_eps={eps}_ks={ks}.csv',
                               index_col=0,
                               )
-                df['frequency'] *= 100
+                df['frequency\nin %'] *= 100
 
-                fig, axes = subplots(nrows=1, ncols=1, figsize=(48, 18))
+                fig, axes = subplots(nrows=1, ncols=1, figsize=(48, 12))
                 subplots_adjust(bottom=0.1, top=0.9, left=0.15, right=1.03)
                 heatmap(data=df.T, ax=axes, cmap='RdYlGn', annot=True, vmin=0.0, vmax=1.0, linewidths=.5)
                 yticks(rotation=0)
                 axes.set_ylabel('target event')
                 axes.set_title(
-                    label=f'Matrix of conditional probabilities of events regarding reliability (epsilon={eps})'
-                          '\nusing 5 different 64-bit (8, 8)-iPUFs with 100k challenges per iPUF'
-                          'evaluated each 100 times.',
+                    label=f'Matrix of conditional probabilities of events regarding reliability'
+                          f'\nusing 64-bit {ks}-iPUFs with 20k challenges per iPUF '
+                          f'evaluated each 100 times (noisiness={noisiness}, epsilon={eps}).',
                     fontsize=14,
                 )
                 fig.savefig(f'figures/diverse_swaps_conditional_probs_noise={noisiness}_eps={eps}_ks={ks}.png', dpi=300)
@@ -118,9 +133,9 @@ for p1, p2, p3, p4 in [
     for noisiness in [0.05, 0.1]
     for epsilon in [0.9, 1.0]
 ]:
-    # p0 = read_csv(filepath_or_buffer=f'results/diverse_swaps_raw_rel_similarities.csv')
+    p0 = read_csv(filepath_or_buffer=f'results/diverse_swaps_raw_rel_similarities.csv')
     # plot_similarities(df=p0, n=p1, k=p2, noisiness=p3, eps=p4)
-    # conditional_probs(df=p0, n=p1, ks=p2, noisiness=p3, eps=p4)
+    conditional_probs(df=p0, n=p1, ks=p2, noisiness=p3, eps=p4)
     pass
 
 plot_conditional_probs()
