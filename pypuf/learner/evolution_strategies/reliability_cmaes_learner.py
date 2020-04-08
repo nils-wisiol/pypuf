@@ -6,11 +6,11 @@
 """
 from cma import CMA
 from numpy import array, int8, abs as abs_np, sum as sum_np, zeros, mean, float64
-import tensorflow as tf
+from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul,\
+    abs as abs_tf, Variable, where, zeros_like
+from tensorflow_core.python.framework.random_seed import set_seed
 from numpy.random.mtrand import RandomState
-
 from scipy.stats import pearsonr, mode
-
 from pypuf.tools import approx_dist, transform_challenge_11_to_01
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
@@ -35,8 +35,8 @@ def reliabilities_MODEL(delay_diffs, epsilon=3):
         Computes 'Hypothical Reliabilities' according to [Becker].
         :param delay_diffs: Array with shape [num_challenges]
     """
-    res = tf.math.greater(tf.transpose(tf.abs(delay_diffs)), epsilon)
-    return tf.cast(res, tf.double)
+    res = greater(transpose(abs_tf(delay_diffs)), epsilon)
+    return cast(res, double)
 
 
 def tf_pearsonr(x, y):
@@ -46,10 +46,10 @@ def tf_pearsonr(x, y):
         Return array where index i,j is the pearson correlation of i'th
         column vector in x and the j'th column vector in y.
     """
-    centered_x = x - tf.reduce_mean(x, axis=0)
-    centered_y = y - tf.reduce_mean(y, axis=0)
-    cov_xy = tf.tensordot(tf.transpose(centered_x), centered_y, axes=1)
-    auto_cov = tf.sqrt(tf.tensordot(tf.reduce_sum(centered_x**2, axis=0), tf.reduce_sum(centered_y**2, axis=0), axes=0))
+    centered_x = x - reduce_mean(x, axis=0)
+    centered_y = y - reduce_mean(y, axis=0)
+    cov_xy = tensordot(transpose(centered_x), centered_y, axes=1)
+    auto_cov = sqrt(tensordot(reduce_sum(centered_x**2, axis=0), reduce_sum(centered_y**2, axis=0), axes=0))
     corr = cov_xy / auto_cov
     return corr
 
@@ -95,6 +95,8 @@ class ReliabilityBasedCMAES(Learner):
         self.num_iterations = 0
         self.stops = ''
         self.logger = logger
+        self.current_fitness = []
+        self.fitness_histories = []
         self.gpu_id = 1  # gpu_id
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
@@ -125,24 +127,24 @@ class ReliabilityBasedCMAES(Learner):
         # Weights and epsilon have the first dim as number of population
         weights = state[:, :self.n]
         epsilon = state[:, -1]
-        delay_diffs = tf.linalg.matmul(weights, self.current_challenges.T)
+        delay_diffs = matmul(weights, self.current_challenges.T)
         model_reliabilities = reliabilities_MODEL(delay_diffs, epsilon=epsilon)
 
         # Calculate pearson coefficient
-        x = tf.Variable(model_reliabilities, tf.double)
-        y = tf.Variable(self.puf_reliabilities, tf.double)
+        x = Variable(model_reliabilities, double)
+        y = Variable(self.puf_reliabilities, double)
         corr = tf_pearsonr(x, y)
 
         # MOD: Calculate correlation with already learned chains
         corr2 = 0
         if len(self.pool) > 0:
-            corr2 = tf.abs(tf_pearsonr(array(self.pool).T, tf.transpose(weights)))
-            mask = tf.math.greater(corr2, 0.25)
-            corr2 = tf.where(mask, corr2 - 0.25, tf.zeros_like(corr2))
+            corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
+            mask = greater(corr2, 0.25)
+            corr2 = where(mask, corr2 - 0.25, zeros_like(corr2))
             corr2 = corr2**2
-            corr2 = tf.reduce_sum(tf.cast(mask, tf.double), axis=0)
+            corr2 = reduce_sum(cast(mask, double), axis=0)
 
-        return tf.abs(1 - corr) + corr2
+        return abs(1 - corr) + corr2
 
     def test_model(self, model):
         """
@@ -158,6 +160,7 @@ class ReliabilityBasedCMAES(Learner):
     def logging_function(self, cma, logger):
         if cma.generation % 10 == 0:
             fitness = cma.best_fitness()
+            self.current_fitness.append(fitness)
             logger.info(f'Generation {cma.generation} - fitness {fitness}')
 
         if cma.termination_criterion_met or cma.generation == 1000:
@@ -178,12 +181,13 @@ class ReliabilityBasedCMAES(Learner):
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
+            self.current_fitness = []
             print("Attempting to learn chain", n_chain)
             self.current_challenges = array(
                     self.linearized_challenges[:, n_chain, :],
                     dtype=float64)   # tensorflow needs floats
 
-            tf.random.set_seed(self.prng.randint(low=0, high=2 ** 32 - 1))
+            set_seed(self.prng.randint(low=0, high=2 ** 32 - 1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
             init_state = array(init_state)   # weights = normal_dist; epsilon = 2
             cma = CMA(
@@ -207,11 +211,12 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(self.pool):
-                if tf.abs(pearsonr(w, v)[0]) > 0.5:
+                if abs_tf(pearsonr(w, v)[0]) > 0.5:
                     meta_data['discard_count'][n_chain].append(i)
                     break
             else:
                 self.pool.append(w)
+                self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
@@ -219,5 +224,6 @@ class ReliabilityBasedCMAES(Learner):
         if self.test_model(model) < 0.5:
             self.pool[0] = - self.pool[0]
             model = LTFArray(array(self.pool), self.transform, self.combiner)
+        meta_data['fitness_histories'] = self.fitness_histories
 
         return model, meta_data

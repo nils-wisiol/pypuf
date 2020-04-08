@@ -30,10 +30,10 @@ class LowerIPUFAttackStudy(Study):
             )
             for n in [64]
             for noisiness in [0.05]
-            for k_up, k_down, N in [(1, 4, 800000)]
+            for k_up, k_down, N in [(1, 2, 200000)]
             for R in [11]
-            for eps in [0.8, 1.0]
-            for seed in range(10)
+            for eps in [0.9]
+            for seed in range(1)
         ]
 
     def plot(self):

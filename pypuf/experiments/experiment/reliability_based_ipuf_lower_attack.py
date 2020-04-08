@@ -41,6 +41,7 @@ class Result(NamedTuple):
     cross_model_correlation_upper: list
     discard_count: dict
     iteration_count: dict
+    fitness_histories: list
 
 
 class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
@@ -172,7 +173,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         cross_model_correlation_lower = [[round(pearsonr(v, w)[0], 4)
                                           for w in self.ts.instance.down.weight_array]
                                          for v in self.model.weight_array]
-        cross_model_correlation_upper = [[round(pearsonr(v[array(range(66)) != 32], w)[0], 4)
+        cross_model_correlation_upper = [[round(pearsonr(v[array(range(66)) != ((n - 2) // 2)], w)[0], 4)
                                           for w in self.ts.instance.up.weight_array]
                                          for v in self.model.weight_array]
 
@@ -188,6 +189,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             cross_model_correlation_upper=cross_model_correlation_upper,
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count'],
+            fitness_histories=self.learning_meta_data['fitness_histories'],
         )
 
     def interpose(self, challenges, bit):
