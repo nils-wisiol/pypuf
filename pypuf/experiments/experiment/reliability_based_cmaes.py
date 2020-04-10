@@ -46,6 +46,7 @@ class Result(NamedTuple):
     cross_model_correlation: list
     discard_count: dict
     iteration_count: dict
+    fitness_curves: list
 
 
 
@@ -158,5 +159,6 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             max_possible_acc=best_empirical_accuracy,
             cross_model_correlation=cross_model_correlation,
             discard_count=self.learning_meta_data['discard_count'],
-            iteration_count=self.learning_meta_data['iteration_count']
+            iteration_count=self.learning_meta_data['iteration_count'],
+            fitness_curves=self.learner.fitness_histories,
         )
