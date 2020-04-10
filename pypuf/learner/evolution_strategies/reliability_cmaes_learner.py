@@ -5,7 +5,7 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-from numpy import array, int8, abs as abs_np, sum as sum_np, zeros, mean, float64
+from numpy import array, int8, abs as abs_np, sum as sum_np, zeros, mean, float64, average, absolute
 from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul,\
     abs as abs_tf, Variable, where, zeros_like
 from tensorflow_core.python.framework.random_seed import set_seed
@@ -20,22 +20,18 @@ from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 def reliabilities_PUF(response_bits):
     """
-        Computes 'Reliabilities' according to [Becker].
+        Computes 'Reliabilities'
         :param response_bits: Array with shape [num_challenges, num_measurements]
     """
-    # Convert to 0/1 from 1/-1
-    response_bits = array(response_bits, dtype=int8)
-    if -1 in response_bits:
-        response_bits = transform_challenge_11_to_01(response_bits)
-    return abs_np(response_bits.shape[1]/2 - sum_np(response_bits, axis=1))
+    return absolute(average(response_bits, axis=1))
 
 
 def reliabilities_MODEL(delay_diffs, epsilon=3):
     """
-        Computes 'Hypothical Reliabilities' according to [Becker].
+        Computes 'Hypothetical Reliabilities'
         :param delay_diffs: Array with shape [num_challenges]
     """
-    res = greater(transpose(abs_tf(delay_diffs)), epsilon)
+    res = transpose(abs_tf(delay_diffs))
     return cast(res, double)
 
 
