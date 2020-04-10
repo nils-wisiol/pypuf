@@ -6,4 +6,4 @@ already imported, as deactivating multiprocessing is then impossible.
 from pypuf.experiments.experimenter import Experimenter
 
 
-Experimenter.disable_auto_multiprocessing()
+Experimenter.disable_auto_multiprocessing(raise_exception=False)

@@ -115,6 +115,8 @@ class Experimenter(object):
         """
         Runs all experiments. Blocks until all experiment are finished.
         """
+        self.disable_auto_multiprocessing()
+
         # determine cpu type
         from numpy.distutils import cpuinfo
         try:
@@ -316,7 +318,7 @@ class Experimenter(object):
                 raise FailedExperimentsException(self.exceptions)
 
     @staticmethod
-    def disable_auto_multiprocessing():
+    def disable_auto_multiprocessing(raise_exception=True):
         """
         Disables numpy's automatic multiprocessing/multithreading for the current
         python instance by setting environment variables.
@@ -337,14 +339,20 @@ class Experimenter(object):
         if 'numpy' in sys.modules:
             for key, val in desired_environment.items():
                 if key not in os.environ or os.environ[key] != val:
-                    raise Exception('Cannot disable numpy\'s automatic parallel computing, '
-                                    'because it was already imported. To fix this issue, '
-                                    'import Experimenter before numpy or run python in the '
-                                    'following environment: %s or restrict the number of '
-                                    'parallel jobs that pypuf will run using the '
-                                    'PYPUF_CPU_LIMIT environment variable set to 1.' % str(desired_environment))
+                    if raise_exception:
+                        raise Exception('Cannot disable numpy\'s automatic parallel computing, '
+                                        'because it was already imported. To fix this issue, '
+                                        'import Experimenter before numpy or run python in the '
+                                        'following environment: %s or restrict the number of '
+                                        'parallel jobs that pypuf will run using the '
+                                        'PYPUF_CPU_LIMIT environment variable set to 1.' % str(desired_environment))
+                    else:
+                        return False
+
         for key, val in desired_environment.items():
             os.environ[key] = val
+
+        return True
 
     @staticmethod
     def _merge_results(results, other_results):
