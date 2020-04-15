@@ -25,18 +25,21 @@ class LowerIPUFAttackStudy(Study):
                     N=N,
                     R=R,
                     eps=eps,
-                    abort_delta=0.00001,
+                    abort_delta=0.0001,
+                    max_tries=k_down,
+                    gpu_id=1,
                 )
             )
             for n in [64]
             for noisiness in [0.05]
-            for k_up, k_down, N in [(1, 2, 200000)]
+            for k_up, k_down, N in [(1, 4, 100000)]
             for R in [11]
             for eps in [0.9]
-            for seed in range(1)
+            for seed in range(4)
         ]
 
     def plot(self):
+        """
         data = self.experimenter.results.copy()
         data['reps__noisiness'] = data.apply(
             lambda row: f'{row["reps"]}__{row["noisiness"]}', axis=1)
@@ -53,3 +56,5 @@ class LowerIPUFAttackStudy(Study):
             )
             grid.savefig(f'figures/{self.name()}{"." if hue else ""}{hue}.pdf')
             close(grid.fig)
+        """
+        pass

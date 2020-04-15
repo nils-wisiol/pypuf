@@ -154,7 +154,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             measured_time=self.measured_time,
             pid=getpid(),
             accuracy=empirical_accuracy,
-            iterations=self.learner.num_iterations,
+            iterations=self.learner.num_tries,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
             cross_model_correlation=cross_model_correlation,

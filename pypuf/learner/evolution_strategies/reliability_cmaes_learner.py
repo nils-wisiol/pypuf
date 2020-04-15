@@ -5,13 +5,13 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-from numpy import array, int8, abs as abs_np, sum as sum_np, zeros, mean, float64, average, absolute
+from numpy import array, zeros, mean, float64, average, absolute
 from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul,\
-    abs as abs_tf, Variable, where, zeros_like
+    abs as abs_tf, Variable
 from tensorflow_core.python.framework.random_seed import set_seed
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr, mode
-from pypuf.tools import approx_dist, transform_challenge_11_to_01
+from pypuf.tools import approx_dist
 from pypuf.learner.base import Learner
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
@@ -61,8 +61,7 @@ class ReliabilityBasedCMAES(Learner):
         difference is is close to zero: delta_diff < CONST_EPSILON
     """
 
-    def __init__(self, training_set, k, n, transform, combiner,
-                 abort_delta, random_seed, logger, gpu_id):
+    def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -88,12 +87,15 @@ class ReliabilityBasedCMAES(Learner):
         self.abort_delta = abort_delta
         self.prng = RandomState(random_seed)
         self.chains_learned = zeros((self.k, self.n))
-        self.num_iterations = 0
+        self.num_tries = 0
         self.stops = ''
         self.logger = logger
+        self.max_tries = max_tries
+        self.gpu_id = gpu_id
         self.current_fitness = []
         self.fitness_histories = []
-        self.gpu_id = 1  # gpu_id
+        self.pool = None
+        self.current_challenges = None
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
@@ -136,8 +138,6 @@ class ReliabilityBasedCMAES(Learner):
         if len(self.pool) > 0:
             corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
             mask = greater(corr2, 0.25)
-            corr2 = where(mask, corr2 - 0.25, zeros_like(corr2))
-            corr2 = corr2**2
             corr2 = reduce_sum(cast(mask, double), axis=0)
 
         return abs(1 - corr) + corr2
@@ -149,9 +149,9 @@ class ReliabilityBasedCMAES(Learner):
             whether the chains need to be flipped.
         """
         # Since responses can be noisy, we perform majority vote on response bits
-        Y_true = mode(self.training_set.responses, axis=1)[0].T
-        Y_test = model.eval(self.training_set.challenges)
-        return mean(Y_true == Y_test)
+        y_true = mode(self.training_set.responses, axis=1)[0].T
+        y_test = model.eval(self.training_set.challenges)
+        return mean(y_true == y_test)
 
     def logging_function(self, cma, logger):
         if cma.generation % 10 == 0:
@@ -179,9 +179,7 @@ class ReliabilityBasedCMAES(Learner):
         while n_chain < self.k:
             self.current_fitness = []
             print("Attempting to learn chain", n_chain)
-            self.current_challenges = array(
-                    self.linearized_challenges[:, n_chain, :],
-                    dtype=float64)   # tensorflow needs floats
+            self.current_challenges = array(self.linearized_challenges[:, n_chain, :], dtype=float64)
 
             set_seed(self.prng.randint(low=0, high=2 ** 32 - 1))
             init_state = list(self.prng.normal(0, 1, size=self.n)) + [2]
@@ -207,13 +205,15 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(self.pool):
-                if abs_tf(pearsonr(w, v)[0]) > 0.5:
+                if abs_tf(pearsonr(w, v)[0]) > 0.5 and self.num_tries < self.max_tries:
                     meta_data['discard_count'][n_chain].append(i)
+                    self.num_tries += 1
                     break
             else:
                 self.pool.append(w)
                 self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
+                self.num_tries = 0
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(array(self.pool), self.transform, self.combiner)

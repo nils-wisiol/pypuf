@@ -7,10 +7,11 @@ import os.path
 from typing import NamedTuple
 from uuid import UUID
 from pickle import load, dump
-from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np
+from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np, expand_dims
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
 
+from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
@@ -27,6 +28,8 @@ class Parameters(NamedTuple):
     R: int
     eps: float
     abort_delta: float
+    max_tries: int
+    gpu_id: int
 
 
 class Result(NamedTuple):
@@ -42,6 +45,9 @@ class Result(NamedTuple):
     discard_count: dict
     iteration_count: dict
     fitness_histories: list
+    fitnesses: list
+    error_1: list
+    error_2: list
 
 
 class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
@@ -71,6 +77,10 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         self.s = None
         self.s_swap = None
         self.eps = self.parameters.eps
+        self.max_tries = self.parameters.max_tries
+        self.gpu_id = self.parameters.gpu_id
+        self.error_1 = []
+        self.error_2 = []
 
     def generate_unreliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
@@ -82,7 +92,19 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.eps,
         ))
-        print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({num_unreliable / chosen_total * 100:.2f}%) '
+        self.error_1 = [1 - num_unreliable / chosen_total]
+        nums = [1 - sum_np(~self.is_reliable(
+            simulation=LTFArray(
+                weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+            ),
+            challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
+            repetitions=self.parameters.R,
+            epsilon=self.eps,
+        )) for i in range(self.parameters.k_down)]
+        self.error_1 += [num_chain_unreliable / chosen_total for num_chain_unreliable in nums]
+        print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({self.error_1[0] * 100:.2f}%) '
               f'are actually unreliable on the lower layer.')
         return self.challenges[idx_unreliable], self.responses[idx_unreliable]
 
@@ -96,7 +118,19 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.eps,
         ))
-        print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({num_reliable/chosen_total*100:.2f}%) '
+        self.error_2 = [1 - num_reliable / chosen_total]
+        nums = [1 - sum_np(self.is_reliable(
+            simulation=LTFArray(
+                weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+            ),
+            challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
+            repetitions=self.parameters.R,
+            epsilon=self.eps,
+        )) for i in range(self.parameters.k_down)]
+        self.error_2 += [num_chain_reliable / chosen_total for num_chain_reliable in nums]
+        print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({self.error_2[0] * 100:.2f}%) '
               f'are actually reliable on the lower layer.')
         return self.challenges[idx_reliable], self.responses[idx_reliable]
 
@@ -145,12 +179,13 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
             training_set=self.ts,
-            k=self.parameters.k_down,
+            k=self.parameters.k_down + 2,   # find more chains for analysis purposes
             n=self.parameters.n + 1,
             transform=self.simulation.down.transform,
             combiner=self.simulation.down.combiner,
             abort_delta=self.parameters.abort_delta,
             random_seed=self.prng.randint(2 ** 32),
+            max_tries=self.max_tries,
             logger=self.progress_logger,
             gpu_id=self.gpu_id,
         )
@@ -182,7 +217,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             measured_time=self.measured_time,
             pid=getpid(),
             accuracy=empirical_accuracy,
-            iterations=self.learner.num_iterations,
+            iterations=self.learner.num_tries,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
             cross_model_correlation_lower=cross_model_correlation_lower,
@@ -190,6 +225,9 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count'],
             fitness_histories=self.learning_meta_data['fitness_histories'],
+            fitnesses=[histories[-1] for histories in self.learning_meta_data['fitness_histories']],
+            error_1=self.error_1,
+            error_2=self.error_2
         )
 
     def interpose(self, challenges, bit):
