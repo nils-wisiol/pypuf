@@ -25,6 +25,7 @@ class LowerIPUFAttackStudy(Study):
                     N=N,
                     R=R,
                     eps=eps,
+                    extra=extra,
                     abort_delta=0.0001,
                     max_tries=k_down,
                     gpu_id=1,
@@ -32,10 +33,17 @@ class LowerIPUFAttackStudy(Study):
             )
             for n in [64]
             for noisiness in [0.05]
-            for k_up, k_down, N in [(1, 4, 100000)]
+            for k_up, k_down, extra, N in [
+                (1, 2, 2, 100000),
+                (1, 3, 2, 200000),
+                (1, 4, 3, 300000),
+                (1, 5, 3, 500000),
+                (1, 6, 2, 300000),
+                (1, 6, 4, 800000),
+            ]
             for R in [11]
             for eps in [0.9]
-            for seed in range(4)
+            for seed in range(100)
         ]
 
     def plot(self):

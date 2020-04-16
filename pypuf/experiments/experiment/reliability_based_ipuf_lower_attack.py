@@ -27,6 +27,7 @@ class Parameters(NamedTuple):
     N: int
     R: int
     eps: float
+    extra: int
     abort_delta: float
     max_tries: int
     gpu_id: int
@@ -76,9 +77,6 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         self.responses = None
         self.s = None
         self.s_swap = None
-        self.eps = self.parameters.eps
-        self.max_tries = self.parameters.max_tries
-        self.gpu_id = self.parameters.gpu_id
         self.error_1 = []
         self.error_2 = []
 
@@ -90,7 +88,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             simulation=self.simulation.down,
             challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
             repetitions=self.parameters.R,
-            epsilon=self.eps,
+            epsilon=self.parameters.eps,
         ))
         self.error_1 = [1 - num_unreliable / chosen_total]
         nums = [1 - sum_np(~self.is_reliable(
@@ -101,7 +99,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             ),
             challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
             repetitions=self.parameters.R,
-            epsilon=self.eps,
+            epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
         self.error_1 += [num_chain_unreliable / chosen_total for num_chain_unreliable in nums]
         print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({self.error_1[0] * 100:.2f}%) '
@@ -116,7 +114,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             simulation=self.simulation.down,
             challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
             repetitions=self.parameters.R,
-            epsilon=self.eps,
+            epsilon=self.parameters.eps,
         ))
         self.error_2 = [1 - num_reliable / chosen_total]
         nums = [1 - sum_np(self.is_reliable(
@@ -127,7 +125,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             ),
             challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
             repetitions=self.parameters.R,
-            epsilon=self.eps,
+            epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
         self.error_2 += [num_chain_reliable / chosen_total for num_chain_reliable in nums]
         print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({self.error_2[0] * 100:.2f}%) '
@@ -179,13 +177,13 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
             training_set=self.ts,
-            k=self.parameters.k_down + 2,   # find more chains for analysis purposes
+            k=self.parameters.k_down + self.parameters.extra,   # find more chains for analysis purposes
             n=self.parameters.n + 1,
             transform=self.simulation.down.transform,
             combiner=self.simulation.down.combiner,
             abort_delta=self.parameters.abort_delta,
             random_seed=self.prng.randint(2 ** 32),
-            max_tries=self.max_tries,
+            max_tries=self.parameters.max_tries,
             logger=self.progress_logger,
             gpu_id=self.gpu_id,
         )
@@ -245,12 +243,42 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         cs_swap[:, self.simulation.interpose_pos // 2 - 1] *= -1
         cs_swap[:, self.simulation.interpose_pos // 2] *= -1
 
-        s = self.is_reliable(self.simulation, cs, self.parameters.R, self.eps)
-        s_swap = self.is_reliable(self.simulation, cs_swap, self.parameters.R, self.eps)
-        l_p = self.is_reliable(self.simulation.down, self.interpose(cs, 1), self.parameters.R, self.eps)
-        l_p_swap = self.is_reliable(self.simulation.down, self.interpose(cs_swap, 1), self.parameters.R, self.eps)
-        l_m = self.is_reliable(self.simulation.down, self.interpose(cs, -1), self.parameters.R, self.eps)
-        l_m_swap = self.is_reliable(self.simulation.down, self.interpose(cs_swap, -1), self.parameters.R, self.eps)
+        s = self.is_reliable(
+            simulation=self.simulation,
+            challenges=cs,
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        s_swap = self.is_reliable(
+            simulation=self.simulation,
+            challenges=cs_swap,
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        l_p = self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=self.interpose(cs, 1),
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        l_p_swap = self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=self.interpose(cs_swap, 1),
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        l_m = self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=self.interpose(cs, -1),
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        l_m_swap = self.is_reliable(
+            simulation=self.simulation.down,
+            challenges=self.interpose(cs_swap, -1),
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
 
         for label, event, condition in [
             ('l_p|s', l_p, s),

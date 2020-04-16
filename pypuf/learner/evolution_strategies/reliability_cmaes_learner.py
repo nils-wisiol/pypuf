@@ -111,7 +111,7 @@ class ReliabilityBasedCMAES(Learner):
                 LTFArray(v[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 LTFArray(w[:self.n].reshape(1, self.n), self.transform, self.combiner),
                 10000,
-                RandomState(12345),
+                self.prng,
             )
             for v in self.training_set.instance.weight_array
         ]
