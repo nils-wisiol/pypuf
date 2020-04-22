@@ -40,8 +40,10 @@ class LowerIPUFAttackStudy(Study):
                 (4, 4, 4, 500000),
                 (1, 4, 4, 5000000),
                 (4, 4, 4, 5000000),
+                (1, 8, 4, 5000000),
+                (8, 8, 4, 5000000),
             ]
-            for R, eps in [11, 101]
+            for R in [11, 101]
             for eps in [0.9]
             for seed in range(10)
         ]

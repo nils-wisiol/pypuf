@@ -84,7 +84,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
     def generate_unreliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
         idx_unreliable = logical_and(~self.s, ~self.s_swap)
-        chosen_total = sum_np(idx_unreliable)
+        total_chosen = sum_np(idx_unreliable)
         cs_expand_unreliable = insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1)
         num_unreliable = sum_np(~self.is_reliable(
             simulation=self.simulation.down,
@@ -92,7 +92,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         ))
-        self.error_1 = [1 - num_unreliable / chosen_total]
+        self.error_1 = [1 - num_unreliable / total_chosen]
         nums = [sum_np(~self.is_reliable(
             simulation=NoisyLTFArray(
                 weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
@@ -105,15 +105,15 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
-        self.error_1 += [1 - num_chain_unreliable / chosen_total for num_chain_unreliable in nums]
-        print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({self.error_1[0] * 100:.2f}%) '
+        self.error_1 += [1 - num_chain_unreliable / total_chosen for num_chain_unreliable in nums]
+        print(f'Out of {total_chosen} chosen challenges, {num_unreliable} ({(1 - self.error_1[0]) * 100:.2f}%) '
               f'are actually unreliable on the lower layer.')
         return self.challenges[idx_unreliable], self.responses[idx_unreliable]
 
     def generate_reliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
         idx_reliable = logical_and(self.s, self.s_swap)
-        chosen_total = sum_np(idx_reliable)
+        total_chosen = sum_np(idx_reliable)
         cs_expand_reliable = insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1)
         num_reliable = sum_np(self.is_reliable(
             simulation=self.simulation.down,
@@ -121,7 +121,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         ))
-        self.error_2 = [1 - num_reliable / chosen_total]
+        self.error_2 = [1 - num_reliable / total_chosen]
         nums = [sum_np(self.is_reliable(
             simulation=NoisyLTFArray(
                 weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
@@ -134,8 +134,8 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
-        self.error_2 += [1 - num_chain_reliable / chosen_total for num_chain_reliable in nums]
-        print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({self.error_2[0] * 100:.2f}%) '
+        self.error_2 += [1 - num_chain_reliable / total_chosen for num_chain_reliable in nums]
+        print(f'Out of {total_chosen} chosen challenges, {num_reliable} ({(1 - self.error_2[0]) * 100:.2f}%) '
               f'are actually reliable on the lower layer.')
         return self.challenges[idx_reliable], self.responses[idx_reliable]
 
@@ -155,31 +155,22 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         )
         self.ts = TrainingSet(self.simulation, 1, self.prng, self.parameters.R)
 
-        # Caching
-        trainset_cache_fn = '/tmp/trainset.cache'
-        if os.path.exists(trainset_cache_fn) and False:
-            print('WARNING: USING CACHED TRAINING SET!')
-            with open(trainset_cache_fn, 'rb') as f:
-                self.ts = load(f)
-        else:
-            self.generate_crp_set(self.parameters.N)
-            # Build training Set for learning the lower chains of the IPUF
-            cs_unreliable, rs_unreliable = self.generate_unreliable_challenges_for_lower_layer()
-            cs_reliable, rs_reliable = self.generate_reliable_challenges_for_lower_layer()
-            cs_train = vstack((cs_unreliable, cs_reliable))
-            rs_train = vstack((rs_unreliable, rs_reliable))
-            cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
-            cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
-            cs_train = vstack((cs_train_p, cs_train_m))
-            rs_train = vstack((rs_train, rs_train))
-            self.ts.instance = self.simulation
-            self.ts.challenges = cs_train
-            self.ts.responses = rs_train
-            self.ts.N = cs_train.shape[0]
-            print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}\n'
-                  f'Unreliables (lower): {cs_unreliable.shape[0]} TrainSetSize: {cs_train.shape[0]}')
-            with open(trainset_cache_fn, 'wb+') as f:
-                dump(self.ts, f)
+        self.generate_crp_set(self.parameters.N)
+        # Build training Set for learning the lower chains of the IPUF
+        cs_unreliable, rs_unreliable = self.generate_unreliable_challenges_for_lower_layer()
+        cs_reliable, rs_reliable = self.generate_reliable_challenges_for_lower_layer()
+        cs_train = vstack((cs_unreliable, cs_reliable))
+        rs_train = vstack((rs_unreliable, rs_reliable))
+        cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+        cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
+        cs_train = vstack((cs_train_p, cs_train_m))
+        rs_train = vstack((rs_train, rs_train))
+        self.ts.instance = self.simulation
+        self.ts.challenges = cs_train
+        self.ts.responses = rs_train
+        self.ts.N = cs_train.shape[0]
+        print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}\n'
+              f'Unreliables (lower): {cs_unreliable.shape[0]} TrainSetSize: {cs_train.shape[0]}')
 
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
