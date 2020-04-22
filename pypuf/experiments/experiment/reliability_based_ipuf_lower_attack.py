@@ -11,7 +11,7 @@ from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
 
-from pypuf.simulation.arbiter_based.ltfarray import LTFArray
+from pypuf.simulation.arbiter_based.ltfarray import NoisyLTFArray
 from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
@@ -49,6 +49,7 @@ class Result(NamedTuple):
     fitnesses: list
     error_1: list
     error_2: list
+    weights: list
 
 
 class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
@@ -84,24 +85,27 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         """Analysis outside of attacker model"""
         idx_unreliable = logical_and(~self.s, ~self.s_swap)
         chosen_total = sum_np(idx_unreliable)
+        cs_expand_unreliable = insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1)
         num_unreliable = sum_np(~self.is_reliable(
             simulation=self.simulation.down,
-            challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
+            challenges=cs_expand_unreliable,
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         ))
         self.error_1 = [1 - num_unreliable / chosen_total]
-        nums = [1 - sum_np(~self.is_reliable(
-            simulation=LTFArray(
+        nums = [sum_np(~self.is_reliable(
+            simulation=NoisyLTFArray(
                 weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
                 combiner='xor',
                 transform='atf',
+                sigma_noise=self.simulation.down.sigma_noise,
+                random_instance=self.simulation.down.random,
             ),
-            challenges=insert(self.challenges[idx_unreliable], self.simulation.interpose_pos, 1, axis=1),
+            challenges=cs_expand_unreliable,
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
-        self.error_1 += [num_chain_unreliable / chosen_total for num_chain_unreliable in nums]
+        self.error_1 += [1 - num_chain_unreliable / chosen_total for num_chain_unreliable in nums]
         print(f'Out of {chosen_total} chosen challenges, {num_unreliable} ({self.error_1[0] * 100:.2f}%) '
               f'are actually unreliable on the lower layer.')
         return self.challenges[idx_unreliable], self.responses[idx_unreliable]
@@ -110,24 +114,27 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         """Analysis outside of attacker model"""
         idx_reliable = logical_and(self.s, self.s_swap)
         chosen_total = sum_np(idx_reliable)
+        cs_expand_reliable = insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1)
         num_reliable = sum_np(self.is_reliable(
             simulation=self.simulation.down,
-            challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
+            challenges=cs_expand_reliable,
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         ))
         self.error_2 = [1 - num_reliable / chosen_total]
-        nums = [1 - sum_np(self.is_reliable(
-            simulation=LTFArray(
+        nums = [sum_np(self.is_reliable(
+            simulation=NoisyLTFArray(
                 weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
                 combiner='xor',
                 transform='atf',
+                sigma_noise=self.simulation.down.sigma_noise,
+                random_instance=self.simulation.down.random,
             ),
-            challenges=insert(self.challenges[idx_reliable], self.simulation.interpose_pos, 1, axis=1),
+            challenges=cs_expand_reliable,
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
-        self.error_2 += [num_chain_reliable / chosen_total for num_chain_reliable in nums]
+        self.error_2 += [1 - num_chain_reliable / chosen_total for num_chain_reliable in nums]
         print(f'Out of {chosen_total} chosen challenges, {num_reliable} ({self.error_2[0] * 100:.2f}%) '
               f'are actually reliable on the lower layer.')
         return self.challenges[idx_reliable], self.responses[idx_reliable]
@@ -169,7 +176,7 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             self.ts.challenges = cs_train
             self.ts.responses = rs_train
             self.ts.N = cs_train.shape[0]
-            print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}'
+            print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}\n'
                   f'Unreliables (lower): {cs_unreliable.shape[0]} TrainSetSize: {cs_train.shape[0]}')
             with open(trainset_cache_fn, 'wb+') as f:
                 dump(self.ts, f)
@@ -225,7 +232,8 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             fitness_histories=self.learning_meta_data['fitness_histories'],
             fitnesses=[histories[-1] for histories in self.learning_meta_data['fitness_histories']],
             error_1=self.error_1,
-            error_2=self.error_2
+            error_2=self.error_2,
+            weights=self.model.weight_array,
         )
 
     def interpose(self, challenges, bit):
