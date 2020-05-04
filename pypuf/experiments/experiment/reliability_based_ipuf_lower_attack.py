@@ -3,15 +3,16 @@ Learn the lower XOR Arbiter PUF of an iPUF.
 """
 
 from os import getpid
-import os.path
 from typing import NamedTuple
 from uuid import UUID
-from pickle import load, dump
-from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np, expand_dims
+from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np, expand_dims, absolute, sqrt, empty,\
+    delete
+from numpy.linalg import norm
 from numpy.random.mtrand import RandomState
+from scipy.special import erf
 from scipy.stats import pearsonr
 
-from pypuf.simulation.arbiter_based.ltfarray import NoisyLTFArray
+from pypuf.simulation.arbiter_based.ltfarray import NoisyLTFArray, LTFArray
 from pypuf.tools import approx_dist, TrainingSet, random_inputs
 from pypuf.experiments.experiment.base import Experiment
 from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
@@ -41,8 +42,10 @@ class Result(NamedTuple):
     iterations: int
     stops: str
     max_possible_acc: float
-    cross_model_correlation_lower: list
-    cross_model_correlation_upper: list
+    cross_correlation_lower: list
+    cross_correlation_upper: list
+    cross_correlation_rel_lower: list
+    cross_correlation_rel_upper: list
     discard_count: dict
     iteration_count: dict
     fitness_histories: list
@@ -105,6 +108,18 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
+        nums += [sum_np(~self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.up.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.up.sigma_noise,
+                random_instance=self.simulation.up.random,
+            ),
+            challenges=self.challenges[idx_unreliable],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_up)]
         self.error_1 += [1 - num_chain_unreliable / total_chosen for num_chain_unreliable in nums]
         print(f'Out of {total_chosen} chosen challenges, {num_unreliable} ({(1 - self.error_1[0]) * 100:.2f}%) '
               f'are actually unreliable on the lower layer.')
@@ -134,6 +149,18 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_down)]
+        nums += [sum_np(self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.up.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.up.sigma_noise,
+                random_instance=self.simulation.up.random,
+            ),
+            challenges=self.challenges[idx_reliable],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_up)]
         self.error_2 += [1 - num_chain_reliable / total_chosen for num_chain_reliable in nums]
         print(f'Out of {total_chosen} chosen challenges, {num_reliable} ({(1 - self.error_2[0]) * 100:.2f}%) '
               f'are actually reliable on the lower layer.')
@@ -189,6 +216,10 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
 
+    @staticmethod
+    def normalize(weights):
+        return weights / norm(weights)
+
     def analyze(self):
         """
             Analyze the results and return the Results object.
@@ -201,12 +232,43 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is noisy.
         best_empirical_accuracy = 1 - approx_dist(self.simulation.down, self.simulation.down, 10000, self.prng)
         # Correl. of the learned model and the base line LTF using pearson for all chains
-        cross_model_correlation_lower = [[round(pearsonr(v, w)[0], 4)
-                                          for w in self.ts.instance.down.weight_array]
-                                         for v in self.model.weight_array]
-        cross_model_correlation_upper = [[round(pearsonr(v[array(range(66)) != ((n - 2) // 2)], w)[0], 4)
-                                          for w in self.ts.instance.up.weight_array]
-                                         for v in self.model.weight_array]
+        cross_correlation_lower = [[round(pearsonr(v, w)[0], 4)
+                                    for w in self.ts.instance.down.weight_array]
+                                   for v in self.model.weight_array]
+        cross_correlation_upper = [[round(pearsonr(v[array(range(66)) != ((n - 2) // 2)], w)[0], 4)
+                                    for w in self.ts.instance.up.weight_array]
+                                   for v in self.model.weight_array]
+        # Correlation of learned model and target LTF using reliability analysis
+        model_chains = [LTFArray(
+            weight_array=self.normalize(self.model.weight_array[i:i + 1, :-1]),
+            transform=self.model.transform,
+            combiner=self.model.combiner,
+        ) for i in range(self.model.weight_array.shape[0])]
+        target_chains_lower = [LTFArray(
+            weight_array=self.normalize(self.simulation.down.weight_array[i:i + 1, :-1]),
+            transform=self.simulation.down.transform,
+            combiner=self.simulation.down.combiner,
+        ) for i in range(self.parameters.k_down)]
+        target_chains_upper = [LTFArray(
+            weight_array=self.normalize(self.simulation.up.weight_array[i:i + 1, :-1]),
+            transform=self.simulation.up.transform,
+            combiner=self.simulation.up.combiner,
+        ) for i in range(self.parameters.k_up)]
+        cross_correlation_rel_lower = empty((self.parameters.k_down + self.parameters.extra, self.parameters.k_down))
+        cross_correlation_rel_upper = empty((self.parameters.k_down + self.parameters.extra, self.parameters.k_up))
+        for i, chain in enumerate(model_chains):
+            chain_reliabilities = absolute(chain.val(self.ts.challenges))
+            theoretical_stab = erf(chain_reliabilities / sqrt(2) / self.parameters.noisiness)
+            for j, target_chain in enumerate(target_chains_lower):
+                target_chain_reliabilities = absolute(target_chain.val(self.ts.challenges))
+                target_theoretical_stab = erf(target_chain_reliabilities / sqrt(2) / self.parameters.noisiness)
+                cross_correlation_rel_lower[i, j] = pearsonr(target_theoretical_stab, theoretical_stab)[0]
+            for k, target_chain in enumerate(target_chains_upper):
+                target_chain_reliabilities = absolute(target_chain.val(
+                    delete(self.ts.challenges, self.simulation.interpose_pos, axis=1)
+                ))
+                target_theoretical_stab = erf(target_chain_reliabilities / sqrt(2) / self.parameters.noisiness)
+                cross_correlation_rel_upper[i, k] = pearsonr(target_theoretical_stab, theoretical_stab)[0]
 
         return Result(
             experiment_id=self.id,
@@ -216,8 +278,10 @@ class ExperimentReliabilityBasedLowerIPUFLearning(Experiment):
             iterations=self.learner.num_tries,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
-            cross_model_correlation_lower=cross_model_correlation_lower,
-            cross_model_correlation_upper=cross_model_correlation_upper,
+            cross_correlation_lower=cross_correlation_lower,
+            cross_correlation_upper=cross_correlation_upper,
+            cross_correlation_rel_lower=cross_correlation_rel_lower.tolist(),
+            cross_correlation_rel_upper=cross_correlation_rel_upper.tolist(),
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count'],
             fitness_histories=self.learning_meta_data['fitness_histories'],

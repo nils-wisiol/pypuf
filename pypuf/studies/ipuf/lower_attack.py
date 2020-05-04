@@ -1,5 +1,8 @@
 import os
+from ast import literal_eval
+
 from matplotlib.pyplot import close
+from numpy import argsort, max as max_np, argmax
 from seaborn import catplot
 from pypuf.studies.base import Study
 from pypuf.experiments.experiment.reliability_based_ipuf_lower_attack import \
@@ -26,7 +29,7 @@ class LowerIPUFAttackStudy(Study):
                     R=R,
                     eps=eps,
                     extra=extra,
-                    abort_delta=0.0001,
+                    abort_delta=1e-4,
                     max_tries=k_down,
                     gpu_id=1,
                 )
@@ -34,14 +37,12 @@ class LowerIPUFAttackStudy(Study):
             for n in [64]
             for noisiness in [0.05]
             for k_up, k_down, extra, N in [
-                (1, 4, 4, 50000),
-                (4, 4, 4, 50000),
-                (1, 4, 4, 500000),
-                (4, 4, 4, 500000),
-                (1, 4, 4, 5000000),
-                (4, 4, 4, 5000000),
-                (1, 8, 4, 5000000),
-                (8, 8, 4, 5000000),
+                (1, 4, 2, 10000),
+                (4, 4, 2, 10000),
+                (1, 4, 2, 100000),
+                (4, 4, 2, 100000),
+                (1, 4, 2, 1000000),
+                (4, 4, 2, 1000000),
             ]
             for R in [11, 101]
             for eps in [0.9]
@@ -68,3 +69,8 @@ class LowerIPUFAttackStudy(Study):
             close(grid.fig)
         """
         pass
+        # df = self.experimenter.results
+        # print(max_np(literal_eval(df['cross_model_correlation_lower'])))
+
+        # order = argmax(literal_eval(df['cross_model_correlation_lower']))
+        # print(order)
