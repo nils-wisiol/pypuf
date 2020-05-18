@@ -35,6 +35,7 @@ class Parameters(NamedTuple):
     abort_delta: float
     max_tries: int
     gpu_id: int
+    separate: bool
 
 
 class Result(NamedTuple):
@@ -93,6 +94,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         self.layer = parameters.layer
         self.target_layer = None
         self.ts_ratios = []
+        self.separate = parameters.separate
 
     def generate_unreliable_challenges_for_lower_layer(self):
         """Analysis outside of attacker model"""
@@ -213,24 +215,29 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         cs_reliable, rs_reliable = self.generate_reliable_challenges_for_lower_layer()
         cs_train = vstack((cs_unreliable, cs_reliable))
         rs_train = vstack((rs_unreliable, rs_reliable))
-        cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
-        cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
-        cs_train = vstack((cs_train_p, cs_train_m))
-        rs_train = vstack((rs_train, rs_train))
+        if self.layer == 'lower':
+            cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+            cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
+            cs_train = vstack((cs_train_p, cs_train_m))
+            rs_train = vstack((rs_train, rs_train))
         self.ts.instance = self.simulation
+        self.ts.N = cs_train.shape[0]
+        if self.separate:
+            cs_train = random_inputs(self.target_layer.n, self.ts.N, self.prng)
+            print('\nts shape:', cs_train.shape)
+            rs_train = array([self.target_layer.eval(challenges=cs_train) for _ in range(self.parameters.R)]).T
         self.ts.challenges = cs_train
         self.ts.responses = rs_train
-        self.ts.N = cs_train.shape[0]
         print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}\n'
               f'Unreliables ({self.layer}): {cs_unreliable.shape[0]} TrainSetSize: {cs_train.shape[0]}')
 
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
             training_set=self.ts,
-            k=self.parameters.k_down + self.parameters.extra,   # find more chains for analysis purposes
-            n=self.parameters.n + 1,
-            transform=self.simulation.down.transform,
-            combiner=self.simulation.down.combiner,
+            k=self.target_layer.k + self.parameters.extra,   # find more chains for analysis purposes
+            n=self.target_layer.n,
+            transform=self.target_layer.transform,
+            combiner=self.target_layer.combiner,
             abort_delta=self.parameters.abort_delta,
             random_seed=self.prng.randint(2 ** 32),
             max_tries=self.parameters.max_tries,
@@ -251,16 +258,22 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """
         n = self.parameters.n + 1 + 1
 
-        # Accuracy of the learned model using 10000 random samples.
-        empirical_accuracy = 1 - approx_dist(self.simulation.down, self.model, 10000, self.prng)
+        # Accuracy of the learned model using 10000 random samples
+        empirical_accuracy = 1 - approx_dist(self.target_layer, self.model, 10000, self.prng)
 
-        # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is noisy.
-        best_empirical_accuracy = 1 - approx_dist(self.simulation.down, self.simulation.down, 10000, self.prng)
+        # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is noisy
+        best_empirical_accuracy = 1 - approx_dist(self.target_layer, self.target_layer, 10000, self.prng)
         # Correl. of the learned model and the base line LTF using pearson for all chains
-        cross_correlation_lower = [[round(pearsonr(v, w)[0], 4)
+        cross_correlation_lower = [[round(pearsonr(
+            v,
+            w[array(range(n)) != ((n - 2) // 2)] if self.layer == 'upper' else w,
+        )[0], 2)
                                     for w in self.ts.instance.down.weight_array]
                                    for v in self.model.weight_array]
-        cross_correlation_upper = [[round(pearsonr(v[array(range(66)) != ((n - 2) // 2)], w)[0], 4)
+        cross_correlation_upper = [[round(pearsonr(
+            v[array(range(n)) != ((n - 2) // 2)] if self.layer == 'lower' else v,
+            w,
+        )[0], 2)
                                     for w in self.ts.instance.up.weight_array]
                                    for v in self.model.weight_array]
         # Correlation of learned model and target LTF using reliability analysis
@@ -270,7 +283,9 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             combiner=self.model.combiner,
         ) for i in range(self.model.weight_array.shape[0])]
         target_chains_lower = [LTFArray(
-            weight_array=self.normalize(self.simulation.down.weight_array[i:i + 1, :-1]),
+            weight_array=self.normalize(self.simulation.down.weight_array[i:i + 1, :-1] if self.layer == 'lower'
+                                        else self.simulation.down.weight_array[
+                                             i:i + 1, array(range(n)) != ((n - 2) // 2)][:, :-1]),
             transform=self.simulation.down.transform,
             combiner=self.simulation.down.combiner,
         ) for i in range(self.parameters.k_down)]
@@ -287,13 +302,14 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             for j, target_chain in enumerate(target_chains_lower):
                 target_chain_reliabilities = absolute(target_chain.val(self.ts.challenges))
                 target_theoretical_stab = erf(target_chain_reliabilities / sqrt(2) / self.parameters.noisiness)
-                cross_correlation_rel_lower[i, j] = pearsonr(target_theoretical_stab, theoretical_stab)[0]
+                cross_correlation_rel_lower[i, j] = round(pearsonr(target_theoretical_stab, theoretical_stab)[0], 2)
             for k, target_chain in enumerate(target_chains_upper):
                 target_chain_reliabilities = absolute(target_chain.val(
-                    delete(self.ts.challenges, self.simulation.interpose_pos, axis=1)
+                    delete(self.ts.challenges, self.simulation.interpose_pos, axis=1) if self.layer == 'lower'
+                    else self.ts.challenges
                 ))
                 target_theoretical_stab = erf(target_chain_reliabilities / sqrt(2) / self.parameters.noisiness)
-                cross_correlation_rel_upper[i, k] = pearsonr(target_theoretical_stab, theoretical_stab)[0]
+                cross_correlation_rel_upper[i, k] = round(pearsonr(target_theoretical_stab, theoretical_stab)[0], 2)
 
         return Result(
             experiment_id=self.id,

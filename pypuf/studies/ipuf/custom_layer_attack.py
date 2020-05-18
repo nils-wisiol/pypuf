@@ -31,6 +31,7 @@ class CustomLayerIPUFAttackStudy(Study):
                     abort_delta=1e-4,
                     max_tries=k_down,
                     gpu_id=1,
+                    separate=separate,
                 )
             )
             for n in [64]
@@ -39,9 +40,9 @@ class CustomLayerIPUFAttackStudy(Study):
                 # (1, 4, 2, 10000),
                 # (4, 4, 2, 10000),
                 # (1, 3, 2, 100000),
-                (3, 3, 2, 400000),
+                (3, 3, 0, 400000),
                 # (1, 4, 2, 1000000),
-                # (4, 4, 2, 1000000),
+                (4, 4, 0, 1000000),
             ]
             for layer in ['lower', 'upper']
             for remove_error_1, remove_error_2 in [
@@ -52,7 +53,8 @@ class CustomLayerIPUFAttackStudy(Study):
             ]
             for R in [51]
             for eps in [0.9]
-            for seed in range(10)
+            for separate in [True, False]
+            for seed in range(5)
         ]
 
     def plot(self):
