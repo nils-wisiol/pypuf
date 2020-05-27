@@ -96,7 +96,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         self.ts_ratios = []
         self.separate = parameters.separate
 
-    def generate_unreliable_challenges_for_lower_layer(self):
+    def generate_unreliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
         idx_heuristic = logical_and(~self.s, ~self.s_swap) if self.layer == 'lower' \
             else logical_and(~self.s, self.s_swap)
@@ -144,7 +144,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         return (self.challenges[idx_heuristic][idx_layer_unrel], self.responses[idx_heuristic][idx_layer_unrel]) \
             if self.parameters.remove_error_1 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])
 
-    def generate_reliable_challenges_for_lower_layer(self):
+    def generate_reliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
         idx_heuristic = logical_and(self.s, self.s_swap) if self.layer == 'lower' \
             else logical_and(self.s, ~self.s_swap)
@@ -192,6 +192,74 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         return (self.challenges[idx_heuristic][idx_layer_rel], self.responses[idx_heuristic][idx_layer_rel]) \
             if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])
 
+    def generate_separate_tset(self):
+        cs_train = random_inputs(self.target_layer.n, self.ts.N, self.prng)
+        rs_train = array([self.target_layer.eval(challenges=cs_train) for _ in range(self.parameters.R)]).T
+        cs_train_expand = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+        idx_layer_rel = self.is_reliable(
+            simulation=self.target_layer,
+            challenges=cs_train_expand if self.layer == 'lower' else cs_train,
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )
+        num_reliable = sum_np(idx_layer_rel)
+        num_unreliable = self.ts.N - num_reliable
+        self.ts_ratios = [num_unreliable, num_unreliable, num_reliable, num_reliable]
+        self.error_1 = [0]
+        self.error_2 = [0]
+        nums_unreliable = [sum_np(~self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.down.sigma_noise,
+                random_instance=self.simulation.down.random,
+            ),
+            challenges=cs_train_expand[~idx_layer_rel],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_down)]
+        nums_unreliable += [sum_np(~self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.up.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.up.sigma_noise,
+                random_instance=self.simulation.up.random,
+            ),
+            challenges=cs_train[~idx_layer_rel],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_up)]
+        self.error_2 += [1 - num_chain_unreliable / num_unreliable for num_chain_unreliable in nums_unreliable]
+        nums_reliable = [sum_np(self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.down.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.down.sigma_noise,
+                random_instance=self.simulation.down.random,
+            ),
+            challenges=cs_train_expand[idx_layer_rel],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_down)]
+        nums_reliable += [sum_np(self.is_reliable(
+            simulation=NoisyLTFArray(
+                weight_array=expand_dims(self.simulation.up.weight_array[i, :-1], axis=0),
+                combiner='xor',
+                transform='atf',
+                sigma_noise=self.simulation.up.sigma_noise,
+                random_instance=self.simulation.up.random,
+            ),
+            challenges=cs_train[idx_layer_rel],
+            repetitions=self.parameters.R,
+            epsilon=self.parameters.eps,
+        )) for i in range(self.parameters.k_up)]
+        self.error_2 += [1 - num_chain_reliable / num_reliable for num_chain_reliable in nums_reliable]
+
+        return cs_train, rs_train
+
     def run(self):
         """ Initialize the instance, the training set and the learner to then run the Reliability based CMAES with the
         given parameters.
@@ -211,8 +279,8 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
 
         self.generate_crp_set(self.parameters.N)
         # Build training Set for learning the lower chains of the IPUF
-        cs_unreliable, rs_unreliable = self.generate_unreliable_challenges_for_lower_layer()
-        cs_reliable, rs_reliable = self.generate_reliable_challenges_for_lower_layer()
+        cs_unreliable, rs_unreliable = self.generate_unreliable_challenges_for_layer()
+        cs_reliable, rs_reliable = self.generate_reliable_challenges_for_layer()
         cs_train = vstack((cs_unreliable, cs_reliable))
         rs_train = vstack((rs_unreliable, rs_reliable))
         if self.layer == 'lower':
@@ -223,9 +291,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         self.ts.instance = self.simulation
         self.ts.N = cs_train.shape[0]
         if self.separate:
-            cs_train = random_inputs(self.target_layer.n, self.ts.N, self.prng)
-            print('\nts shape:', cs_train.shape)
-            rs_train = array([self.target_layer.eval(challenges=cs_train) for _ in range(self.parameters.R)]).T
+            cs_train, rs_train = self.generate_separate_tset()
         self.ts.challenges = cs_train
         self.ts.responses = rs_train
         print(f'Generated Training Set: Reliables: {cs_reliable.shape[0]}\n'

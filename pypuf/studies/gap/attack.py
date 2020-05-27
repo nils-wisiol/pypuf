@@ -32,10 +32,10 @@ class ReliabilityAttackStudy(Study):
             )
             for n in [64]
             for transform in ['atf']
-            for noisiness in [.1]
-            for k, N in [(4, 100000),]
-            for R in [5]
-            for seed in range(10)
+            for noisiness in [0.1]
+            for k, N in [(3, 20000)]
+            for R in [19]
+            for seed in range(20)
         ]
 
     """

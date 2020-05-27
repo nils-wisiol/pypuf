@@ -10,14 +10,12 @@ from os import getpid
 from typing import NamedTuple
 from uuid import UUID
 
-import numpy as np
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr
 
 from pypuf.tools import approx_dist, TrainingSet
 from pypuf.experiments.experiment.base import Experiment
-# from pypuf.learner.evolution_strategies.reliability_based_cmaes import ReliabilityBasedCMAES
-from pypuf.learner.evolution_strategies.reliability_cmaes_learner import ReliabilityBasedCMAES
+from pypuf.learner.evolution_strategies.reliability_cmaes_learner_alt import ReliabilityBasedCMAES
 from pypuf.simulation.arbiter_based.ltfarray import LTFArray, NoisyLTFArray
 
 
@@ -47,7 +45,6 @@ class Result(NamedTuple):
     discard_count: dict
     iteration_count: dict
     fitness_curves: list
-
 
 
 class ExperimentReliabilityBasedCMAES(Experiment):
@@ -83,6 +80,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         self.instance = None
         self.learner = None
         self.model = None
+        self.learning_meta_data = None
 
     def run(self):
         """
@@ -92,40 +90,43 @@ class ExperimentReliabilityBasedCMAES(Experiment):
 
         # Instantiate the baseline Noisy LTF Array that shall be learned
         self.instance = NoisyLTFArray(
-                            weight_array=LTFArray.normal_weights(
-                                self.parameters.n,
-                                self.parameters.k,
-                                random_instance=self.prng_i),
-                            transform=self.parameters.transform,
-                            combiner=self.parameters.combiner,
-                            sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
-                                self.parameters.n,
-                                1,
-                                self.parameters.noisiness),
-                            random_instance=self.prng_i)
+            weight_array=LTFArray.normal_weights(
+                self.parameters.n,
+                self.parameters.k,
+                random_instance=self.prng_i),
+            transform=self.parameters.transform,
+            combiner=self.parameters.combiner,
+            sigma_noise=NoisyLTFArray.sigma_noise_from_random_weights(
+                self.parameters.n,
+                1,
+                self.parameters.noisiness),
+            random_instance=self.prng_i,
+        )
 
         # Sample training data from the Noisy LTF Array
         self.training_set = TrainingSet(
-                                self.instance,
-                                self.parameters.num,
-                                self.prng_c,
-                                self.parameters.reps)
+            instance=self.instance,
+            N=self.parameters.num,
+            random_instance=self.prng_c,
+            reps=self.parameters.reps,
+        )
 
         # Instantiate the CMA-ES learner
         self.learner = ReliabilityBasedCMAES(
-                           self.training_set,
-                           self.parameters.k,
-                           self.parameters.n,
-                           self.instance.transform,
-                           self.instance.combiner,
-                           self.parameters.abort_delta,
-                           self.parameters.seed_model,
-                           self.progress_logger,
-                           self.gpu_id)
+            training_set=self.training_set,
+            k=self.parameters.k,
+            n=self.parameters.n,
+            transform=self.instance.transform,
+            combiner=self.instance.combiner,
+            abort_delta=self.parameters.abort_delta,
+            random_seed=self.parameters.seed_model,
+            logger=self.progress_logger,
+            max_tries=3,
+            gpu_id=self.gpu_id,
+        )
 
         # Start learning a model
         self.model, self.learning_meta_data = self.learner.learn()
-
 
     def analyze(self):
         """
@@ -134,20 +135,23 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         n = self.parameters.n
 
         # Accuracy of the learned model using 10000 random samples.
-        empirical_accuracy     = 1 - approx_dist(self.instance, self.model,
-                                    10000, RandomState(1902380))
+        empirical_accuracy = 1 - approx_dist(self.instance, self.model, 10000, RandomState(1902380))
 
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is Noisy.
-        best_empirical_accuracy = 1 - approx_dist(self.instance,
-                                    LTFArray(
-                                        weight_array=self.instance.weight_array[:, :n],
-                                        transform=self.parameters.transform,
-                                        combiner=self.parameters.combiner),
-                                    10000, RandomState(12346))
+        best_empirical_accuracy = 1 - approx_dist(
+            instance1=self.instance,
+            instance2=LTFArray(
+                weight_array=self.instance.weight_array[:, :n],
+                transform=self.parameters.transform,
+                combiner=self.parameters.combiner),
+            num=10000,
+            random_instance=RandomState(12346),
+        )
         # Correl. of the learned model and the base line LTF using pearson for all chains
-        cross_model_correlation = [[pearsonr(v[:n], w[:n])[0]
-                                        for w in self.model.weight_array]
-                                        for v in self.training_set.instance.weight_array]
+        cross_model_correlation = [
+            [pearsonr(v[:n], w[:n])[0] for w in self.model.weight_array]
+            for v in self.training_set.instance.weight_array
+        ]
 
         return Result(
             experiment_id=self.id,

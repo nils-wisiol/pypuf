@@ -20,13 +20,13 @@ from pypuf.simulation.arbiter_based.ltfarray import LTFArray
 
 def reliabilities_PUF(response_bits):
     """
-        Computes 'Reliabilities'
+        Computes 'Reliabilities' between 0 and 1
         :param response_bits: Array with shape [num_challenges, num_measurements]
     """
     return absolute(average(response_bits, axis=1))
 
 
-def reliabilities_MODEL(delay_diffs, epsilon=3):
+def reliabilities_MODEL(delay_diffs):
     """
         Computes 'Hypothetical Reliabilities'
         :param delay_diffs: Array with shape [num_challenges]
@@ -105,7 +105,6 @@ class ReliabilityBasedCMAES(Learner):
 
     def print_accs(self, es):
         w = es.best.x[:-1]
-        # print(es.fit.hist)
         a = [
             1 - approx_dist(
                 LTFArray(v[:self.n].reshape(1, self.n), self.transform, self.combiner),
@@ -124,9 +123,8 @@ class ReliabilityBasedCMAES(Learner):
         """
         # Weights and epsilon have the first dim as number of population
         weights = state[:, :self.n]
-        epsilon = state[:, -1]
         delay_diffs = matmul(weights, self.current_challenges.T)
-        model_reliabilities = reliabilities_MODEL(delay_diffs, epsilon=epsilon)
+        model_reliabilities = reliabilities_MODEL(delay_diffs)
 
         # Calculate pearson coefficient
         x = Variable(model_reliabilities, double)
