@@ -6,6 +6,7 @@ from pypuf.studies.base import Study
 
 import os
 
+
 class ReliabilityAttackStudy(Study):
 
     def __init__(self):

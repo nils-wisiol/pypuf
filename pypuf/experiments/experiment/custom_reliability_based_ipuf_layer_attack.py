@@ -36,6 +36,7 @@ class Parameters(NamedTuple):
     max_tries: int
     gpu_id: int
     separate: bool
+    heuristic: list
 
 
 class Result(NamedTuple):
@@ -95,11 +96,13 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         self.target_layer = None
         self.ts_ratios = []
         self.separate = parameters.separate
+        self.heuristic = parameters.heuristic
 
     def generate_unreliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
-        idx_heuristic = logical_and(~self.s, ~self.s_swap) if self.layer == 'lower' \
-            else logical_and(~self.s, self.s_swap)
+        s = self.s if self.heuristic[0] else ~self.s
+        s_swap = self.s_swap if self.heuristic[1] else ~self.s_swap
+        idx_heuristic = logical_and(s, s_swap)
         self.num_unreliable = sum_np(idx_heuristic)
         cs_expand_unreliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_unrel = ~self.is_reliable(
@@ -146,8 +149,9 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
 
     def generate_reliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
-        idx_heuristic = logical_and(self.s, self.s_swap) if self.layer == 'lower' \
-            else logical_and(self.s, ~self.s_swap)
+        s = self.s if self.heuristic[2] else ~self.s
+        s_swap = self.s_swap if self.heuristic[3] else ~self.s_swap
+        idx_heuristic = logical_and(s, s_swap)
         self.num_reliable = sum_np(idx_heuristic)
         cs_expand_reliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_rel = self.is_reliable(
@@ -193,9 +197,10 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])
 
     def generate_separate_tset(self):
-        cs_train = random_inputs(self.target_layer.n, self.ts.N, self.prng)
-        rs_train = array([self.target_layer.eval(challenges=cs_train) for _ in range(self.parameters.R)]).T
+        cs_train = random_inputs(self.parameters.n, self.ts.N, self.prng)
         cs_train_expand = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+        rs_train = array([self.target_layer.eval(challenges=cs_train_expand if self.layer == 'lower' else cs_train)
+                          for _ in range(self.parameters.R)]).T
         idx_layer_rel = self.is_reliable(
             simulation=self.target_layer,
             challenges=cs_train_expand if self.layer == 'lower' else cs_train,
@@ -256,9 +261,9 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_up)]
-        self.error_2 += [1 - num_chain_reliable / num_reliable for num_chain_reliable in nums_reliable]
+        self.error_1 += [1 - num_chain_reliable / num_reliable for num_chain_reliable in nums_reliable]
 
-        return cs_train, rs_train
+        return cs_train_expand if self.layer == 'lower' else cs_train, rs_train
 
     def run(self):
         """ Initialize the instance, the training set and the learner to then run the Reliability based CMAES with the
@@ -284,10 +289,11 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         cs_train = vstack((cs_unreliable, cs_reliable))
         rs_train = vstack((rs_unreliable, rs_reliable))
         if self.layer == 'lower':
-            cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
-            cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
-            cs_train = vstack((cs_train_p, cs_train_m))
-            rs_train = vstack((rs_train, rs_train))
+            cs_train = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+            # cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
+            # cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
+            # cs_train = vstack((cs_train_p, cs_train_m))
+            # rs_train = vstack((rs_train, rs_train))
         self.ts.instance = self.simulation
         self.ts.N = cs_train.shape[0]
         if self.separate:
