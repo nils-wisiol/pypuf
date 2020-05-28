@@ -52,8 +52,7 @@ class ReliabilityAttackStudy(Study):
         data = self.experimenter.results.copy()
         data['reps__noisiness'] = data.apply(
             lambda row: f'{row["reps"]}__{row["noisiness"]}', axis=1)
-        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'],
-            1 - row['accuracy']), axis=1)
+        data['accuracy1'] = data.apply(lambda row: max(row['accuracy'], 1 - row['accuracy']), axis=1)
         for hue in ['', 'reps', 'noisiness']:
             grid = catplot(
                 x='num',

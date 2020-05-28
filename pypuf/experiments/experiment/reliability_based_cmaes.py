@@ -149,7 +149,7 @@ class ExperimentReliabilityBasedCMAES(Experiment):
         )
         # Correl. of the learned model and the base line LTF using pearson for all chains
         cross_model_correlation = [
-            [pearsonr(v[:n], w[:n])[0] for w in self.model.weight_array]
+            [round(pearsonr(v[:n], w[:n])[0], 2) for w in self.model.weight_array]
             for v in self.training_set.instance.weight_array
         ]
 
@@ -157,10 +157,10 @@ class ExperimentReliabilityBasedCMAES(Experiment):
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=empirical_accuracy,
+            accuracy=round(empirical_accuracy, 4),
             iterations=self.learner.num_tries,
             stops=self.learner.stops,
-            max_possible_acc=best_empirical_accuracy,
+            max_possible_acc=round(best_empirical_accuracy, 4),
             cross_model_correlation=cross_model_correlation,
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count'],
