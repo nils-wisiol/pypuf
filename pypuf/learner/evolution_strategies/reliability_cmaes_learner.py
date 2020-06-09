@@ -134,10 +134,10 @@ class ReliabilityBasedCMAES(Learner):
         # MOD: Calculate correlation with already learned chains
         corr2 = 0
         # Remove punishment for approaching already learned chains
-        if len(self.pool) > 0:
-            corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
-            mask = greater(corr2, 0.25)
-            corr2 = reduce_sum(cast(mask, double), axis=0)
+        # if len(self.pool) > 0:
+        #     corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
+        #     mask = greater(corr2, 0.25)
+        #     corr2 = reduce_sum(cast(mask, double), axis=0)
 
         return abs(1 - corr) + corr2
 

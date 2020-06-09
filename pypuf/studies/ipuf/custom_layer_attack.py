@@ -47,32 +47,32 @@ class CustomLayerIPUFAttackStudy(Study):
             ]
             for layer, heuristic in [
                 ('lower', [0, 0, 1, 1]),    # current heuristic
-                # ('lower', [0, 0, 1, 0]),
-                # ('lower', [0, 0, 0, 1]),
-                # ('lower', [1, 0, 1, 1]),
-                # ('lower', [1, 0, 1, 1]),
-                # ('lower', [0, 1, 1, 1]),
-                # ('lower', [0, 1, 1, 0]),
-                # ('lower', [1, 0, 0, 1]),
-                # ('upper', [0, 0, 1, 1]),
-                # ('upper', [0, 0, 1, 0]),
-                # ('upper', [0, 0, 0, 1]),
-                # ('upper', [1, 0, 1, 1]),
-                # ('upper', [1, 0, 1, 1]),
-                # ('upper', [0, 1, 1, 1]),
+                ('lower', [0, 0, 1, 0]),
+                ('lower', [0, 0, 0, 1]),
+                ('lower', [1, 0, 1, 1]),
+                ('lower', [1, 0, 1, 1]),
+                ('lower', [0, 1, 1, 1]),    # best
+                ('lower', [0, 1, 1, 0]),
+                ('lower', [1, 0, 0, 1]),
+                ('upper', [0, 0, 1, 1]),
+                ('upper', [0, 0, 1, 0]),    # best
+                ('upper', [0, 0, 0, 1]),
+                ('upper', [1, 0, 1, 1]),
+                ('upper', [1, 0, 1, 1]),
+                ('upper', [0, 1, 1, 1]),
                 ('upper', [0, 1, 1, 0]),    # current heuristic
-                # ('upper', [1, 0, 0, 1]),
+                ('upper', [1, 0, 0, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
-                (False, True),
-                (True, False),
-                (True, True)
+                # (False, True),
+                # (True, False),
+                # (True, True)
             ]
             for R in [51]
             for eps in [0.9]
-            for separate in [False, True]
-            for seed in range(5)
+            for separate in [False]
+            for seed in range(100)
         ]
 
     def plot(self):
