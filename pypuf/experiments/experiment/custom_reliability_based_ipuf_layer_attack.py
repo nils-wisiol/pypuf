@@ -102,7 +102,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """Analysis outside of attacker model"""
         s = self.s if self.heuristic[0] else ~self.s
         s_swap = self.s_swap if self.heuristic[1] else ~self.s_swap
-        idx_heuristic = s   # logical_and(s, s_swap)
+        idx_heuristic = logical_and(s, s_swap)
         self.num_unreliable = sum_np(idx_heuristic)
         cs_expand_unreliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_unrel = ~self.is_reliable(
@@ -151,7 +151,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """Analysis outside of attacker model"""
         s = self.s if self.heuristic[2] else ~self.s
         s_swap = self.s_swap if self.heuristic[3] else ~self.s_swap
-        idx_heuristic = s   # logical_and(s, s_swap)
+        idx_heuristic = logical_and(s, s_swap)
         self.num_reliable = sum_np(idx_heuristic)
         cs_expand_reliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_rel = self.is_reliable(
