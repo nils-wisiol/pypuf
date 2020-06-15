@@ -46,22 +46,24 @@ class CustomLayerIPUFAttackStudy(Study):
                 # (4, 4, 0, 1000000),
             ]
             for layer, heuristic in [
-                ('lower', [0, 0, 1, 1]),    # current heuristic
-                ('lower', [0, 0, 1, 0]),
-                ('lower', [0, 0, 0, 1]),
-                ('lower', [1, 0, 1, 1]),
-                ('lower', [1, 0, 1, 1]),
-                ('lower', [0, 1, 1, 1]),    # best
-                ('lower', [0, 1, 1, 0]),
-                ('lower', [1, 0, 0, 1]),
-                ('upper', [0, 0, 1, 1]),
-                ('upper', [0, 0, 1, 0]),    # best
-                ('upper', [0, 0, 0, 1]),
-                ('upper', [1, 0, 1, 1]),
-                ('upper', [1, 0, 1, 1]),
-                ('upper', [0, 1, 1, 1]),
-                ('upper', [0, 1, 1, 0]),    # current heuristic
-                ('upper', [1, 0, 0, 1]),
+                ('lower', [0, 2, 1, 2]),
+                ('upper', [0, 2, 1, 2]),
+                # ('lower', [0, 0, 1, 1]),    # current and best heuristic
+                # ('lower', [0, 0, 1, 0]),
+                # ('lower', [0, 0, 0, 1]),
+                # ('lower', [1, 0, 1, 1]),
+                # ('lower', [1, 0, 1, 1]),
+                # ('lower', [0, 1, 1, 1]),
+                # ('lower', [0, 1, 1, 0]),
+                # ('lower', [1, 0, 0, 1]),
+                # ('upper', [0, 0, 1, 1]),
+                # ('upper', [0, 0, 1, 0]),    # best
+                # ('upper', [0, 0, 0, 1]),
+                # ('upper', [1, 0, 1, 1]),
+                # ('upper', [1, 0, 1, 1]),
+                # ('upper', [0, 1, 1, 1]),
+                # ('upper', [0, 1, 1, 0]),    # current heuristic
+                # ('upper', [1, 0, 0, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
