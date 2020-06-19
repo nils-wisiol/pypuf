@@ -1,7 +1,7 @@
 """
 Simulations of Physically Unclonable Functions (PUFs).
 """
-from numpy import ndarray
+from numpy import ndarray, empty
 
 
 class Simulation:
@@ -32,6 +32,42 @@ class Simulation:
             challenges in order they were given.
         """
         raise NotImplementedError()
+
+    def r_eval(self, r: int, challenges: ndarray) -> ndarray:
+        """
+        Evaluates the Simulation ``r`` times on the list of :math:`N` ``challenges`` given and returns an array
+        of shape (``r``, :math:`N`, ``self.response_length``) of all responses.
+
+        >>> from pypuf.simulation.delay import XORArbiterPUF
+        >>> from pypuf.io import random_inputs
+        >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.02, seed=1)
+        >>> responses = puf.r_eval(5, random_inputs(N=2, n=64, seed=2))
+        >>> responses[:, 0]  # unstable example
+        array([[ 1.],
+               [ 1.],
+               [-1.],
+               [ 1.],
+               [ 1.]])
+        >>> responses[:, 1]  # stable example
+        array([[-1.],
+               [-1.],
+               [-1.],
+               [-1.],
+               [-1.]])
+
+        .. note::
+            To approximate the expected respones value, use average along the first axis:
+
+            >>> from numpy import average
+            >>> average(responses, axis=0)
+            array([[ 0.6],
+                   [-1. ]])
+        """
+        N = challenges.shape[0]
+        responses = empty(shape=(r, N, self.response_length))
+        for i in range(r):
+            responses[i, :] = self.eval(challenges).reshape(N, self.response_length)
+        return responses
 
     @staticmethod
     def seed(description: str) -> int:
