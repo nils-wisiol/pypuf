@@ -231,13 +231,13 @@ class ReliabilityBasedCMAES(Learner):
 
     def update_hits(self, w):
         cross_correlation_upper = [round(pearsonr(
-            v,
-            w[:-1][array(range(self.n)) != ((self.n - 2) // 2)] if self.n > self.target.up.n else w,
+            v[:-1],
+            w[array(range(self.n)) != (self.n // 2)] if self.n > self.target.up.n else w,
         )[0], 2)
                                    for v in self.target.up.weight_array]
         cross_correlation_lower = [round(pearsonr(
-            v[array(range(self.n)) != ((self.n - 2) // 2)] if self.n < self.target.down.n else v,
-            w[:-1],
+            v[:-1][array(range(self.target.down.n)) != (self.n // 2)] if self.n < self.target.down.n else v[:-1],
+            w,
         )[0], 2)
                                    for v in self.target.down.weight_array]
         if max(abs_np(cross_correlation_upper)) > 0.8:
