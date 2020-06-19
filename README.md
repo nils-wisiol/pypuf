@@ -1,5 +1,7 @@
 # pypuf: Cryptanalysis of Physically Unclonable Functions
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3901435.svg)](https://doi.org/10.5281/zenodo.3901435)
+
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
 
 ## Studies and Results
