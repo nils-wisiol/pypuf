@@ -25,11 +25,15 @@ Testing, linting.
 
 ### Maintainer: Prepare New Release
 
+1. Clean up `dist/` folder
 1. Commit all changes
+1. Set up new release version: `RELEASE=x.y.z`
 1. Update version to `x.y.z` in `setup.py` and `docs/conf.py`
-1. Commit with message "Release Version vx.y.z"
-1. Tag commit using `git tag -as vx.y.z`
+1. Commit with message "Release Version vx.y.z": `git commit -p -m "Release Version v$RELEASE"`
+1. Tag commit using `git tag -as v$RELEASE -m "Release Version v$RELEASE"`
 1. Push
+    1. branch: `git push`
+    1. tag: `git push origin v$RELEASE`
 1. Set environment variables `GITHUB_TOKEN` to a GitHub token, `TWINE_USERNAME` and `TWINE_PASSWORD` to PyPi
     credentials.
 1. Publish using `publish nils-wisiol pypuf`
