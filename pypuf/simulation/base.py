@@ -42,31 +42,23 @@ class Simulation:
         >>> from pypuf.io import random_inputs
         >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.02, seed=1)
         >>> responses = puf.r_eval(5, random_inputs(N=2, n=64, seed=2))
-        >>> responses[:, 0]  # unstable example
-        array([[ 1.],
-               [ 1.],
-               [-1.],
-               [ 1.],
-               [ 1.]])
-        >>> responses[:, 1]  # stable example
-        array([[-1.],
-               [-1.],
-               [-1.],
-               [-1.],
-               [-1.]])
+        >>> responses[0, :, :]  # unstable example
+        array([[ 1.,  1., -1.,  1.,  1.]])
+        >>> responses[1, :, :]  # stable example
+        array([[-1., -1., -1., -1., -1.]])
 
         .. note::
-            To approximate the expected respones value, use average along the first axis:
+            To approximate the expected respones value, use average along the last axis:
 
             >>> from numpy import average
-            >>> average(responses, axis=0)
+            >>> average(responses, axis=-1)
             array([[ 0.6],
                    [-1. ]])
         """
         N = challenges.shape[0]
-        responses = empty(shape=(r, N, self.response_length))
+        responses = empty(shape=(N, self.response_length, r))
         for i in range(r):
-            responses[i, :] = self.eval(challenges).reshape(N, self.response_length)
+            responses[:, :, i] = self.eval(challenges).reshape(N, self.response_length)
         return responses
 
     @staticmethod
