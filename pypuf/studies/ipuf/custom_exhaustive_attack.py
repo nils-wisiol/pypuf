@@ -33,7 +33,7 @@ class CustomLayerIPUFAttackStudy(Study):
                     gpu_id=1,
                     separate=separate,
                     heuristic=heuristic,
-                )
+                ),
             )
             for n in [64]
             for noisiness in [0.1]
@@ -41,13 +41,15 @@ class CustomLayerIPUFAttackStudy(Study):
                 # (1, 4, 2, 10000),
                 # (4, 4, 2, 10000),
                 # (1, 3, 2, 100000),
-                (2, 2, 27, 300000),
-                (3, 3, 47, 800000),
+                (1, 3, 200, 400000),
+                (1, 4, 200, 800000),
+                (1, 5, 200, 2000000),
+                # (3, 3, 47, 800000),
                 # (1, 4, 2, 1000000),
                 # (4, 4, 0, 1000000),
             ]
             for layer, heuristic in [
-                ('lower', [0, 0, 1, 1]),    # current and best heuristic
+                # ('lower', [0, 0, 1, 1]),    # current and best heuristic
                 # ('lower', [0, 0, 1, 0]),
                 # ('lower', [0, 0, 0, 1]),
                 # ('lower', [1, 0, 1, 1]),
@@ -58,10 +60,11 @@ class CustomLayerIPUFAttackStudy(Study):
                 ('upper', [0, 0, 1, 0]),    # best
                 # ('upper', [0, 0, 0, 1]),
                 # ('upper', [1, 0, 1, 1]),
-                # ('upper', [1, 0, 1, 1]),
+                ('upper', [1, 0, 1, 1]),
                 # ('upper', [0, 1, 1, 1]),
-                ('upper', [0, 1, 1, 0]),    # current heuristic
+                # ('upper', [0, 1, 1, 0]),    # current heuristic
                 # ('upper', [1, 0, 0, 1]),
+                ('upper', [0, 2, 1, 2]),    # no heuristic
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
@@ -72,7 +75,7 @@ class CustomLayerIPUFAttackStudy(Study):
             for R in [51]
             for eps in [0.9]
             for separate in [False]
-            for seed in range(10)
+            for seed in range(100)
         ]
 
     def plot(self):

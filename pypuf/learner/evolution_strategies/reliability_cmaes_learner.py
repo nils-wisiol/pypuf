@@ -5,7 +5,7 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-from numpy import array, zeros, mean, float64, average, absolute
+from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax
 from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul,\
     abs as abs_tf, Variable
 from tensorflow_core.python.framework.random_seed import set_seed
@@ -61,7 +61,8 @@ class ReliabilityBasedCMAES(Learner):
         difference is is close to zero: delta_diff < CONST_EPSILON
     """
 
-    def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id):
+    def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id,
+                 target):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -96,6 +97,8 @@ class ReliabilityBasedCMAES(Learner):
         self.fitness_histories = []
         self.pool = None
         self.current_challenges = None
+        self.target = target
+        self.hits = zeros(self.target.up.k + self.target.down.k)
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
@@ -213,6 +216,9 @@ class ReliabilityBasedCMAES(Learner):
                 self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
                 self.num_tries = 0
+                self.update_hits(w)
+                if all(self.hits[:self.target.up.k]):   # end learning when specific chains of target are learned
+                    break
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(array(self.pool), self.transform, self.combiner)
@@ -222,3 +228,19 @@ class ReliabilityBasedCMAES(Learner):
         meta_data['fitness_histories'] = self.fitness_histories
 
         return model, meta_data
+
+    def update_hits(self, w):
+        cross_correlation_upper = [round(pearsonr(
+            v,
+            w[:-1][array(range(self.n)) != ((self.n - 2) // 2)] if self.n > self.target.up.n else w,
+        )[0], 2)
+                                   for v in self.target.up.weight_array]
+        cross_correlation_lower = [round(pearsonr(
+            v[array(range(self.n)) != ((self.n - 2) // 2)] if self.n < self.target.down.n else v,
+            w[:-1],
+        )[0], 2)
+                                   for v in self.target.down.weight_array]
+        if max(abs_np(cross_correlation_upper)) > 0.8:
+            self.hits[argmax(cross_correlation_upper)] = 1
+        if max(abs_np(cross_correlation_lower)) > 0.8:
+            self.hits[self.target.up.k + argmax(cross_correlation_lower)] = 1

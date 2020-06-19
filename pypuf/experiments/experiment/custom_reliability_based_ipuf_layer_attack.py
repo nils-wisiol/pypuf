@@ -102,7 +102,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """Analysis outside of attacker model"""
         s = self.s if self.heuristic[0] else ~self.s
         s_swap = self.s_swap if self.heuristic[1] else ~self.s_swap
-        idx_heuristic = logical_and(s, s_swap)
+        idx_heuristic = s if self.heuristic[1] == 2 else logical_and(s, s_swap)
         self.num_unreliable = sum_np(idx_heuristic)
         cs_expand_unreliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_unrel = ~self.is_reliable(
@@ -151,7 +151,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """Analysis outside of attacker model"""
         s = self.s if self.heuristic[2] else ~self.s
         s_swap = self.s_swap if self.heuristic[3] else ~self.s_swap
-        idx_heuristic = logical_and(s, s_swap)
+        idx_heuristic = s if self.heuristic[3] == 2 else logical_and(s, s_swap)
         self.num_reliable = sum_np(idx_heuristic)
         cs_expand_reliable = insert(self.challenges[idx_heuristic], self.simulation.interpose_pos, 1, axis=1)
         idx_layer_rel = self.is_reliable(
@@ -290,10 +290,6 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         rs_train = vstack((rs_unreliable, rs_reliable))
         if self.layer == 'lower':
             cs_train = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
-            # cs_train_p = insert(cs_train, self.simulation.interpose_pos, 1, axis=1)
-            # cs_train_m = insert(cs_train, self.simulation.interpose_pos, -1, axis=1)
-            # cs_train = vstack((cs_train_p, cs_train_m))
-            # rs_train = vstack((rs_train, rs_train))
         self.ts.instance = self.simulation
         self.ts.N = cs_train.shape[0]
         if self.separate:
@@ -315,6 +311,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             max_tries=self.parameters.max_tries,
             logger=self.progress_logger,
             gpu_id=self.gpu_id,
+            target=self.simulation,
         )
 
         # Start learning a model
