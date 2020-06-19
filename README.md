@@ -42,4 +42,9 @@ Testing, linting.
 
 ## Citation
 
-Cite as: TODO
+pypuf is published [via Zenodo](https://zenodo.org/record/3901435). Please cite this work as (update date and version
+as appropriate)
+
+> Nils Wisiol, Christopher Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay. (2020, June 19). pypuf: Cryptanalysis of Physically Unclonable Functions (Version v0.0.6). Zenodo. http://doi.org/10.5281/zenodo.3901435
+
+or [download BibTeX directly from Zenodo](https://zenodo.org/record/3901435/export/hx).
