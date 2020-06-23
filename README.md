@@ -48,6 +48,10 @@ Testing, linting, licensing.
 1. Set environment variables `GITHUB_TOKEN` to a GitHub token, `TWINE_USERNAME` and `TWINE_PASSWORD` to PyPi
     credentials.
 1. Publish using `publish nils-wisiol pypuf`
+1. At zenedo.org, make sure the author list and project title are correct
+1. Bump DOI in README (badge, citation section)
+1. Bump DOI in docs `index.rst` (image src and link)
+1. `git commit -p -m "docs: Bump DOI for v$RELEASE"`
 
 ## Citation
 
