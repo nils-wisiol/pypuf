@@ -7,7 +7,7 @@ pypuf: Cryptanalysis of Physically Unclonable Functions
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
 
 .. warning::
-    This cleaned up version does not yet contain PUF metrics and attacks. Project structure and APIs are still subject
+    This cleaned up version does not yet contain attacks. Project structure and APIs are still subject
     to change.
 
 .. toctree::
