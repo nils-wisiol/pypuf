@@ -38,45 +38,27 @@ class CustomLayerIPUFAttackStudy(Study):
             for n in [64]
             for noisiness in [0.1]
             for k_up, k_down, extra, N in [
-                # (1, 4, 2, 10000),
-                # (4, 4, 2, 10000),
-                # (1, 3, 2, 100000),
-                (1, 3, 200, 400000),
-                (1, 4, 200, 800000),
-                (1, 5, 200, 2000000),
-                (1, 6, 200, 6000000),
-                # (3, 3, 47, 800000),
-                # (1, 4, 2, 1000000),
-                # (4, 4, 0, 1000000),
+                (1, 2, 20, 150000),
+                (1, 3, 20, 200000),
+                (1, 4, 20, 400000),
+                (1, 5, 20, 1000000),
+                (1, 6, 20, 3000000),
             ]
             for layer, heuristic in [
                 # ('lower', [0, 0, 1, 1]),    # current and best heuristic
-                # ('lower', [0, 0, 1, 0]),
-                # ('lower', [0, 0, 0, 1]),
-                # ('lower', [1, 0, 1, 1]),
-                # ('lower', [0, 1, 1, 1]),
-                # ('lower', [0, 1, 1, 0]),
-                # ('lower', [1, 0, 0, 1]),
                 ('upper', [0, 0, 1, 1]),
                 ('upper', [0, 0, 1, 0]),    # best
-                # ('upper', [0, 0, 0, 1]),
-                # ('upper', [1, 0, 1, 1]),
                 ('upper', [1, 0, 1, 1]),
-                # ('upper', [0, 1, 1, 1]),
                 # ('upper', [0, 1, 1, 0]),    # current heuristic
-                # ('upper', [1, 0, 0, 1]),
                 ('upper', [0, 2, 1, 2]),    # no heuristic
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
-                # (False, True),
-                # (True, False),
-                # (True, True)
             ]
             for R in [51]
             for eps in [0.9]
             for separate in [False]
-            for seed in range(100)
+            for seed in range(20)
         ]
 
     def plot(self):

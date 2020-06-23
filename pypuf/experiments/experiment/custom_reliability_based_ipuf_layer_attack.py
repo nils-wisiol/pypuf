@@ -59,6 +59,9 @@ class Result(NamedTuple):
     error_2: list
     weights: list
     ts_ratios: list
+    tries: int
+    hits: int
+    n_chains: int
 
 
 class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
@@ -325,7 +328,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         """
             Analyze the results and return the Results object.
         """
-        n = self.parameters.n + 1 + 1
+        n = self.parameters.n + 2
 
         # Accuracy of the learned model using 10000 random samples
         empirical_accuracy = 1 - approx_dist(self.target_layer, self.model, 10000, self.prng)
@@ -390,8 +393,10 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             max_possible_acc=best_empirical_accuracy,
             cross_correlation_lower=cross_correlation_lower,
             cross_correlation_upper=cross_correlation_upper,
-            cross_correlation_rel_lower=cross_correlation_rel_lower.tolist(),
-            cross_correlation_rel_upper=cross_correlation_rel_upper.tolist(),
+            cross_correlation_rel_lower=[[round(max(0, min(corr, 1)), 2) for corr in corrs]
+                                         for corrs in cross_correlation_rel_lower.tolist()],
+            cross_correlation_rel_upper=[[round(max(0, min(corr, 1)), 2) for corr in corrs]
+                                         for corrs in cross_correlation_rel_upper.tolist()],
             discard_count=self.learning_meta_data['discard_count'],
             iteration_count=self.learning_meta_data['iteration_count'],
             fitness_histories=self.learning_meta_data['fitness_histories'],
@@ -400,6 +405,9 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             error_2=self.error_2,
             weights=self.model.weight_array,
             ts_ratios=self.ts_ratios,
+            tries=self.learner.num_tries + 1,
+            hits=self.learner.hits.tolist(),
+            n_chains=len(self.learner.pool),
         )
 
     def interpose(self, challenges, bit):

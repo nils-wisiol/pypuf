@@ -137,10 +137,10 @@ class ReliabilityBasedCMAES(Learner):
         # MOD: Calculate correlation with already learned chains
         corr2 = 0
         # Remove punishment for approaching already learned chains
-        # if len(self.pool) > 0:
-        #     corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
-        #     mask = greater(corr2, 0.25)
-        #     corr2 = reduce_sum(cast(mask, double), axis=0)
+        if len(self.pool) > 0:
+            corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
+            mask = greater(corr2, 0.4)
+            corr2 = reduce_sum(cast(mask, double), axis=0)
 
         return abs(1 - corr) + corr2
 
@@ -207,7 +207,7 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(self.pool):
-                if abs_tf(pearsonr(w, v)[0]) > 0.5 and self.num_tries < self.max_tries:
+                if abs_tf(pearsonr(w, v)[0]) > 0.5 and self.num_tries < self.max_tries - 1:
                     meta_data['discard_count'][n_chain].append(i)
                     self.num_tries += 1
                     break
@@ -215,10 +215,10 @@ class ReliabilityBasedCMAES(Learner):
                 self.pool.append(w)
                 self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
-                self.num_tries = 0
                 self.update_hits(w)
                 if all(self.hits[:self.target.up.k]):   # end learning when specific chains of target are learned
                     break
+                self.num_tries = 0
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(array(self.pool), self.transform, self.combiner)
@@ -230,16 +230,17 @@ class ReliabilityBasedCMAES(Learner):
         return model, meta_data
 
     def update_hits(self, w):
-        cross_correlation_upper = [round(pearsonr(
-            v[:-1],
-            w[array(range(self.n)) != (self.n // 2)] if self.n > self.target.up.n else w,
-        )[0], 2)
-                                   for v in self.target.up.weight_array]
-        cross_correlation_lower = [round(pearsonr(
-            v[:-1][array(range(self.target.down.n)) != (self.n // 2)] if self.n < self.target.down.n else v[:-1],
-            w,
-        )[0], 2)
-                                   for v in self.target.down.weight_array]
+        cross_correlation_upper = [
+            round(pearsonr(v[:-1], w[array(range(self.n)) != (self.n // 2)] if self.n > self.target.up.n else w,)[0], 2)
+            for v in self.target.up.weight_array
+        ]
+        cross_correlation_lower = [
+            round(pearsonr(
+                v[:-1][array(range(self.target.down.n)) != (self.n // 2)] if self.n < self.target.down.n else v[:-1],
+                w,
+            )[0], 2)
+            for v in self.target.down.weight_array
+        ]
         if max(abs_np(cross_correlation_upper)) > 0.8:
             self.hits[argmax(cross_correlation_upper)] = 1
         if max(abs_np(cross_correlation_lower)) > 0.8:
