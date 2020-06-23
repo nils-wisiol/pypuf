@@ -1,2 +1,6 @@
-numpy~=1.18.5
-setuptools~=47.3.0
+numpy
+setuptools
+flake8
+xdoctest
+sphinx
+sphinx_rtd_theme
