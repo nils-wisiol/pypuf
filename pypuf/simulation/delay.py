@@ -493,6 +493,18 @@ class XORArbiterPUF(NoisyLTFArray):
             seed=noise_seed,
         )
 
+    def chain(self, idx: int) -> Simulation:
+        r"""
+        Returns a ``Simulation`` instance an arbiter chain of this XOR Arbiter PUF.
+        :param idx: Index of the desired arbiter chain in :math:`\{0, ..., k\}`
+        """
+        return LTFArray(
+            weight_array=self.weight_array[idx:idx + 1, :-1],
+            transform=self.transform,
+            combiner=self.combiner,
+            bias=self.weight_array[idx:idx + 1, -1],
+        )
+
 
 class ArbiterPUF(XORArbiterPUF):
 
