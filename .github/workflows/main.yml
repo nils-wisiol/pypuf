@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, v2 ]
+  pull_request:
+    branches: [ master, v2 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.8'
+
+    - name: Install Requirements
+      run: pip3 install -r requirements.txt
+
+    - name: flake8 Linter
+      run:  python3 -m flake8 pypuf
+
+    - name: Python Doc Tests
+      run: python3 -m xdoctest pypuf
+
+    - name: Sphinx Doc Tests
+      run: python3 -m sphinx -b doctest docs docs/_build
+
+    - name: Sphinx Documentation Build
+      run: python3 -m sphinx docs docs/_build
