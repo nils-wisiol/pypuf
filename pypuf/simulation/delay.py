@@ -479,8 +479,8 @@ class XORArbiterPUF(NoisyLTFArray):
                  noisiness: float = 0) -> None:
         if seed is None:
             seed = 'default'
-        weight_seed = default_rng(seed=self.seed(f'xor arbiter puf {seed} weights'))
-        noise_seed = default_rng(seed=self.seed(f'xor arbiter puf {seed} noise'))
+        weight_seed = self.seed(f'xor arbiter puf {seed} weights')
+        noise_seed = self.seed(f'xor arbiter puf {seed} noise')
         super().__init__(
             weight_array=self.normal_weights(n=n, k=k, seed=weight_seed),
             transform=transform or self.transform_atf,
