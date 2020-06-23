@@ -18,6 +18,13 @@ pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable 
    simulation/base
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Metrics
+   :hidden:
+
+   Basics <metrics/basics>
+
+.. toctree::
   :maxdepth: 2
   :caption: Appendix
   :hidden:

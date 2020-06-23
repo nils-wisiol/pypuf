@@ -2,5 +2,7 @@
 ignore =
     # E501: line longer than 79 chars
     E501,
+    # E741: disallows variables names l, I, ...
+    E741,
     # ANN101/ANN102: don't force repetition of class name as type annotation for first argument
     ANN101, ANN102,
