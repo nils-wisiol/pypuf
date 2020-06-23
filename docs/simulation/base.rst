@@ -18,6 +18,6 @@ takes a ``seed`` argument for reproducible results. Weak PUFs can be added by se
 API
 ---
 
-.. autoclass:: simulation.base.Simulation
+.. autoclass:: pypuf.simulation.base.Simulation
     :member-order: bysource
     :members:
