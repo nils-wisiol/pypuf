@@ -23,12 +23,20 @@ To get started, please check out the [documentation](https://pypuf.readthedocs.o
 
 ## Contribute
 
-Testing, linting.
+Testing, linting, licensing.
+
+### Update Documentation and Check Doc Tests
+
+1. install `sphinx-build`
+1. `cd docs`
+1. `make clean`
+1. `make doctest && make html`
 
 ### Maintainer: Prepare New Release
 
-1. Clean up `dist/` folder
+1. Make sure docs are testing and building without error (see above)
 1. Commit all changes
+1. Clean up `dist/` folder
 1. Set up new release version: `RELEASE=x.y.z`
 1. Update version to `x.y.z` in `setup.py` and `docs/conf.py`
 1. Commit with message "Release Version vx.y.z": `git commit -p -m "Release Version v$RELEASE"`
