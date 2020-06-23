@@ -13,6 +13,9 @@ from .simulation.base import Simulation
 BIT_TYPE = int8
 
 
+# TODO add documentation
+
+
 def random_inputs(n: int, N: int, seed: int) -> ndarray:
     return 2 * RandomState(seed).randint(0, 2, (N, n), dtype=BIT_TYPE) - 1
 
@@ -42,35 +45,41 @@ def approx_stabilities(instance: Simulation, num: int, reps: int, seed: int) -> 
 class ChallengeResponseSet:
 
     def __init__(self, challenges: ndarray, responses: ndarray) -> None:
+        if challenges.shape[0] != responses.shape[0]:
+            raise ValueError('Must supply an equal number of challenges and responses.')
         self.challenges = challenges
         self.responses = responses
-        assert len(self.challenges) == len(self.responses)
         self.N = len(self.challenges)
+
+    @property
+    def challenge_length(self) -> int:
+        return self.challenges.shape[1]
+
+    @property
+    def response_length(self) -> int:
+        return self.responses.shape[1]
+
+    def __len__(self) -> int:
+        return self.challenges.shape[0]
+
+    def __getitem__(self, item: Union[slice, int]) -> ChallengeResponseSet:
+        return ChallengeResponseSet(self.challenges[item], self.responses[item])
 
     def random_subset(self, N: Union[int, float]) -> ChallengeResponseSet:
         if N < 1:
             N = int(self.N * N)
-        return self.subset(sample(range(self.N), N))
+        return self[sample(range(self.N), N)]
 
     def block_subset(self, i: int, total: int) -> ChallengeResponseSet:
-        return self.subset(slice(
-            int(i / total * self.N),
-            int((i + 1) / total * self.N)
-        ))
-
-    def subset(self, subset_slice: slice) -> ChallengeResponseSet:
-        return ChallengeResponseSet(
-            challenges=self.challenges[subset_slice],
-            responses=self.responses[subset_slice]
-        )
+        return self[int(i / total * self.N):int((i + 1) / total * self.N)]
 
 
-class TrainingSet(ChallengeResponseSet):
+class SimulationChallengeResponseSet(ChallengeResponseSet):
 
-    def __init__(self, instance: Simulation, N: int, seed: int) -> None:
+    def __init__(self, instance: Simulation, N: int, seed: int, r: int = 1) -> None:
         self.instance = instance
         challenges = random_inputs(instance.challenge_length, N, seed)
         super().__init__(
             challenges=challenges,
-            responses=instance.eval(challenges)
+            responses=instance.r_eval(r, challenges)
         )
