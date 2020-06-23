@@ -1,6 +1,6 @@
 # pypuf: Cryptanalysis of Physically Unclonable Functions
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3901435.svg)](https://doi.org/10.5281/zenodo.3901435)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3904267.svg)](https://doi.org/10.5281/zenodo.3904267)
 ![](https://github.com/nils-wisiol/pypuf/workflows/Doc%20Tests/badge.svg?branch=v2)
 
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
@@ -51,9 +51,9 @@ Testing, linting, licensing.
 
 ## Citation
 
-pypuf is published [via Zenodo](https://zenodo.org/record/3901435). Please cite this work as (update date and version
+pypuf is published [via Zenodo](https://zenodo.org/record/3904267). Please cite this work as (update date and version
 as appropriate)
 
-> Nils Wisiol, Christopher Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay. (2020, June 19). pypuf: Cryptanalysis of Physically Unclonable Functions (Version v0.0.6). Zenodo. http://doi.org/10.5281/zenodo.3901435
+> Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay. (2020, June 23). pypuf: Cryptanalysis of Physically Unclonable Functions (Version v0.0.7). Zenodo. http://doi.org/10.5281/zenodo.3904267
 
-or [download BibTeX directly from Zenodo](https://zenodo.org/record/3901435/export/hx).
+or [download BibTeX directly from Zenodo](https://zenodo.org/record/3904267/export/hx).
