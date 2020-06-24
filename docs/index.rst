@@ -32,6 +32,7 @@ pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable 
    :hidden:
 
    Randomness and Reproducibility <random>
+   Large-Scale Experiments <large>
 
 .. toctree::
   :maxdepth: 2
