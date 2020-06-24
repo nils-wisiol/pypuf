@@ -38,19 +38,19 @@ class CustomLayerIPUFAttackStudy(Study):
             for n in [64]
             for noisiness in [0.1]
             for k_up, k_down, extra, N in [
-                (1, 2, 20, 150000),
-                (1, 3, 20, 200000),
-                (1, 4, 20, 400000),
-                (1, 5, 20, 1000000),
-                (1, 6, 20, 3000000),
+                # (1, 2, 10, 150000),
+                (1, 3, 10, 200000),
+                (1, 4, 10, 400000),
+                # (1, 5, 10, 1000000),
+                # (1, 6, 10, 3000000),
             ]
             for layer, heuristic in [
-                # ('lower', [0, 0, 1, 1]),    # current and best heuristic
-                ('upper', [0, 0, 1, 1]),
-                ('upper', [0, 0, 1, 0]),    # best
-                ('upper', [1, 0, 1, 1]),
-                # ('upper', [0, 1, 1, 0]),    # current heuristic
-                ('upper', [0, 2, 1, 2]),    # no heuristic
+                ('upper', [1, 0, 1, 1]),    # best
+                ('upper', [1, 0, 1, 2]),
+                ('upper', [1, 0, 2, 1]),
+                ('upper', [2, 0, 1, 1]),
+                ('upper', [2, 0, 1, 2]),
+                ('upper', [2, 0, 2, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
