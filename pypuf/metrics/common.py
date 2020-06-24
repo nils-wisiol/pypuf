@@ -164,11 +164,20 @@ def approx_similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np
     >>> approx_similarity_data(array([[1, 1], [1, 1], [1, 1], [1, 1]]), array([[1, 1], [1, 1], [1, 1], [-1, 1]]))
     array([0.75, 1.  ])
     """
+    # Check for response arrays with repetitions (shape (N, m, r))
+    # and majority vote along the repetition axis
+    if len(responses1.shape) == 3:
+        responses1 = np.sign(np.average(responses1, axis=-1))
+    if len(responses2.shape) == 3:
+        responses2 = np.sign(np.average(responses2, axis=-1))
+
+    # check for broken response arrays with implicit response length 1 (shape (N,))
+    # TODO fix LTFArray to return responses of shape (N, 1)
     if len(responses1.shape) == 1:
-        # TODO fix LTFArray to return responses of shape (N, 1)
-        N = responses1.shape[0]
-        responses1 = responses1.reshape(N, 1)
-        responses2 = responses2.reshape(N, 1)
+        responses1 = responses1.reshape(-1, 1)
+    if len(responses2.shape) == 1:
+        responses2 = responses2.reshape(-1, 1)
+
     return 1 - np.average(np.absolute(responses1 - responses2), axis=0) / 2
 
 
@@ -194,6 +203,10 @@ def approx_accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> n
     >>> test_set = SimulationChallengeResponseSet(puf, N=1000, seed=2)
     >>> approx_accuracy(puf, test_set)
     array([0.823])
+    >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.3, seed=2)
+    >>> test_set = SimulationChallengeResponseSet(puf, N=1000, seed=2, r=5)
+    >>> approx_accuracy(puf, test_set)
+    array([0.706])
     """
     sim_responses = simulation.eval(test_set.challenges)
     return approx_similarity_data(sim_responses, test_set.responses)
