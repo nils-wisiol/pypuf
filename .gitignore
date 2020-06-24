@@ -140,3 +140,5 @@ cython_debug/
 # pycharm
 .idea
 
+# scratch folder
+scratch/
