@@ -51,6 +51,9 @@ class CustomLayerIPUFAttackStudy(Study):
                 ('upper', [2, 0, 1, 1]),
                 ('upper', [2, 0, 1, 2]),
                 ('upper', [2, 0, 2, 1]),
+                ('upper', [0, 2, 1, 1]),
+                ('upper', [0, 2, 1, 2]),
+                ('upper', [0, 2, 2, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
