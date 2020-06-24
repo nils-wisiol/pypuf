@@ -4,3 +4,5 @@ flake8
 xdoctest
 sphinx
 sphinx_rtd_theme
+scipy
+pandas
