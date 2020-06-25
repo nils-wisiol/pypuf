@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from random import sample
 from typing import Union
 
@@ -40,6 +38,12 @@ def approx_stabilities(instance: Simulation, num: int, reps: int, seed: int) -> 
     for i in range(reps):
         responses[i, :] = instance.eval(challenges)
     return 0.5 + 0.5 * np_abs(np_sum(responses, axis=0)) / reps
+
+
+class ChallengeResponseSet:
+    # TODO remove when removing python 3.7 support
+    #  (replace with from __future__ import annotations)
+    pass
 
 
 class ChallengeResponseSet:
