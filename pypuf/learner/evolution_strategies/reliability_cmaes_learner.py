@@ -61,6 +61,8 @@ class ReliabilityBasedCMAES(Learner):
         difference is is close to zero: delta_diff < CONST_EPSILON
     """
 
+    MAX_CORR = 0.6
+
     def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id,
                  target):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
@@ -139,7 +141,7 @@ class ReliabilityBasedCMAES(Learner):
         # Remove punishment for approaching already learned chains
         if len(self.pool) > 0:
             corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
-            mask = greater(corr2, 0.4)
+            mask = greater(corr2, self.MAX_CORR)
             corr2 = reduce_sum(cast(mask, double), axis=0)
 
         return abs(1 - corr) + corr2
@@ -207,7 +209,7 @@ class ReliabilityBasedCMAES(Learner):
 
             # Check if learned model (w) is a 'new' chain (not correlated to other chains)
             for i, v in enumerate(self.pool):
-                if abs_tf(pearsonr(w, v)[0]) > 0.5 and self.num_tries < self.max_tries - 1:
+                if abs_tf(pearsonr(w, v)[0]) > self.MAX_CORR and self.num_tries < self.max_tries - 1:
                     meta_data['discard_count'][n_chain].append(i)
                     self.num_tries += 1
                     break

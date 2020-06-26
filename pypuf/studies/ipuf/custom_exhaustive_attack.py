@@ -12,6 +12,8 @@ class CustomLayerIPUFAttackStudy(Study):
         os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
     def experiments(self):
+        k = 10 ** 3
+        M = 10 ** 6
         return [
             ExperimentCustomReliabilityBasedLayerIPUF(
                 progress_log_name=None,
@@ -36,24 +38,17 @@ class CustomLayerIPUFAttackStudy(Study):
                 ),
             )
             for n in [64]
-            for noisiness in [0.1]
+            for noisiness in [0.05]
             for k_up, k_down, extra, N in [
-                # (1, 2, 10, 150000),
-                (1, 3, 10, 200000),
-                (1, 4, 10, 400000),
-                # (1, 5, 10, 1000000),
-                # (1, 6, 10, 3000000),
+                (1, 8, 9, 500 * k),
+                (1, 12, 9, 500 * k),
+                (1, 16, 9, 500 * k),
+                (1, 8, 9, 5 * M),
+                (1, 12, 9, 5 * M),
+                (1, 16, 9, 5 * M),
             ]
             for layer, heuristic in [
-                ('upper', [1, 0, 1, 1]),    # best
-                ('upper', [1, 0, 1, 2]),
-                ('upper', [1, 0, 2, 1]),
-                ('upper', [2, 0, 1, 1]),
-                ('upper', [2, 0, 1, 2]),
-                ('upper', [2, 0, 2, 1]),
-                ('upper', [0, 2, 1, 1]),
-                ('upper', [0, 2, 1, 2]),
-                ('upper', [0, 2, 2, 1]),
+                ('upper', [1, 0, 1, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
@@ -61,7 +56,7 @@ class CustomLayerIPUFAttackStudy(Study):
             for R in [51]
             for eps in [0.9]
             for separate in [False]
-            for seed in range(20)
+            for seed in range(10)
         ]
 
     def plot(self):
