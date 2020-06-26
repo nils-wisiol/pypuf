@@ -2,6 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3904267.svg)](https://doi.org/10.5281/zenodo.3904267)
 ![](https://github.com/nils-wisiol/pypuf/workflows/Doc%20Tests/badge.svg?branch=v2)
+[![pypi](https://img.shields.io/pypi/v/pypuf.svg)](https://pypi.python.org/pypi/pypuf)
 
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
 
