@@ -220,7 +220,7 @@ class GapAttack:
         # initialize learner
         cma = CMA(
             initial_solution=init_state,
-            initial_step_size=.5,
+            initial_step_size=1,
             fitness_function=objective,
             termination_no_effect=self.abort_delta,
             population_size=25,
