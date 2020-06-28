@@ -40,12 +40,8 @@ class CustomLayerIPUFAttackStudy(Study):
             for n in [64]
             for noisiness in [0.05]
             for k_up, k_down, extra, N in [
-                (1, 8, 9, 500 * k),
-                (1, 12, 9, 500 * k),
-                (1, 16, 9, 500 * k),
-                (1, 8, 9, 5 * M),
-                (1, 12, 9, 5 * M),
-                (1, 16, 9, 5 * M),
+                (2, 16, 14, 2 * M),
+                (4, 16, 28, 4 * M),
             ]
             for layer, heuristic in [
                 ('upper', [1, 0, 1, 1]),
