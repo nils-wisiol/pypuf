@@ -42,6 +42,7 @@ class GapAttack:
         self.pool_response_similarity_hist = None
         self.attempt = 0
         self.traces = []
+        self.generations = 0
 
         self.current_challenges = None
         self.fitness_history = None
@@ -123,7 +124,7 @@ class GapAttack:
             logging.debug(f'Attempting to learn {len(self.pool_weights) + 1}-th chain with seed {chain_seed} '
                           f'(attempt {self.attempt})')
 
-            weights, eps, fitness, abort_reasons, early_stop_reasons = \
+            weights, eps, fitness, abort_reasons, early_stop_reasons, generations = \
                 self.learn_chain(len(self.pool_weights), chain_seed)
             discard_reasons = self.discard_chain(weights, fitness, self.pool_weights)
             logging.debug(f'Found chain with fitness {fitness:.3f}, aborting/early stopping '
@@ -139,10 +140,12 @@ class GapAttack:
                 'abort_reasons': abort_reasons,
                 'discard_reasons': discard_reasons,
                 'early_stop_reasons': early_stop_reasons,
+                'generations': generations,
             })
 
             self.attempt += 1
             current_attempt += 1
+            self.generations += generations
 
             if discard_reasons or early_stop_reasons:
                 logging.debug('Discarding chain due to ' + ', '.join(discard_reasons + early_stop_reasons))
@@ -172,18 +175,18 @@ class GapAttack:
         if self.current_responses is not None and self.pool_responses:
             # compute a similarity score of the current fittest chain to each known chain
             scores = [
-                4.5 * np.absolute(.5 - np.average(approx_similarity_data(r, self.current_responses.numpy())))
+                3 * np.absolute(.5 - np.average(approx_similarity_data(r, self.current_responses.numpy())))
                 for idx, r in enumerate(self.pool_responses)
             ]
             self.pool_response_similarity_hist.append(scores)
             score = max(scores)
-            if .5 < cma.σ.numpy() < score:  # this is where the magic happens
+            if .3 < cma.σ.numpy() < score:  # this is where the magic happens
                 reasons.append(f'similar to already accepted chain with similarity score {score:.4f} '
                                f'at sigma {cma.σ.numpy():.4f}')
         return reasons
 
     def learn_chain(self, l: int, seed: int, callback: Callable = None,
-                    cma_kwargs: dict = None) -> Tuple[np.ndarray, float, float, List[str], List[str]]:
+                    cma_kwargs: dict = None) -> Tuple[np.ndarray, float, float, List[str], List[str], int]:
 
         # prepare specialized objective function
         self.current_challenges = np.array(self._linearized_challenges[:, l, :], dtype=np.float64)
@@ -237,7 +240,7 @@ class GapAttack:
         weights, eps = w[:-1], w[-1]
         termination_reasons = [key for key, val in cma.should_terminate(True)[1].items() if val]
 
-        return weights, eps, fitness, termination_reasons, early_stop_reasons
+        return weights, eps, fitness, termination_reasons, early_stop_reasons, cma.generation
 
     def discard_chain(self, weights: np.ndarray, fitness: float, pool: List[np.ndarray]) -> List[str]:
         discard_reasons = []
