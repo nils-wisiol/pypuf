@@ -216,9 +216,10 @@ class GapAttack:
         # initialize learner
         cma = CMA(
             initial_solution=init_state,
-            initial_step_size=1.0,
+            initial_step_size=.5,
             fitness_function=objective,
             termination_no_effect=self.abort_delta,
+            population_size=4 + np.floor(3 * np.log(self.n)),
             callback_function=callback_hook,
             **(cma_kwargs or {}),
         )
