@@ -110,7 +110,7 @@ class GapAttack:
 
         # record fitness
         best = tf.argmin(fitness)
-        self.fitness_history.append(fitness[best].numpy())
+        # self.fitness_history.append(fitness[best].numpy())  # WRONG
         self.current_responses = tf.sign(delay_diffs[best])
 
         return fitness
@@ -210,6 +210,7 @@ class GapAttack:
                 logger.info(f'generation {_cma.generation:n}/{self.abort_iter:n} '
                             f'({_cma.generation/self.abort_iter:.1%})')
             self.sigma_history.append(_cma.σ.numpy())
+            self.fitness_history.append(_cma.best_fitness())
             early_stopping = self.early_stop(_cma)
             if early_stopping:
                 raise EarlyStop(early_stopping)
