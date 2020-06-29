@@ -243,7 +243,7 @@ class ReliabilityBasedCMAES(Learner):
             )[0], 2)
             for v in self.target.down.weight_array
         ]
-        if max(abs_np(cross_correlation_upper)) > 0.8:
-            self.hits[argmax(cross_correlation_upper)] = 1
-        if max(abs_np(cross_correlation_lower)) > 0.8:
-            self.hits[self.target.up.k + argmax(cross_correlation_lower)] = 1
+        if max(abs_np(cross_correlation_upper)) > 0.9:
+            self.hits[argmax(cross_correlation_upper)] = max(abs_np(cross_correlation_upper))
+        if max(abs_np(cross_correlation_lower)) > 0.9:
+            self.hits[self.target.up.k + argmax(cross_correlation_lower)] = max(abs_np(cross_correlation_lower))
