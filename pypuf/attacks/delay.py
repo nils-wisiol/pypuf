@@ -173,6 +173,22 @@ class GapAttack:
         return model
 
     def early_stop(self, cma: CMA) -> List[str]:
+        """
+        Determines if the learning should be aborted early by returning a list of reasons why to abort. Returning ``[]``
+        continues the learning process.
+
+        We abort early if the response behavior of the currently learned chain is similar to already known chains, or
+        if the evolution of the sigma and fitness values is typical for an unsuccessful run. This follows [Bec15]_:
+
+            In general, unsuccessful runs can be aborted early to greatly decrease the computation time of the attack.
+            To determine which runs are likely to be unsuccessful, the global mutation parameter 𝜎 in conjunction with
+            the fitness value can be used. Furthermore, the hamming distance between responses from the model under
+            test and the already computed PUF models can be used to detect runs that are converging to a PUF model
+            that has already been found. These runs can also be aborted early to considerably speed up the computation
+            time.
+
+        This function is called once per generation and is passed the CMA learner object.
+        """
         reasons = []
         if self.current_responses is not None and self.pool_responses:
             # compute a similarity score of the current fittest chain to each known chain
@@ -185,6 +201,8 @@ class GapAttack:
             if .3 < cma.σ.numpy() < score:  # this is where the magic happens
                 reasons.append(f'similar to already accepted chain with similarity score {score:.4f} '
                                f'at sigma {cma.σ.numpy():.4f}')
+        if self.fitness_history and self.fitness_history[-1] > self.fitness_threshold and cma.σ < .5:
+            reasons.append(f'low sigma high fitness sigma={cma.σ.numpy():.4f} fitness={self.fitness_history[-1]:.4f}')
         return reasons
 
     def learn_chain(self, l: int, seed: int, callback: Callable = None,
