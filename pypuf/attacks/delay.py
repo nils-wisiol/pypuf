@@ -23,7 +23,7 @@ class EarlyStop(BaseException):
 class GapAttack:
 
     def __init__(self, crp_set: ChallengeResponseSet, k_max: int, transform: Callable,
-                 pop_size: int = 20,
+                 pop_size: int = 25,
                  abort_delta: float = 5e-3,
                  abort_iter: int = 500,
                  fitness_threshold: float = .9,
@@ -223,7 +223,7 @@ class GapAttack:
             initial_step_size=1,
             fitness_function=objective,
             termination_no_effect=self.abort_delta,
-            population_size=25,
+            population_size=self.pop_size,
             callback_function=callback_hook,
             **(cma_kwargs or {}),
         )
