@@ -27,7 +27,8 @@ class GapAttack:
                  abort_delta: float = 5e-3,
                  abort_iter: int = 500,
                  fitness_threshold: float = .9,
-                 pool_threshold: float = .9) -> None:
+                 pool_threshold: float = .9,
+                 sigma: float = 1.0) -> None:
         self.crp_set = crp_set
         self.k_max = k_max
         self.n = crp_set.challenge_length
@@ -37,6 +38,7 @@ class GapAttack:
         self.abort_iter = abort_iter
         self.fitness_threshold = fitness_threshold
         self.pool_threshold = pool_threshold
+        self.sigma = sigma
         self.pool_weights = []
         self.pool_responses = []
         self.pool_response_similarity_hist = None
@@ -220,7 +222,7 @@ class GapAttack:
         # initialize learner
         cma = CMA(
             initial_solution=init_state,
-            initial_step_size=1,
+            initial_step_size=self.sigma,
             fitness_function=objective,
             termination_no_effect=self.abort_delta,
             population_size=self.pop_size,
