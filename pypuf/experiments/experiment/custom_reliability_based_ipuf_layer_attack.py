@@ -44,6 +44,7 @@ class Result(NamedTuple):
     measured_time: float
     pid: int
     accuracy: float
+    accuracy_layer: float
     iterations: int
     stops: str
     max_possible_acc: float
@@ -57,7 +58,6 @@ class Result(NamedTuple):
     fitnesses: list
     error_1: list
     error_2: list
-    weights: list
     ts_ratios: list
     tries: int
     hits: int
@@ -382,12 +382,22 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
                 ))
                 target_theoretical_stab = erf(target_chain_reliabilities / sqrt(2) / self.parameters.noisiness)
                 cross_correlation_rel_upper[i, k] = round(pearsonr(target_theoretical_stab, theoretical_stab)[0], 2)
-
+        if self.learning_meta_data['layer_models'][self.layer]:
+            model_layer = LTFArray(
+                weight_array=self.normalize(self.learning_meta_data['layer_models'][self.layer]),
+                transform=self.model.transform,
+                combiner=self.model.combiner,
+            )
+            accuracy_layer = 1 - approx_dist(self.target_layer, model_layer, 10000, self.prng)
+        else:
+            accuracy_layer = 0.5
+        accuracy_layer = max(accuracy_layer, 1 - accuracy_layer)
         return Result(
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
             accuracy=empirical_accuracy,
+            accuracy_layer=accuracy_layer,
             iterations=self.learner.num_tries,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
@@ -403,7 +413,6 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             fitnesses=[histories[-1] for histories in self.learning_meta_data['fitness_histories']],
             error_1=self.error_1,
             error_2=self.error_2,
-            weights=self.model.weight_array,
             ts_ratios=self.ts_ratios,
             tries=self.learner.num_tries + 1,
             hits=self.learner.hits.tolist(),

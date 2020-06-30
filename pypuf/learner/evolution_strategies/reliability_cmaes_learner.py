@@ -97,10 +97,11 @@ class ReliabilityBasedCMAES(Learner):
         self.gpu_id = gpu_id
         self.current_fitness = []
         self.fitness_histories = []
-        self.pool = None
+        self.pool = []
         self.current_challenges = None
         self.target = target
         self.hits = zeros(self.target.up.k + self.target.down.k)
+        self.layer_models = {'upper': [], 'lower': []}
 
         # Compute PUF Reliabilities. These remain static throughout the optimization.
         self.puf_reliabilities = reliabilities_PUF(self.training_set.responses)
@@ -175,7 +176,7 @@ class ReliabilityBasedCMAES(Learner):
             attempts.
         """
         # pool: collection of learned chains, meta_data: information about learning
-        meta_data, self.pool = {}, []
+        meta_data = {}
         meta_data['discard_count'] = {i: [] for i in range(self.k)}
         meta_data['iteration_count'] = {i: [] for i in range(self.k)}
         # For k chains, learn a model and add to pool if "it is new"
@@ -218,7 +219,8 @@ class ReliabilityBasedCMAES(Learner):
                 self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
                 self.update_hits(w)
-                if all(self.hits[:self.target.up.k]):   # end learning when specific chains of target are learned
+                # End learning when specific chains of target are learned
+                if all(self.hits[:self.target.up.k]):
                     break
                 self.num_tries = 0
 
@@ -228,6 +230,7 @@ class ReliabilityBasedCMAES(Learner):
             self.pool[0] = - self.pool[0]
             model = LTFArray(array(self.pool), self.transform, self.combiner)
         meta_data['fitness_histories'] = self.fitness_histories
+        meta_data['layer_models'] = self.layer_models
 
         return model, meta_data
 
@@ -244,6 +247,10 @@ class ReliabilityBasedCMAES(Learner):
             for v in self.target.down.weight_array
         ]
         if max(abs_np(cross_correlation_upper)) > 0.9:
-            self.hits[argmax(cross_correlation_upper)] = max(abs_np(cross_correlation_upper))
+            chain = argmax(cross_correlation_upper)
+            self.hits[chain] = max(abs_np(cross_correlation_upper))
+            self.layer_models['upper'].append(w)
         if max(abs_np(cross_correlation_lower)) > 0.9:
-            self.hits[self.target.up.k + argmax(cross_correlation_lower)] = max(abs_np(cross_correlation_lower))
+            chain = argmax(cross_correlation_lower)
+            self.hits[self.target.up.k + chain] = max(abs_np(cross_correlation_lower))
+            self.layer_models['lower'].append(w)
