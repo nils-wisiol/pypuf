@@ -1,6 +1,7 @@
 import logging
 import os
-from datetime import datetime
+import pickle
+from datetime import datetime, timedelta
 from hashlib import sha256
 from typing import List
 
@@ -22,6 +23,10 @@ class StudyBase:
         self.results_file = results_file
         self.results = None
         self._load_results()
+
+        self.log_file = results_file + '.log.pickle'
+        self.log = None
+        self.log_saved = datetime.fromtimestamp(0)
 
         self._cached_parameter_matrix = self.parameter_matrix()
 
@@ -79,6 +84,11 @@ class StudyBase:
         logging.debug(f'saving results file {self.results_file} ({len(self.results)} results)')
         self.results.to_pickle(self.results_file)
         self.results.to_csv(f'{self.results_file}.csv')
+
+    def _save_log(self, force=False) -> None:
+        if force or datetime.now() - self.log_saved > timedelta(minutes=10):
+            with open(self.log_file, 'wb') as f:
+                pickle.dump(self.log, f)
 
     def _known_parameter_hashes(self) -> List[str]:
         return list(self.results.get('param_hash', []))
