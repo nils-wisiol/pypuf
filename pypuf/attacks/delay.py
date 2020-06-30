@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Tuple, List
+from typing import Callable, Tuple, List, Union, Optional
 
 import numpy as np
 import tensorflow as tf
@@ -7,7 +7,7 @@ from cma import CMA
 from scipy.stats import pearsonr
 
 from .. import random
-from ..io import transform_challenge_11_to_01, ChallengeResponseSet
+from ..io import transform_challenge_11_to_01, ChallengeResponseSet, ChallengeReliabilitySet
 from ..metrics.common import approx_accuracy, approx_similarity_data
 from ..simulation.base import Simulation
 from ..simulation.delay import LTFArray, ArbiterPUF
@@ -20,47 +20,7 @@ class EarlyStop(BaseException):
         self.reasons = reasons
 
 
-class GapAttack:
-
-    def __init__(self, crp_set: ChallengeResponseSet, k_max: int, transform: Callable,
-                 pop_size: int = 25,
-                 abort_delta: float = 5e-3,
-                 abort_iter: int = 500,
-                 fitness_threshold: float = .9,
-                 pool_threshold: float = .9,
-                 sigma: float = 1.0) -> None:
-        self.crp_set = crp_set
-        self.k_max = k_max
-        self.n = crp_set.challenge_length
-        self.transform = transform
-        self.pop_size = pop_size
-        self.abort_delta = abort_delta
-        self.abort_iter = abort_iter
-        self.fitness_threshold = fitness_threshold
-        self.pool_threshold = pool_threshold
-        self.sigma = sigma
-        self.pool_weights = []
-        self.pool_responses = []
-        self.pool_response_similarity_hist = None
-        self.attempt = 0
-        self.traces = []
-        self.generations = 0
-
-        self.current_challenges = None
-        self.fitness_history = None
-        self.sigma_history = None
-        self.current_responses = None
-
-        if crp_set.responses.shape[1] != 1:
-            raise ValueError(f'GapAttack only supports 1-bit responses, but responses of shape '
-                             f'{crp_set.responses.shape} were given (expected (N, 1, r)).')
-
-        # Compute PUF Reliabilities. These remain static throughout the optimization.
-        self.puf_reliabilities = self.reliability_crp_set(self.crp_set.responses)
-        self.puf_reliabilities_centered = self.puf_reliabilities - tf.reduce_mean(self.puf_reliabilities)
-
-        # Linearize challenges for faster LTF computation (shape=(N,k_max,n))
-        self._linearized_challenges = self.transform(self.crp_set.challenges, k=self.k_max)
+class GapChainAttack:
 
     @classmethod
     def _pearsonr(cls, x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
@@ -76,8 +36,9 @@ class GapAttack:
         return corr
 
     def _reliability_pearson(self, x: tf.Tensor) -> tf.Tensor:
+        # TODO make sure this is correct
         centered_x = x - tf.reduce_mean(x, axis=0)
-        return self._pearsonr_centered(self.puf_reliabilities_centered, centered_x)
+        return self._pearsonr_centered(self._puf_reliabilities_centered, centered_x)
 
     def _init_learner_state(self, seed: int) -> np.ndarray:
         state = np.empty(shape=(self.n + 1))
@@ -90,87 +51,86 @@ class GapAttack:
         return tf.math.greater(tf.transpose(tf.abs(delay_diffs)), eps)
 
     @staticmethod
-    def reliability_crp_set(responses: np.ndarray) -> tf.Tensor:
-        # Convert to 0/1 from 1/-1
-        N, _, r = responses.shape
-        responses = responses.reshape(N, r)
-        responses = transform_challenge_11_to_01(responses)
-        return tf.constant(np.abs(responses.shape[1] / 2 - np.sum(responses, axis=-1)), dtype=tf.double)
+    def reliability_crp_set(crps: ChallengeReliabilitySet) -> tf.Tensor:
+        r"""
+        How to use the reliabilities given. This is actually part of the fitness function,
+        but separated as precomputation for performance.
 
-    def objective(self, state: tf.Tensor, challenges: tf.Tensor) -> tf.Tensor:
+        This implementation returns as reliability for any given challenge ::math`c`
+
+        ..math:: \left| \frac{l}{2} - \sum_{i=1}^l r_i \right|,
+
+        where the math::`r_i` are the `l` responses recorded to challenge ::math`c`, in 0/1 notation,
+        following the definition by Becker [Bec15]_.
+
+        As the argument to this function is a ChallengeReliabilitySet, containing the average response
+        to each challenge in -1/1 notation, the implementation differs from above formula.
+        """
+        N = crps.reliabilities.shape[0]
+        return 5 * np.absolute(crps.reliabilities).reshape((N,)) / 2  # TODO fix constant r=5
+
+    def __init__(self, crps: ChallengeReliabilitySet, avoid_responses: List[np.ndarray], seed: int,
+                 cma_kwargs: Optional[dict], sigma: float, pop_size: int,
+                 abort_delta: float,
+                 abort_iter: int, stop_early: bool, minimum_fitness_by_sigma: dict) -> None:
+        # parameters
+        self.n = crps.challenge_length
+        self.crps = crps
+        self.challenges = np.array(crps.challenges, dtype=np.float64)
+        self.avoid_responses = avoid_responses
+        self.seed = seed
+        self.cma_kwargs = cma_kwargs
+        self.sigma = sigma
+        self.pop_size = pop_size
+        self.abort_delta = abort_delta
+        self.abort_iter = abort_iter
+        self.stop_early = stop_early
+        self.minimum_fitness_by_sigma = minimum_fitness_by_sigma
+
+        # histories
+        self.fitness_history = []
+        self.sigma_history = []
+        self.avoid_responses_score_history = []
+
+        # learner state
+        self.cma = None
+        self.current_result = None
+        self.current_fitness = None
+        self.current_responses = None
+        self._callback_generation = None
+
+        # learner result
+        self.result = None
+        self.weights = None
+        self.eps = None
+        self.fitness = None
+        self.generations = None
+        self.early_stop_reasons = None
+        self.abort_reasons = None
+
+        # precomputation
+        puf_reliabilities = self.reliability_crp_set(self.crps)
+        self._puf_reliabilities_centered = puf_reliabilities - tf.reduce_mean(puf_reliabilities)
+
+    def objective(self, state: tf.Tensor) -> tf.Tensor:
         # Weights and epsilon have the first dim as number of population
         weights = state[:, :self.n]
         eps = state[:, -1]
 
         # compute model reliabilities
-        delay_diffs = tf.linalg.matmul(weights, challenges.T)
+        delay_diffs = tf.linalg.matmul(weights, self.challenges.T)
         model_reliabilities = self.reliability_model(delay_diffs, eps)
 
         # compute pearson correlation coefficients with target reliabilities
         x = tf.cast(model_reliabilities, tf.double)
         fitness = tf.abs(self._reliability_pearson(x) - tf.constant(1, dtype=tf.float64))
 
-        # record fitness
+        # record fitness and current responses
         best = tf.argmin(fitness)
-        # self.fitness_history.append(fitness[best].numpy())  # WRONG
+        # self.fitness_history.append(fitness[best].numpy())  # TODO WRONG
         self.current_responses = tf.sign(delay_diffs[best])
 
         return fitness
-
-    def learn(self, seed: int, max_retries: int = np.inf) -> Simulation:
-        current_attempt = 0
-
-        # main learning loop
-        while len(self.pool_weights) < self.k_max and current_attempt < max_retries:
-            chain_seed = random.seed(f'GapAttack on seed {seed} attempt {self.attempt}')
-            logging.debug(f'Attempting to learn {len(self.pool_weights) + 1}-th chain with seed {chain_seed} '
-                          f'(attempt {self.attempt})')
-
-            weights, eps, fitness, abort_reasons, early_stop_reasons, generations = \
-                self.learn_chain(len(self.pool_weights), chain_seed)
-            discard_reasons = self.discard_chain(weights, fitness, self.pool_weights)
-            logging.debug(f'Found chain with fitness {fitness:.3f}, aborting/early stopping '
-                          f'due to {", ".join(abort_reasons + early_stop_reasons)}')
-
-            self.traces.append({
-                'weights': weights,
-                'eps': eps,
-                'fitness': fitness,
-                'fitness_hist': self.fitness_history,
-                'sigma_hist': self.sigma_history,
-                'response_sim_hist': self.pool_response_similarity_hist,
-                'abort_reasons': abort_reasons,
-                'discard_reasons': discard_reasons,
-                'early_stop_reasons': early_stop_reasons,
-                'generations': generations,
-            })
-
-            self.attempt += 1
-            current_attempt += 1
-            self.generations += generations
-
-            if discard_reasons or early_stop_reasons:
-                logging.debug('Discarding chain due to ' + ', '.join(discard_reasons + early_stop_reasons))
-            else:
-                # accept this chain, record weights and response behavior
-                self.pool_weights.append(weights)
-                self.pool_responses.append(self.current_responses.numpy())
-                logging.debug(f'Adding {len(self.pool_weights)}-th chain to pool, '
-                              f'{self.k_max - len(self.pool_weights)} still missing')
-
-        if self.pool_weights:
-            # if training accuracy < 0.5, we flip a chain to flip all outputs
-            model = LTFArray(np.array(self.pool_weights), self.transform)
-            if np.average(approx_accuracy(model, self.crp_set)) < .5:
-                model.weight_array[0] *= -1
-        else:
-            # if we couldn't find a single chain, just provide a random model to not break the interface
-            model = ArbiterPUF(
-                n=self.n, transform=self.transform,
-                seed=random.seed(f'GapAttack on seed {seed} no result guess'),
-            )
-
-        return model
 
     def early_stop(self, cma: CMA) -> List[str]:
         """
@@ -190,94 +150,216 @@ class GapAttack:
         This function is called once per generation and is passed the CMA learner object.
         """
         reasons = []
-        if self.current_responses is not None and self.pool_responses:
+
+        # check if response behavior is similar to any of those that should be avoided
+        if self.current_responses is not None and self.avoid_responses:
             # compute a similarity score of the current fittest chain to each known chain
             scores = [
                 3 * np.absolute(.5 - np.average(approx_similarity_data(r, self.current_responses.numpy())))
-                for idx, r in enumerate(self.pool_responses)
+                for r in self.avoid_responses
             ]
-            self.pool_response_similarity_hist.append(scores)
+            self.avoid_responses_score_history.append(scores)
             score = max(scores)
             if .3 < cma.σ.numpy() < score:  # this is where the magic happens
                 reasons.append(f'similar to already accepted chain with similarity score {score:.4f} '
                                f'at sigma {cma.σ.numpy():.4f}')
-        if self.fitness_history and self.fitness_history[-1] > self.fitness_threshold and cma.σ < .5:
-            reasons.append(f'low sigma high fitness sigma={cma.σ.numpy():.4f} fitness={self.fitness_history[-1]:.4f}')
+
+        # check if fitness is not good enough for current sigma value
+        if self.fitness_history:
+            current_fitness = self.fitness_history[-1]
+            for sigma, min_fitness in self.minimum_fitness_by_sigma.items():
+                if cma.σ < sigma and current_fitness > min_fitness:
+                    reasons.append(f'low sigma high fitness sigma={cma.σ.numpy():.4f} fitness={current_fitness:.4f}')
+
         return reasons
 
-    def learn_chain(self, l: int, seed: int, callback: Callable = None,
-                    cma_kwargs: dict = None) -> Tuple[np.ndarray, float, float, List[str], List[str], int]:
-
-        # prepare specialized objective function
-        self.current_challenges = np.array(self._linearized_challenges[:, l, :], dtype=np.float64)
-        self.fitness_history = []
-        self.sigma_history = []
-        self.pool_response_similarity_hist = []
-        self.current_responses = None
-
-        def objective(state: tf.Tensor) -> tf.Tensor:
-            return self.objective(state, self.current_challenges)
-
-        # seed tensorflow for reproducible results
-        tf.random.set_seed(random.seed(f'GapAttack tensorflow seed for seed {seed}'))
-
-        # initial learning state
-        init_state = self._init_learner_state(seed)
+    def prepare(self) -> None:
+        # for reproducible results
+        tf.random.set_seed(random.seed(f'GapAttack tensorflow seed for seed {self.seed}'))
+        init_state = self._init_learner_state(self.seed)
+        self._callback_generation = 0
 
         # prepare callback function, will be called after each generation
         def callback_hook(_cma: CMA, logger: logging.Logger) -> None:
-            if _cma.generation % (self.abort_iter // 10) == 0:
-                logger.info(f'generation {_cma.generation:n}/{self.abort_iter:n} '
-                            f'({_cma.generation/self.abort_iter:.1%})')
+            # only one callback per generation
+            if _cma.generation == self._callback_generation:
+                return
+            self._callback_generation = _cma.generation
+
+            # record data
             self.sigma_history.append(_cma.σ.numpy())
             self.fitness_history.append(_cma.best_fitness())
-            early_stopping = self.early_stop(_cma)
-            if early_stopping:
-                raise EarlyStop(early_stopping)
-            if callback:
-                callback(_cma, _cma.m[:-1], _cma.m[-1])
+
+            # stop early
+            early_stop_reasons = self.early_stop(_cma)
+            if early_stop_reasons and self.stop_early:
+                raise EarlyStop(early_stop_reasons)
 
         # initialize learner
-        cma = CMA(
+        self.cma = CMA(
             initial_solution=init_state,
             initial_step_size=self.sigma,
-            fitness_function=objective,
+            fitness_function=self.objective,
             termination_no_effect=self.abort_delta,
             population_size=self.pop_size,
             callback_function=callback_hook,
-            **(cma_kwargs or {}),
+            **(self.cma_kwargs or {}),
         )
 
-        # with tf.device('/GPU:0'):
-        # learn
+    def step(self) -> bool:
         try:
-            w, fitness = cma.search(max_generations=self.abort_iter)
-            early_stop_reasons = []
+            self.current_result, self.current_fitness = self.cma.search(max_generations=1)
+            if self.cma.termination_criterion_met:
+                self.early_stop_reasons = []
+                return False
+            else:
+                return True
         except EarlyStop as e:
-            w, fitness = cma.best_solution(), cma.best_fitness()
-            early_stop_reasons = e.reasons
+            self.current_result, self.current_fitness = self.cma.best_solution(), self.cma.best_fitness()
+            self.early_stop_reasons = e.reasons
+            return False
 
-        # extract results
-        weights, eps = w[:-1], w[-1]
-        termination_reasons = [key for key, val in cma.should_terminate(True)[1].items() if val]
+    def finish(self) -> None:
+        self.result = self.current_result
+        self.weights, self.eps = self.result[:-1], self.result[-1]
+        self.fitness = self.current_fitness
+        self.abort_reasons = [key for key, val in self.cma.should_terminate(True)[1].items() if val]
 
-        return weights, eps, fitness, termination_reasons, early_stop_reasons, cma.generation
 
-    def discard_chain(self, weights: np.ndarray, fitness: float, pool: List[np.ndarray]) -> List[str]:
+class GapAttack:
+
+    def __init__(self,
+                 crps: ChallengeReliabilitySet,
+                 k_max: int,
+                 transform: Callable,
+                 discard_threshold: float,
+                 pop_size: int = 25,
+                 abort_delta: float = 5e-3,
+                 abort_iter: int = 500,
+                 minimum_fitness_by_sigma: dict = None,
+                 sigma: float = 1.0,
+                 stop_early: bool = True,
+                 ) -> None:
+        # parameters
+        self.n = crps.challenge_length
+        self.crps = crps
+        self.k_max = k_max
+        self.transform = transform
+        self.pop_size = pop_size
+        self.abort_delta = abort_delta
+        self.abort_iter = abort_iter
+        self.minimum_fitness_by_sigma = minimum_fitness_by_sigma
+        self.discard_threshold = discard_threshold
+        self.sigma = sigma
+        self.stop_early = stop_early
+
+        # learner status
+        self.learner = None
+        self.results = []
+        self.avoid_responses = []
+        self.attempts = 0
+        self.traces = []
+        self.generations = 0
+
+        # result
+        self.model = None
+
+        # sanity checks
+        if crps.reliabilities.shape[1] != 1:
+            raise ValueError(f'GapAttack only supports 1-bit responses, but reliabilities of shape '
+                             f'{crps.reliabilities.shape} were given (expected (N, 1, r)).')
+
+        # precomputations
+        self._linearized_challenges = self.transform(self.crps.challenges, k=self.k_max)
+
+    def discard_result(self, learner: GapChainAttack) -> List[str]:
         discard_reasons = []
-
-        # normalize weights to have positive first weight
+        weights = learner.result[:-1]
         if weights[0] < 0:
-            weights *= -1
+            weights *= -1  # normalize weights to have positive first weight
 
         # check if fitness is sufficient (below)
-        if fitness >= self.fitness_threshold or np.isnan(fitness) or np.isinf(fitness):
+        if learner.fitness >= self.discard_threshold or np.isnan(learner.fitness) or np.isinf(learner.fitness):
             discard_reasons.append('fitness too high')
 
         # Check if learned model (w) is a 'new' chain (not correlated to other chains)
-        for i, v in enumerate(pool):
+        for i, v in enumerate(self.results):
             corr = tf.abs(pearsonr(weights, v)[0])
-            if corr > self.pool_threshold:
+            if corr > .9:
                 discard_reasons.append(f'too similar, to learned chain {i} (correlation {corr.numpy():.2f})')
 
+        # check if stopped early
+        discard_reasons += learner.early_stop_reasons
+
         return discard_reasons
+
+    def prepare(self, seed: int) -> None:
+        seed = random.seed(f'GapAttack on seed {seed} attempt {self.attempts}')
+        target_chain = len(self.results)
+        logging.debug(f'Attempting to learn {target_chain + 1}-th chain with seed {seed} (attempt {self.attempts})')
+
+        self.learner = GapChainAttack(
+            crps=ChallengeReliabilitySet(self._linearized_challenges[:, target_chain, :], self.crps.reliabilities),
+            avoid_responses=self.avoid_responses,
+            seed=seed,
+            cma_kwargs=None,
+            sigma=self.sigma,
+            pop_size=self.pop_size,
+            abort_delta=self.abort_delta,
+            abort_iter=self.abort_iter,
+            stop_early=self.stop_early,
+            minimum_fitness_by_sigma=self.minimum_fitness_by_sigma,
+        )
+        self.learner.prepare()
+
+    def accept_discard(self) -> List[str]:
+        self.attempts += 1
+        self.generations += self.learner.cma.generation
+
+        discard_reasons = self.discard_result(self.learner)
+        if discard_reasons:
+            logging.debug('Discarding chain due to ' + ', '.join(discard_reasons))
+            return discard_reasons
+        else:
+            # accept this chain, record weights and response behavior
+            self.results.append(self.learner.result[:-1])
+            self.avoid_responses.append(self.learner.current_responses.numpy())
+            logging.debug(f'Adding {len(self.results)}-th chain to pool, '
+                          f'{self.k_max - len(self.results)} still missing')
+            return []
+
+    def build_model(self) -> LTFArray:
+        if self.results:
+            # if training accuracy < 0.5, we flip a chain to flip all outputs
+            self.model = LTFArray(np.array(self.results), self.transform)
+            crps = ChallengeResponseSet(self.crps.challenges, np.sign(self.crps.reliabilities))
+            if np.average(approx_accuracy(self.model, crps)) < .5:  # TODO
+                self.model.weight_array[0] *= -1
+        else:
+            # if we couldn't find a single chain, just provide a random model to not break the interface
+            self.model = ArbiterPUF(
+                n=self.n, transform=self.transform,
+                seed=random.seed('GapAttack on seed no result guess'),
+            )
+
+        return self.model
+
+    def learn(self, seed: int, max_retries: int = np.inf) -> Simulation:
+        current_attempt = 0
+
+        # loop until k_max chains found
+        while len(self.results) < self.k_max and current_attempt < max_retries:
+            self.prepare(seed)
+
+            # loop until termination
+            while self.learner.step():
+                pass
+            self.learner.finish()
+
+            logging.debug(f'Found result with fitness {self.learner.fitness:.3f}, aborting/early stopping '
+                          f'due to {", ".join(self.learner.abort_reasons + self.learner.early_stop_reasons)}')
+
+            # see if result is good
+            self.accept_discard()
+
+        return self.build_model()
