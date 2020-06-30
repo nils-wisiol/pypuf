@@ -197,14 +197,14 @@ def approx_accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> n
     Returns an array of shape :math:`(m,)`.
 
     >>> from pypuf.simulation.delay import XORArbiterPUF
-    >>> from pypuf.io import SimulationChallengeResponseSet
+    >>> from pypuf.io import ChallengeResponseSet
     >>> from pypuf.metrics.common import approx_accuracy
     >>> puf = XORArbiterPUF(n=128, k=4, noisiness=.1, seed=1)
-    >>> test_set = SimulationChallengeResponseSet(puf, N=1000, seed=2)
+    >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2)
     >>> approx_accuracy(puf, test_set)
     array([0.823])
     >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.3, seed=2)
-    >>> test_set = SimulationChallengeResponseSet(puf, N=1000, seed=2, r=5)
+    >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2, r=5)
     >>> approx_accuracy(puf, test_set)
     array([0.706])
     """
