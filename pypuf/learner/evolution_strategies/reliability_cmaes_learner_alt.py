@@ -7,7 +7,7 @@
 from cma import CMA
 from numpy import array, zeros, mean, average, absolute, expand_dims, float64
 from tensorflow import transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul, abs as abs_tf, \
-    Variable, add, divide, subtract, ones, multiply, convert_to_tensor, less, constant, where
+    Variable, add, divide, subtract, ones, multiply, convert_to_tensor, less, constant, where, greater
 from tensorflow_core.python.framework.random_seed import set_seed
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr, mode
@@ -74,7 +74,10 @@ class ReliabilityBasedCMAES(Learner):
         difference is is close to zero: delta_diff < CONST_EPSILON
     """
 
-    def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id):
+    MAX_CORR = 0.6
+
+    def __init__(self, training_set, k, n, transform, combiner, fitness, abort_delta, random_seed, logger, max_tries,
+                 gpu_id):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -97,6 +100,7 @@ class ReliabilityBasedCMAES(Learner):
         self.n = n
         self.transform = transform
         self.combiner = combiner
+        self.fitness = fitness
         self.abort_delta = abort_delta
         self.prng = RandomState(random_seed)
         self.chains_learned = zeros((self.k, self.n))
@@ -142,9 +146,19 @@ class ReliabilityBasedCMAES(Learner):
 
         # Calculate pearson coefficient
         x = Variable(model_reliabilities, double)
-        y = Variable(self.puf_reliabilities, double)
+        y = Variable(self.current_reliabilities, double)
         corr = tf_pearsonr(x, y)
-        return abs(1 - corr)
+
+        # MOD: Calculate correlation with already learned chains
+        corr2 = 0
+        # Remove punishment for approaching already learned chains
+        if self.fitness == 'penalty':
+            if len(self.pool) > 0:
+                corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
+                mask = greater(corr2, self.MAX_CORR)
+                corr2 = reduce_sum(cast(mask, double), axis=0)
+
+        return abs(1 - corr) + corr2
 
     def test_model(self, model):
         """
@@ -178,7 +192,7 @@ class ReliabilityBasedCMAES(Learner):
         meta_data, self.pool = {}, []
         meta_data['discard_count'] = {i: [] for i in range(self.k)}
         meta_data['iteration_count'] = {i: [] for i in range(self.k)}
-        self.current_reliabilities = ones((self.training_set.N, 1), dtype=double)
+        self.current_reliabilities = self.puf_reliabilities
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
@@ -219,21 +233,23 @@ class ReliabilityBasedCMAES(Learner):
                 self.fitness_histories.append(self.current_fitness)
                 n_chain += 1
                 self.num_tries = 0
-                idx_unreliable = less(reliabilities_MODEL(
-                    matmul(expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
-                           cast(self.current_challenges.T, double))), constant([1], dtype=double))
-                self.current_reliabilities = where(
-                    condition=idx_unreliable,
-                    x=self.current_reliabilities,
-                    y=ones(self.training_set.N, dtype=double),
-                )
-                """
-                self.current_reliabilities = combine_reliabilities(
-                    rels_1=self.current_reliabilities,
-                    rels_2=reliabilities_MODEL(matmul(expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
-                                                      cast(self.current_challenges.T, double))),
-                )
-                """
+                if self.fitness == 'combine' or self.fitness == 'remove':
+                    idx_unreliable = less(reliabilities_MODEL(
+                        matmul(expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
+                               cast(self.current_challenges.T, double))), constant([1], dtype=double))
+                    if self.fitness == 'combine':
+                        self.current_reliabilities = combine_reliabilities(
+                            rels_1=self.current_reliabilities,
+                            rels_2=reliabilities_MODEL(matmul(
+                                expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
+                                cast(self.current_challenges.T, double))),
+                        )
+                    if self.fitness == 'remove':
+                        self.current_reliabilities = where(
+                            condition=idx_unreliable,
+                            x=self.current_reliabilities,
+                            y=ones(self.training_set.N, dtype=double),
+                        )
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(array(self.pool), self.transform, self.combiner)

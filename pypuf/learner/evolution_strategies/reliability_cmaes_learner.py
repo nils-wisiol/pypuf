@@ -5,9 +5,9 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax
-from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul,\
-    abs as abs_tf, Variable
+from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax, expand_dims
+from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul, \
+    abs as abs_tf, Variable, less, convert_to_tensor, constant, where, ones, add, divide, multiply, subtract
 from tensorflow_core.python.framework.random_seed import set_seed
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr, mode
@@ -33,6 +33,19 @@ def reliabilities_MODEL(delay_diffs):
     """
     res = transpose(abs_tf(delay_diffs))
     return cast(res, double)
+
+
+def combine_reliabilities(rels_1, rels_2):
+    """
+        Computes the superimposition of each two reliabilities along given reliability arrays
+        :param rels_1: array of reliabilities
+        :param rels_2: array of reliabilities
+        :return: array of superimpositions
+    """
+    r1 = cast(add(divide(rels_1, 2), 0.5), dtype=double)
+    r2 = cast(add(divide(rels_2, 2), 0.5), dtype=double)
+    return multiply(subtract(r1 * r2 + subtract(ones(r1.shape, dtype=double), r1)
+                             * subtract(ones(r2.shape, dtype=double), r2), 0.5), 2)
 
 
 def tf_pearsonr(x, y):
@@ -64,7 +77,7 @@ class ReliabilityBasedCMAES(Learner):
     MAX_CORR = 0.6
 
     def __init__(self, training_set, k, n, transform, combiner, abort_delta, random_seed, logger, max_tries, gpu_id,
-                 target):
+                 fitness, target):
         """Initialize a Reliability based CMAES Learner for the specified LTF array
 
         :param training_set:    Training set, a data structure containing repeated
@@ -87,6 +100,7 @@ class ReliabilityBasedCMAES(Learner):
         self.n = n
         self.transform = transform
         self.combiner = combiner
+        self.fitness = fitness
         self.abort_delta = abort_delta
         self.prng = RandomState(random_seed)
         self.chains_learned = zeros((self.k, self.n))
@@ -99,6 +113,7 @@ class ReliabilityBasedCMAES(Learner):
         self.fitness_histories = []
         self.pool = []
         self.current_challenges = None
+        self.current_reliabilities = None
         self.target = target
         self.hits = zeros(self.target.up.k + self.target.down.k)
         self.layer_models = {'upper': [], 'lower': []}
@@ -134,16 +149,17 @@ class ReliabilityBasedCMAES(Learner):
 
         # Calculate pearson coefficient
         x = Variable(model_reliabilities, double)
-        y = Variable(self.puf_reliabilities, double)
+        y = Variable(self.current_reliabilities, double)
         corr = tf_pearsonr(x, y)
 
         # MOD: Calculate correlation with already learned chains
         corr2 = 0
         # Remove punishment for approaching already learned chains
-        if len(self.pool) > 0:
-            corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
-            mask = greater(corr2, self.MAX_CORR)
-            corr2 = reduce_sum(cast(mask, double), axis=0)
+        if self.fitness == 'penalty':
+            if len(self.pool) > 0:
+                corr2 = abs_tf(tf_pearsonr(array(self.pool).T, transpose(weights)))
+                mask = greater(corr2, self.MAX_CORR)
+                corr2 = reduce_sum(cast(mask, double), axis=0)
 
         return abs(1 - corr) + corr2
 
@@ -179,6 +195,7 @@ class ReliabilityBasedCMAES(Learner):
         meta_data = {}
         meta_data['discard_count'] = {i: [] for i in range(self.k)}
         meta_data['iteration_count'] = {i: [] for i in range(self.k)}
+        self.current_reliabilities = self.puf_reliabilities
         # For k chains, learn a model and add to pool if "it is new"
         n_chain = 0
         while n_chain < self.k:
@@ -223,6 +240,23 @@ class ReliabilityBasedCMAES(Learner):
                 if all(self.hits[:self.target.up.k]):
                     break
                 self.num_tries = 0
+                if self.fitness == 'combine' or self.fitness == 'remove':
+                    idx_unreliable = less(reliabilities_MODEL(
+                        matmul(expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
+                               cast(self.current_challenges.T, double))), constant([1], dtype=double))
+                    if self.fitness == 'combine':
+                        self.current_reliabilities = combine_reliabilities(
+                            rels_1=self.current_reliabilities,
+                            rels_2=reliabilities_MODEL(matmul(
+                                expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
+                                cast(self.current_challenges.T, double))),
+                        )
+                    if self.fitness == 'remove':
+                        self.current_reliabilities = where(
+                            condition=idx_unreliable,
+                            x=self.current_reliabilities,
+                            y=ones(self.training_set.N, dtype=double),
+                        )
 
         # Test LTFArray. If accuracy < 0.5, we flip the first chain, hence the output bits
         model = LTFArray(array(self.pool), self.transform, self.combiner)

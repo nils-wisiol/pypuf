@@ -35,13 +35,34 @@ class CustomLayerIPUFAttackStudy(Study):
                     gpu_id=1,
                     separate=separate,
                     heuristic=heuristic,
+                    fitness=fitness,
                 ),
             )
-            for n in [128]
             for noisiness in [0.05]
-            for k_up, k_down, extra, N in [
-                (1, 16, 9, 2 * M),
-                (1, 16, 9, 5 * M),
+            # max number of chains that are learned is k_up + extra
+            for n, k_up, k_down, extra, N in [
+                # (2, 2, 2, 200 * k),
+                # (4, 4, 12, 2 * M),
+                # (2, 8, 8, 2 * M),
+                # (8, 1, 8, 2 * M),
+                (64, 1, 16, 7, 5 * M),      # 5h    0.5GB
+                (64, 2, 16, 10, 10 * M),    # 10h   1.25GB
+                (64, 4, 16, 12, 20 * M),    # 40h   2.5GB
+                (64, 8, 16, 16, 40 * M),    # 160h  5GB
+                (64, 1, 32, 7, 10 * M),     # 10h   1.25GB
+                (64, 2, 32, 10, 20 * M),    # 20h   2.5GB
+                (64, 4, 32, 12, 40 * M),    # 80h   5GB
+
+                (128, 1, 16, 7, 10 * M),    # 20h   1.25GB
+                (128, 2, 16, 10, 20 * M),   # 40h   2.5GB
+                (128, 4, 16, 12, 40 * M),   # 160h  5GB
+                (128, 1, 32, 7, 20 * M),    # 20h   2.5GB
+                (128, 2, 32, 10, 40 * M),   # 40h   5GB
+            ]
+            for fitness in [
+                'penalty',
+                # 'combine',
+                # 'remove',
             ]
             for layer, heuristic in [
                 ('upper', [1, 0, 1, 1]),
@@ -52,7 +73,7 @@ class CustomLayerIPUFAttackStudy(Study):
             for R in [51]
             for eps in [0.9]
             for separate in [False]
-            for seed in range(10)
+            for seed in range(100)
         ]
 
     def plot(self):

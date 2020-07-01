@@ -37,6 +37,7 @@ class Parameters(NamedTuple):
     gpu_id: int
     separate: bool
     heuristic: list
+    fitness: str
 
 
 class Result(NamedTuple):
@@ -44,7 +45,6 @@ class Result(NamedTuple):
     measured_time: float
     pid: int
     accuracy: float
-    accuracy_layer: float
     iterations: int
     stops: str
     max_possible_acc: float
@@ -309,6 +309,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             n=self.target_layer.n,
             transform=self.target_layer.transform,
             combiner=self.target_layer.combiner,
+            fitness=self.parameters.fitness,
             abort_delta=self.parameters.abort_delta,
             random_seed=self.prng.randint(2 ** 32),
             max_tries=self.parameters.max_tries,
@@ -329,9 +330,6 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             Analyze the results and return the Results object.
         """
         n = self.parameters.n + 2
-
-        # Accuracy of the learned model using 10000 random samples
-        empirical_accuracy = 1 - approx_dist(self.target_layer, self.model, 10000, self.prng)
 
         # Accuracy of the base line Noisy LTF. Can be < 1.0 since it is noisy
         best_empirical_accuracy = 1 - approx_dist(self.target_layer, self.target_layer, 10000, self.prng)
@@ -396,8 +394,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             experiment_id=self.id,
             measured_time=self.measured_time,
             pid=getpid(),
-            accuracy=empirical_accuracy,
-            accuracy_layer=accuracy_layer,
+            accuracy=accuracy_layer,
             iterations=self.learner.num_tries,
             stops=self.learner.stops,
             max_possible_acc=best_empirical_accuracy,
