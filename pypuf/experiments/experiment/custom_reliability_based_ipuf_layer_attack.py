@@ -364,8 +364,8 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             transform=self.simulation.up.transform,
             combiner=self.simulation.up.combiner,
         ) for i in range(self.parameters.k_up)]
-        cross_correlation_rel_lower = empty((self.parameters.k_down + self.parameters.extra, self.parameters.k_down))
-        cross_correlation_rel_upper = empty((self.parameters.k_down + self.parameters.extra, self.parameters.k_up))
+        cross_correlation_rel_lower = empty((self.learning_meta_data['n_chains'], self.parameters.k_down))
+        cross_correlation_rel_upper = empty((self.learning_meta_data['n_chains'], self.parameters.k_up))
         for i, chain in enumerate(model_chains):
             chain_reliabilities = absolute(chain.val(self.ts.challenges))
             theoretical_stab = erf(chain_reliabilities / sqrt(2) / self.parameters.noisiness)

@@ -265,6 +265,7 @@ class ReliabilityBasedCMAES(Learner):
             model = LTFArray(array(self.pool), self.transform, self.combiner)
         meta_data['fitness_histories'] = self.fitness_histories
         meta_data['layer_models'] = self.layer_models
+        meta_data['n_chains'] = n_chain
 
         return model, meta_data
 
@@ -280,11 +281,11 @@ class ReliabilityBasedCMAES(Learner):
             )[0], 2)
             for v in self.target.down.weight_array
         ]
-        if max(abs_np(cross_correlation_upper)) > 0.9:
+        if max(abs_np(cross_correlation_upper)) > 0.8:
             chain = argmax(cross_correlation_upper)
             self.hits[chain] = max(abs_np(cross_correlation_upper))
             self.layer_models['upper'].append(w)
-        if max(abs_np(cross_correlation_lower)) > 0.9:
+        if max(abs_np(cross_correlation_lower)) > 0.8:
             chain = argmax(cross_correlation_lower)
             self.hits[self.target.up.k + chain] = max(abs_np(cross_correlation_lower))
             self.layer_models['lower'].append(w)
