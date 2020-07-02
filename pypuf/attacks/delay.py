@@ -25,14 +25,24 @@ class GapChainAttack:
 
     @classmethod
     def _pearsonr(cls, x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+        """
+        Calculates Pearson Correlation Coefficient.
+        x and y are matrices with data vectors as columns.
+        Return array where index i,j is the pearson correlation of i'th
+        column vector in x and the j'th column vector in y.
+        """
         x_centered = x - tf.reduce_mean(x, axis=0)
         y_centered = y - tf.reduce_mean(y, axis=0)
         return cls._pearsonr_centered(x_centered, y_centered)
 
     @staticmethod
     def _pearsonr_centered(x_centered: tf.Tensor, y_centered: tf.Tensor) -> tf.Tensor:
-        cov_xy = tf.tensordot(x_centered, y_centered, axes=1)
-        auto_cov = tf.sqrt(tf.reduce_sum(tf.square(x_centered), axis=0) * tf.reduce_sum(tf.square(y_centered)))
+        cov_xy = tf.tensordot(tf.transpose(x_centered), y_centered, axes=1)
+        auto_cov = tf.sqrt(tf.tensordot(
+            tf.reduce_sum(tf.square(x_centered), axis=0),
+            tf.reduce_sum(tf.square(y_centered), axis=0),
+            axes=0,
+        ))
         corr = cov_xy / auto_cov
         return corr
 
@@ -73,7 +83,8 @@ class GapChainAttack:
     def __init__(self, crps: ChallengeReliabilitySet, avoid_responses: List[np.ndarray], seed: int,
                  cma_kwargs: Optional[dict], sigma: float, pop_size: int,
                  abort_delta: float,
-                 abort_iter: int, stop_early: bool, minimum_fitness_by_sigma: dict) -> None:
+                 abort_iter: int, stop_early: bool, minimum_fitness_by_sigma: dict, gap_attack) -> None:
+        # TODO add gap_attack type annotation GapAttack when upgrading to Python 3.8
         # parameters
         self.n = crps.challenge_length
         self.crps = crps
@@ -87,6 +98,7 @@ class GapChainAttack:
         self.abort_iter = abort_iter
         self.stop_early = stop_early
         self.minimum_fitness_by_sigma = minimum_fitness_by_sigma
+        self.gap_attack: GapAttack = gap_attack
 
         # histories
         self.fitness_history = []
@@ -244,6 +256,44 @@ class GapChainAttackContinuous(GapChainAttack):
         return random.prng(f'GapAttack initial state for seed {seed}').normal(0, 1, size=self.n)  # init weights
 
 
+class GapChainAttackPenalty(GapChainAttack):
+
+    AVOID_WEIGHTS_MASK_CORR = .6
+
+    def __init__(self, crps: ChallengeReliabilitySet, avoid_responses: List[np.ndarray], seed: int,
+                 cma_kwargs: Optional[dict], sigma: float, pop_size: int, abort_delta: float, abort_iter: int,
+                 stop_early: bool, minimum_fitness_by_sigma: dict, gap_attack) -> None:
+        super().__init__(crps, avoid_responses, seed, cma_kwargs, sigma, pop_size, abort_delta, abort_iter, stop_early,
+                         minimum_fitness_by_sigma, gap_attack)
+        self.avoid_weights = np.array(self.gap_attack.results)
+        self.current_penalty = None
+        self.current_penalty_corr = None
+
+    def objective(self, state: tf.Tensor) -> tf.Tensor:
+        fitness = super().objective(state)
+
+        if self.avoid_weights.shape[0]:
+            # compute absolute correlations with all weights that should be avoided
+            weights = state[:, :self.n]
+            corr = tf.abs(self._pearsonr(self.avoid_weights.T, tf.transpose(weights)))
+
+            # the correlation score is the sum of those
+            corr_score = tf.reduce_sum(corr, axis=0)
+
+            # penalty is the excess of the corr score of an individual over the average score
+            penalty = tf.maximum(corr_score - tf.reduce_mean(corr_score), 0)
+
+            # only log when we assume the caller is the CMA-ES
+            # other calls happen when someone uses best_fitness(), in that case we don't want to record anything
+            if state.shape[0] > 1:
+                self.current_penalty_corr = tf.reduce_sum(corr, axis=0).numpy()
+                self.current_penalty = penalty.numpy()
+
+            return fitness + penalty
+
+        return fitness
+
+
 class GapAttack:
 
     def __init__(self,
@@ -329,6 +379,7 @@ class GapAttack:
             abort_iter=self.abort_iter,
             stop_early=self.stop_early,
             minimum_fitness_by_sigma=self.minimum_fitness_by_sigma,
+            gap_attack=self,
         )
         self.learner.prepare()
 
