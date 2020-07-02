@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from cma import CMA
 from scipy.stats import pearsonr
+from tensorflow.python import erf
 
 from .. import random
 from ..io import ChallengeResponseSet, ChallengeReliabilitySet
@@ -226,6 +227,21 @@ class GapChainAttack:
         self.abort_reasons = [key for key, val in self.cma.should_terminate(True)[1].items() if val]
         if self.cma.generation == self.abort_iter:
             self.abort_reasons.append('max generations')
+
+
+class GapChainAttackContinuous(GapChainAttack):
+
+    @staticmethod
+    def reliability_model(delay_diffs: tf.Tensor, eps: tf.Tensor) -> tf.Tensor:
+        return erf(tf.transpose(tf.abs(delay_diffs)))
+
+    @staticmethod
+    def reliability_crp_set(crps: ChallengeReliabilitySet) -> tf.Tensor:
+        N = crps.reliabilities.shape[0]
+        return np.absolute(crps.reliabilities).reshape((N,)).astype(np.float64)
+
+    def _init_learner_state(self, seed: int) -> np.ndarray:
+        return random.prng(f'GapAttack initial state for seed {seed}').normal(0, 1, size=self.n)  # init weights
 
 
 class GapAttack:
