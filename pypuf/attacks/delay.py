@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Tuple, List, Union, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 import tensorflow as tf
@@ -7,7 +7,7 @@ from cma import CMA
 from scipy.stats import pearsonr
 
 from .. import random
-from ..io import transform_challenge_11_to_01, ChallengeResponseSet, ChallengeReliabilitySet
+from ..io import ChallengeResponseSet, ChallengeReliabilitySet
 from ..metrics.common import approx_accuracy, approx_similarity_data
 from ..simulation.base import Simulation
 from ..simulation.delay import LTFArray, ArbiterPUF
