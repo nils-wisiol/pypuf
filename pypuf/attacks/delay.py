@@ -222,7 +222,7 @@ class GapChainAttack:
 
     def finish(self) -> None:
         self.result = self.current_result
-        self.weights, self.eps = self.result[:-1], self.result[-1]
+        self.weights, self.eps = self.result[:self.n], self.result[-1]
         self.fitness = self.current_fitness
         self.abort_reasons = [key for key, val in self.cma.should_terminate(True)[1].items() if val]
         if self.cma.generation == self.abort_iter:
@@ -294,7 +294,7 @@ class GapAttack:
 
     def discard_result(self, learner: GapChainAttack) -> List[str]:
         discard_reasons = []
-        weights = learner.result[:-1]
+        weights = learner.result[:self.n]
         if weights[0] < 0:
             weights *= -1  # normalize weights to have positive first weight
 
@@ -342,7 +342,7 @@ class GapAttack:
             return discard_reasons
         else:
             # accept this chain, record weights and response behavior
-            self.results.append(self.learner.result[:-1])
+            self.results.append(self.learner.result[:self.n])
             self.avoid_responses.append(self.learner.current_responses.numpy())
             logging.debug(f'Adding {len(self.results)}-th chain to pool, '
                           f'{self.k_max - len(self.results)} still missing')
@@ -351,7 +351,7 @@ class GapAttack:
     def build_model(self) -> LTFArray:
         if self.results:
             # if training accuracy < 0.5, we flip a chain to flip all outputs
-            self.model = LTFArray(np.array(self.results), self.transform)
+            self.model = LTFArray(np.array(self.results)[:, :self.n], self.transform)
             crps = ChallengeResponseSet(self.crps.challenges, np.sign(self.crps.reliabilities))
             if np.average(approx_accuracy(self.model, crps)) < .5:  # TODO
                 self.model.weight_array[0] *= -1
