@@ -209,7 +209,7 @@ class GapChainAttack:
     def step(self) -> bool:
         try:
             self.current_result, self.current_fitness = self.cma.search(max_generations=1)
-            if self.cma.termination_criterion_met:
+            if self.cma.termination_criterion_met or self.cma.generation == self.abort_iter:
                 self.early_stop_reasons = []
                 return False
             else:
@@ -224,6 +224,8 @@ class GapChainAttack:
         self.weights, self.eps = self.result[:-1], self.result[-1]
         self.fitness = self.current_fitness
         self.abort_reasons = [key for key, val in self.cma.should_terminate(True)[1].items() if val]
+        if self.cma.generation == self.abort_iter:
+            self.abort_reasons.append('max generations')
 
 
 class GapAttack:
@@ -289,7 +291,7 @@ class GapAttack:
                 discard_reasons.append(f'too similar, to learned chain {i} (correlation {corr.numpy():.2f})')
 
         # check if stopped early
-        discard_reasons += learner.early_stop_reasons
+        discard_reasons += learner.early_stop_reasons or []
 
         return discard_reasons
 
