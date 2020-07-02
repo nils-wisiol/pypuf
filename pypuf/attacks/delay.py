@@ -241,6 +241,7 @@ class GapAttack:
                  minimum_fitness_by_sigma: dict = None,
                  sigma: float = 1.0,
                  stop_early: bool = True,
+                 chain_attack_type: type(GapChainAttack) = GapChainAttack,
                  ) -> None:
         # parameters
         self.n = crps.challenge_length
@@ -254,6 +255,7 @@ class GapAttack:
         self.discard_threshold = discard_threshold
         self.sigma = sigma
         self.stop_early = stop_early
+        self.chain_attack_type = chain_attack_type
 
         # learner status
         self.learner = None
@@ -300,7 +302,7 @@ class GapAttack:
         target_chain = len(self.results)
         logging.debug(f'Attempting to learn {target_chain + 1}-th chain with seed {seed} (attempt {self.attempts})')
 
-        self.learner = GapChainAttack(
+        self.learner = self.chain_attack_type(
             crps=ChallengeReliabilitySet(self._linearized_challenges[:, target_chain, :], self.crps.reliabilities),
             avoid_responses=self.avoid_responses,
             seed=seed,
