@@ -89,6 +89,7 @@ class StudyBase:
         if force or datetime.now() - self.log_saved > timedelta(minutes=10):
             with open(self.log_file, 'wb') as f:
                 pickle.dump(self.log, f)
+                self.log_saved = datetime.now()
 
     def _known_parameter_hashes(self) -> List[str]:
         return list(self.results.get('param_hash', []))
