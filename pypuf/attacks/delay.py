@@ -280,8 +280,8 @@ class GapChainAttackPenalty(GapChainAttack):
             # the correlation score is the sum of those
             corr_score = tf.reduce_sum(corr, axis=0)
 
-            # penalty is the excess of the corr score of an individual over the average score
-            penalty = tf.maximum(corr_score - tf.reduce_mean(corr_score), 0)
+            # penalty is 1 when corr score exceeds threshold
+            penalty = tf.cast(tf.greater(corr_score, self.AVOID_WEIGHTS_MASK_CORR), tf.double)
 
             # only log when we assume the caller is the CMA-ES
             # other calls happen when someone uses best_fitness(), in that case we don't want to record anything
