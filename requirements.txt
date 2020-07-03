@@ -4,3 +4,6 @@ flake8
 xdoctest
 sphinx
 sphinx_rtd_theme
+tqdm
+torch
+sklearn
