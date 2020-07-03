@@ -326,7 +326,8 @@ class GapAttack:
         # learner status
         self.learner = None
         self.results = []
-        self.avoid_responses = []
+        self.results_discarded: List[np.ndarray] = []
+        self.avoid_responses: List[np.ndarray] = []
         self.attempts = 0
         self.traces = []
         self.generations = 0
@@ -390,6 +391,7 @@ class GapAttack:
         discard_reasons = self.discard_result(self.learner)
         if discard_reasons:
             logging.debug('Discarding chain due to ' + ', '.join(discard_reasons))
+            self.results_discarded.append(self.learner.result[:self.n])
             return discard_reasons
         else:
             # accept this chain, record weights and response behavior
