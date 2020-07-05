@@ -5,8 +5,8 @@ Learn the lower XOR Arbiter PUF of an iPUF.
 from os import getpid
 from typing import NamedTuple
 from uuid import UUID
-from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np, expand_dims, absolute, sqrt, empty,\
-    delete
+from numpy import logical_and, vstack, array, insert, abs as abs_np, sum as sum_np, expand_dims, absolute, sqrt, empty, \
+    delete, shape, ones
 from numpy.linalg import norm
 from numpy.random.mtrand import RandomState
 from scipy.special import erf
@@ -144,11 +144,14 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_up)]
+        print('\n\nshapeshapeshape', shape(self.responses[idx_heuristic]), '\n\n')
         self.error_1 += [1 - num_chain_unreliable / self.num_unreliable for num_chain_unreliable in nums]
         print(f'Out of {self.num_unreliable} chosen challenges, {num_unreliable} ({(1 - self.error_1[0]) * 100:.2f}%) '
               f'are actually unreliable on the {self.layer} layer.')
+        unreliable_rs = ones(shape(self.responses[idx_heuristic]))
+        unreliable_rs[:, int(self.parameters.R / 2):] *= -1
         return (self.challenges[idx_heuristic][idx_layer_unrel], self.responses[idx_heuristic][idx_layer_unrel]) \
-            if self.parameters.remove_error_1 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])
+            if self.parameters.remove_error_1 else (self.challenges[idx_heuristic], unreliable_rs)  # self.responses[idx_heuristic])
 
     def generate_reliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
@@ -196,8 +199,9 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         self.error_2 += [1 - num_chain_reliable / self.num_reliable for num_chain_reliable in nums]
         print(f'Out of {self.num_reliable} chosen challenges, {num_reliable} ({(1 - self.error_2[0]) * 100:.2f}%) '
               f'are actually reliable on the {self.layer} layer.')
+        reliable_rs = ones(shape(self.responses[idx_heuristic]))
         return (self.challenges[idx_heuristic][idx_layer_rel], self.responses[idx_heuristic][idx_layer_rel]) \
-            if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])
+            if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], reliable_rs)    # self.responses[idx_heuristic])
 
     def generate_separate_tset(self):
         cs_train = random_inputs(self.parameters.n, self.ts.N, self.prng)

@@ -237,8 +237,8 @@ class ReliabilityBasedCMAES(Learner):
                 n_chain += 1
                 self.update_hits(w)
                 # End learning when specific chains of target are learned
-                if all(self.hits[:self.target.up.k]):
-                    break
+                # if all(self.hits[:self.target.up.k]):
+                #     break
                 self.num_tries = 0
                 if self.fitness == 'combine' or self.fitness == 'remove':
                     idx_unreliable = less(reliabilities_MODEL(
