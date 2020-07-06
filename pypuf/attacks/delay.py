@@ -345,9 +345,9 @@ class GapAttack:
 
     def discard_result(self, learner: GapChainAttack) -> List[str]:
         discard_reasons = []
-        weights = learner.result[:self.n]
-        if weights[0] < 0:
-            weights *= -1  # normalize weights to have positive first weight
+        result = learner.result
+        if result[0] < 0:
+            result *= -1  # normalize weights to have positive first weight
 
         # check if fitness is sufficient (below)
         if learner.fitness >= self.discard_threshold or np.isnan(learner.fitness) or np.isinf(learner.fitness):
@@ -355,7 +355,7 @@ class GapAttack:
 
         # Check if learned model (w) is a 'new' chain (not correlated to other chains)
         for i, v in enumerate(self.results):
-            corr = tf.abs(pearsonr(weights, v)[0])
+            corr = tf.abs(pearsonr(result, v)[0])
             if corr > .9:
                 discard_reasons.append(f'too similar, to learned chain {i} (correlation {corr.numpy():.2f})')
 
@@ -391,11 +391,11 @@ class GapAttack:
         discard_reasons = self.discard_result(self.learner)
         if discard_reasons:
             logging.debug('Discarding chain due to ' + ', '.join(discard_reasons))
-            self.results_discarded.append(self.learner.result[:self.n])
+            self.results_discarded.append(self.learner.result)
             return discard_reasons
         else:
             # accept this chain, record weights and response behavior
-            self.results.append(self.learner.result[:self.n])
+            self.results.append(self.learner.result)
             self.avoid_responses.append(self.learner.current_responses.numpy())
             logging.debug(f'Adding {len(self.results)}-th chain to pool, '
                           f'{self.k_max - len(self.results)} still missing')
