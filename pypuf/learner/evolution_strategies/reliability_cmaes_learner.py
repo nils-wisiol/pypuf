@@ -8,7 +8,7 @@ from cma import CMA
 from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax, expand_dims
 from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul, \
     abs as abs_tf, Variable, less, convert_to_tensor, constant, where, ones, add, divide, multiply, subtract
-from tensorflow_core.python.framework.random_seed import set_seed
+from tensorflow.random import set_seed
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr, mode
 from pypuf.tools import approx_dist
@@ -237,8 +237,8 @@ class ReliabilityBasedCMAES(Learner):
                 n_chain += 1
                 self.update_hits(w)
                 # End learning when specific chains of target are learned
-                # if all(self.hits[:self.target.up.k]):
-                #     break
+                if all(self.hits[:self.target.up.k]) or all(self.hits[self.target.up.k:]):
+                    break
                 self.num_tries = 0
                 if self.fitness == 'combine' or self.fitness == 'remove':
                     idx_unreliable = less(reliabilities_MODEL(
@@ -266,6 +266,8 @@ class ReliabilityBasedCMAES(Learner):
         meta_data['fitness_histories'] = self.fitness_histories
         meta_data['layer_models'] = self.layer_models
         meta_data['n_chains'] = n_chain
+        meta_data['u_hits'] = len(self.hits[self.hits[:self.target.up.k] != 0])
+        meta_data['d_hits'] = len(self.hits[self.hits[self.target.up.k:] != 0])
 
         return model, meta_data
 

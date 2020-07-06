@@ -60,7 +60,9 @@ class Result(NamedTuple):
     error_2: list
     ts_ratios: list
     tries: int
-    hits: int
+    hits: list
+    u_hits: list
+    d_hits: list
     n_chains: int
 
 
@@ -417,6 +419,8 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             ts_ratios=self.ts_ratios,
             tries=self.learner.num_tries + 1,
             hits=self.learner.hits.tolist(),
+            u_hits=self.learning_meta_data['u_hits'],
+            d_hits=self.learning_meta_data['d_hits'],
             n_chains=len(self.learner.pool),
         )
 

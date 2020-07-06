@@ -45,10 +45,11 @@ class CustomLayerIPUFAttackStudy(Study):
                 # (64, 4, 4, 12, 2 * M),
                 # (64, 2, 8, 8, 2 * M),
                 # (64, 8, 1, 8, 2 * M),
-                (64, 1, 8, 11, 2 * M),      # 10h   0.5GB
-                (64, 8, 8, 4, 4 * M),       # 10h   0.5GB
-                (64, 8, 1, 4, 2 * M),       # 10h   0.5GB
-                # (64, 1, 8, 7, 500 * k),
+
+                # Test true heuristics
+                (64, 1, 8, 11, 2 * M),      # 40h   0.5GB
+                (64, 6, 6, 6, 2 * M),       # 40h   0.5GB
+                (64, 8, 1, 4, 2 * M),       # 40h   0.5GB
 
                 # (64, 1, 16, 7, 5 * M),      # 5h    0.5GB
                 # (64, 2, 16, 10, 10 * M),    # 10h   1.25GB
@@ -82,18 +83,6 @@ class CustomLayerIPUFAttackStudy(Study):
                 ('upper', [0, 2, 1, 1]),
                 ('upper', [0, 2, 1, 2]),
                 ('upper', [0, 2, 2, 1]),
-                ('upper', [1, 1, 1, 0]),
-                ('upper', [1, 2, 1, 0]),
-                ('upper', [2, 1, 1, 0]),
-                ('upper', [1, 1, 2, 0]),
-                ('upper', [1, 2, 2, 0]),
-                ('upper', [2, 1, 2, 0]),
-                ('upper', [1, 1, 0, 1]),
-                ('upper', [1, 2, 0, 1]),
-                ('upper', [2, 1, 0, 1]),
-                ('upper', [1, 1, 0, 2]),
-                ('upper', [1, 2, 0, 2]),
-                ('upper', [2, 1, 0, 2]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
