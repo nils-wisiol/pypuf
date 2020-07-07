@@ -85,10 +85,10 @@ class StudyBase:
         self.results.to_pickle(self.results_file)
         self.results.to_csv(f'{self.results_file}.csv')
 
-    def _save_log(self, force=False) -> None:
+    def _save_log(self, force: bool = False) -> None:
         if force or datetime.now() - self.log_saved > timedelta(minutes=10):
             with open(self.log_file, 'wb') as f:
-                pickle.dump(self.log, f)
+                pickle.dump((self._current_params, self.log), f)
                 self.log_saved = datetime.now()
 
     def _known_parameter_hashes(self) -> List[str]:
@@ -127,11 +127,14 @@ class StudyBase:
                           f'{(ran + finished)/total:.1%} total')
             try:
                 ran += 1
+                self._current_params = params
                 self.run_single(params)
             except Exception as e:
                 logging.debug(f'Running {self.__class__.__name__} resulted in {e}.')
                 if not self.continue_on_error:
                     raise
+            finally:
+                self._current_params = None
 
     @classmethod
     def cli(cls, args: list) -> None:
