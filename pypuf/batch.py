@@ -130,7 +130,7 @@ class StudyBase:
                 self._current_params = params
                 self.run_single(params)
             except Exception as e:
-                logging.debug(f'Running {self.__class__.__name__} resulted in {e}.')
+                logging.debug(f'Running {self.__class__.__name__} resulted in {type(e)}: {e}.')
                 if not self.continue_on_error:
                     raise
             finally:
