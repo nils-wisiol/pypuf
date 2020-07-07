@@ -41,7 +41,7 @@ class CustomLayerIPUFAttackStudy(Study):
             for noisiness in [0.1]
             # max number of chains that are learned is k_up + extra
             for n, k_up, k_down, extra, N in [
-                # (64, 2, 2, 2, 200 * k),
+                # (64, 2, 2, 0, 200 * k),
                 # (64, 4, 4, 12, 2 * M),
                 # (64, 2, 8, 8, 2 * M),
                 # (64, 8, 1, 8, 2 * M),

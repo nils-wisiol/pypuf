@@ -5,9 +5,10 @@
     Strategies from N. Hansen in "The CMA Evolution Strategy: A Comparing Review".
 """
 from cma import CMA
-from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax, expand_dims
+from numpy import array, zeros, mean, float64, average, absolute, abs as abs_np, argmax, expand_dims, shape
 from tensorflow import greater, transpose, double, cast, reduce_mean, tensordot, sqrt, reduce_sum, matmul, \
     abs as abs_tf, Variable, less, convert_to_tensor, constant, where, ones, add, divide, multiply, subtract
+from tensorflow.python.keras.backend import flatten
 from tensorflow.random import set_seed
 from numpy.random.mtrand import RandomState
 from scipy.stats import pearsonr, mode
@@ -241,15 +242,15 @@ class ReliabilityBasedCMAES(Learner):
                     break
                 self.num_tries = 0
                 if self.fitness == 'combine' or self.fitness == 'remove':
-                    idx_unreliable = less(reliabilities_MODEL(
+                    idx_unreliable = flatten(less(reliabilities_MODEL(
                         matmul(expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
-                               cast(self.current_challenges.T, double))), constant([1], dtype=double))
+                               cast(self.current_challenges.T, double))), constant([1], dtype=double)))
                     if self.fitness == 'combine':
                         self.current_reliabilities = combine_reliabilities(
                             rels_1=self.current_reliabilities,
-                            rels_2=reliabilities_MODEL(matmul(
+                            rels_2=flatten(reliabilities_MODEL(matmul(
                                 expand_dims(convert_to_tensor(w[:self.n], dtype=double), axis=0),
-                                cast(self.current_challenges.T, double))),
+                                cast(self.current_challenges.T, double)))),
                         )
                     if self.fitness == 'remove':
                         self.current_reliabilities = where(
@@ -266,8 +267,8 @@ class ReliabilityBasedCMAES(Learner):
         meta_data['fitness_histories'] = self.fitness_histories
         meta_data['layer_models'] = self.layer_models
         meta_data['n_chains'] = n_chain
-        meta_data['u_hits'] = len(self.hits[self.hits[:self.target.up.k] != 0])
-        meta_data['d_hits'] = len(self.hits[self.hits[self.target.up.k:] != 0])
+        meta_data['hits_u'] = sum(self.hits[:self.target.up.k] != 0)
+        meta_data['hits_d'] = sum(self.hits[self.target.up.k:] != 0)
 
         return model, meta_data
 

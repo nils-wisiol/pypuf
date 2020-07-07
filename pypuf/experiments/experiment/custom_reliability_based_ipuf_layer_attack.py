@@ -61,8 +61,8 @@ class Result(NamedTuple):
     ts_ratios: list
     tries: int
     hits: list
-    u_hits: list
-    d_hits: list
+    hits_u: int
+    hits_d: int
     n_chains: int
 
 
@@ -146,7 +146,6 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             repetitions=self.parameters.R,
             epsilon=self.parameters.eps,
         )) for i in range(self.parameters.k_up)]
-        print('\n\nshapeshapeshape', shape(self.responses[idx_heuristic]), '\n\n')
         self.error_1 += [1 - num_chain_unreliable / self.num_unreliable for num_chain_unreliable in nums]
         print(f'Out of {self.num_unreliable} chosen challenges, {num_unreliable} ({(1 - self.error_1[0]) * 100:.2f}%) '
               f'are actually unreliable on the {self.layer} layer.')
@@ -419,8 +418,8 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
             ts_ratios=self.ts_ratios,
             tries=self.learner.num_tries + 1,
             hits=self.learner.hits.tolist(),
-            u_hits=self.learning_meta_data['u_hits'],
-            d_hits=self.learning_meta_data['d_hits'],
+            hits_u=self.learning_meta_data['hits_u'],
+            hits_d=self.learning_meta_data['hits_d'],
             n_chains=len(self.learner.pool),
         )
 
