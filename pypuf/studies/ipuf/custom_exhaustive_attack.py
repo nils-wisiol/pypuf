@@ -42,14 +42,14 @@ class CustomLayerIPUFAttackStudy(Study):
             # max number of chains that are learned is k_up + extra
             for n, k_up, k_down, extra, N in [
                 # (64, 2, 2, 0, 200 * k),
-                # (64, 4, 4, 12, 2 * M),
-                # (64, 2, 8, 8, 2 * M),
-                # (64, 8, 1, 8, 2 * M),
+                (64, 4, 4, 6, 500 * k),
+                (64, 1, 5, 9, 500 * k),
+                (64, 5, 1, 5, 500 * k),
 
                 # Test true heuristics
-                (64, 1, 8, 11, 2 * M),      # 40h   0.5GB
-                (64, 6, 6, 6, 2 * M),       # 40h   0.5GB
-                (64, 8, 1, 4, 2 * M),       # 40h   0.5GB
+                # (64, 1, 8, 11, 2 * M),      # 40h   0.5GB
+                # (64, 6, 6, 6, 2 * M),       # 40h   0.5GB
+                # (64, 8, 1, 4, 2 * M),       # 40h   0.5GB
 
                 # (64, 1, 16, 7, 5 * M),      # 5h    0.5GB
                 # (64, 2, 16, 10, 10 * M),    # 10h   1.25GB
@@ -67,22 +67,24 @@ class CustomLayerIPUFAttackStudy(Study):
             ]
             for fitness in [
                 'penalty',
-                # 'combine',
-                # 'remove',
+                'combine',
+                'remove',
             ]
             for layer, heuristic in [
                 ('upper', [1, 0, 1, 1]),
-                ('upper', [1, 0, 1, 2]),
-                ('upper', [1, 0, 2, 1]),
-                ('upper', [2, 0, 1, 1]),
-                ('upper', [2, 0, 1, 2]),
-                ('upper', [2, 0, 2, 1]),
+                ('upper', [1, 0, 0, 1]),
+                # ('upper', [1, 0, 1, 2]),
+                # ('upper', [1, 0, 2, 1]),
+                # ('upper', [2, 0, 1, 1]),
+                # ('upper', [2, 0, 1, 2]),
+                # ('upper', [2, 0, 2, 1]),
                 ('upper', [0, 1, 1, 1]),
-                ('upper', [0, 1, 1, 2]),
-                ('upper', [0, 1, 2, 1]),
-                ('upper', [0, 2, 1, 1]),
-                ('upper', [0, 2, 1, 2]),
-                ('upper', [0, 2, 2, 1]),
+                ('upper', [0, 1, 1, 0]),
+                # ('upper', [0, 1, 1, 2]),
+                # ('upper', [0, 1, 2, 1]),
+                # ('upper', [0, 2, 1, 1]),
+                # ('upper', [0, 2, 1, 2]),
+                # ('upper', [0, 2, 2, 1]),
             ]
             for remove_error_1, remove_error_2 in [
                 (False, False),
@@ -90,7 +92,7 @@ class CustomLayerIPUFAttackStudy(Study):
             for R in [51]
             for eps in [0.9]
             for separate in [False]
-            for seed in range(10)
+            for seed in range(5)
         ]
 
     def plot(self):
