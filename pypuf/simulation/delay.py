@@ -837,8 +837,8 @@ class InterposePUF(Simulation):
         super().__init__()
         if seed is None:
             seed = 'default'
-        seed_up = default_rng(self.seed(f'interpose puf {seed} up'))
-        seed_down = default_rng(self.seed(f'interpose puf {seed} down'))
+        seed_up = self.seed(f'interpose puf {seed} up')
+        seed_down = self.seed(f'interpose puf {seed} down')
         self.up = XORArbiterPUF(n, k_up, seed_up, XORArbiterPUF.transform_atf, noisiness)
         self.down = XORArbiterPUF(n + 1, k_down, seed_down, XORArbiterPUF.transform_atf, noisiness)
         self.interpose_pos = interpose_pos or n // 2
