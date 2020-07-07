@@ -67,11 +67,11 @@ class StudyBase:
         row.update(params)
         row.update(result)
         self.results = self.results.append(row, ignore_index=True)
-        try:
-            logging.debug(f'Adding result: {self.primary_results(row)}')
-        except NotImplementedError:
-            pass
         self._save_results()
+        try:
+            logging.debug(f'Added result: {self.primary_results(row)}')
+        except NotImplementedError:
+            logging.debug('Added result.')
 
     def _load_results(self) -> None:
         logging.debug(f'loading results file {self.results_file}')
