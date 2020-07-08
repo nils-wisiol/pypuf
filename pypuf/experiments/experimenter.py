@@ -425,7 +425,7 @@ class Experimenter(object):
         except OSError:
             return None
 
-    def _acquire_result_file_lock(self, check_interval_s=.2, lock_timeout_s=900):
+    def _acquire_result_file_lock(self, check_interval_s=7, lock_timeout_s=300):
         try:
             while True:
                 # wait for foreign process to give up the lock
@@ -442,7 +442,7 @@ class Experimenter(object):
                         pass
 
                     # wait and try again
-                    time.sleep(abs(random.gauss(check_interval_s, .1)))
+                    time.sleep(abs(random.gauss(check_interval_s, 2)))
 
                 # try to acquire the lock
                 with open(self._lock_file, 'w') as f:
@@ -450,7 +450,7 @@ class Experimenter(object):
 
                 # wait to see if someone else also tries to acquire the lock,
                 # then check again if it is us now
-                time.sleep(random.uniform(.1, 3))
+                time.sleep(random.uniform(4, 8))
 
                 # break if we can confirm we have the lock
                 if self._result_lock_owner == self._lock_id:
