@@ -123,7 +123,7 @@ class StudyBase:
 
         ran = 0
         for params in unfinished_parameters:
-            logging.debug(f'Progress: {ran/unfinished:.1%} session, {(ran + finished)/total:.1%} batch, '
+            logging.debug(f'Progress: {ran/unfinished:.1%} session, {(ran + finished)/len(batch):.1%} batch, '
                           f'{(ran + finished)/total:.1%} total')
             try:
                 ran += 1
