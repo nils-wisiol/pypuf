@@ -265,7 +265,7 @@ class GapChainAttackPenalty(GapChainAttack):
                  stop_early: bool, minimum_fitness_by_sigma: dict, gap_attack) -> None:
         super().__init__(crps, avoid_responses, seed, cma_kwargs, sigma, pop_size, abort_delta, abort_iter, stop_early,
                          minimum_fitness_by_sigma, gap_attack)
-        self.avoid_weights = np.array(self.gap_attack.results + self.gap_attack.results_discarded)
+        self.avoid_weights = np.array(self.gap_attack.results + self.gap_attack.results_discarded)[:, :self.n]
         self.current_penalty = None
         self.current_penalty_corr = None
 
