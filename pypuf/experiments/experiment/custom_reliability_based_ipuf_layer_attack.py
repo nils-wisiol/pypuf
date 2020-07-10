@@ -152,7 +152,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
         unreliable_rs = ones(shape(self.responses[idx_heuristic]))
         unreliable_rs[:, int(self.parameters.R / 2):] *= -1
         return (self.challenges[idx_heuristic][idx_layer_unrel], self.responses[idx_heuristic][idx_layer_unrel]) \
-            if self.parameters.remove_error_1 else (self.challenges[idx_heuristic], unreliable_rs)  # self.responses[idx_heuristic])
+            if self.parameters.remove_error_1 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])  # unreliable_rs)
 
     def generate_reliable_challenges_for_layer(self):
         """Analysis outside of attacker model"""
@@ -202,7 +202,7 @@ class ExperimentCustomReliabilityBasedLayerIPUF(Experiment):
               f'are actually reliable on the {self.layer} layer.')
         reliable_rs = ones(shape(self.responses[idx_heuristic]))
         return (self.challenges[idx_heuristic][idx_layer_rel], self.responses[idx_heuristic][idx_layer_rel]) \
-            if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], reliable_rs)    # self.responses[idx_heuristic])
+            if self.parameters.remove_error_2 else (self.challenges[idx_heuristic], self.responses[idx_heuristic])  # reliable_rs)
 
     def generate_separate_tset(self):
         cs_train = random_inputs(self.parameters.n, self.ts.N, self.prng)
