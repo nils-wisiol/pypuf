@@ -70,6 +70,7 @@ class CustomLayerIPUFAttackStudy(Study):
                 'penalty',
                 'combine',
                 'remove',
+                'simple',
             ]
             for layer, heuristic in [
                 ('upper', [1, 0, 1, 1]),

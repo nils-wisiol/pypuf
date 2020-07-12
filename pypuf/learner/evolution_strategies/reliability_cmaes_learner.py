@@ -285,10 +285,10 @@ class ReliabilityBasedCMAES(Learner):
             for v in self.target.down.weight_array
         ]
         if max(abs_np(cross_correlation_upper)) > 0.8:
-            chain = argmax(cross_correlation_upper)
+            chain = argmax(abs_np(cross_correlation_upper))
             self.hits[chain] = max(abs_np(cross_correlation_upper))
             self.layer_models['upper'].append(w)
         if max(abs_np(cross_correlation_lower)) > 0.8:
-            chain = argmax(cross_correlation_lower)
+            chain = argmax(abs_np(cross_correlation_lower))
             self.hits[self.target.up.k + chain] = max(abs_np(cross_correlation_lower))
             self.layer_models['lower'].append(w)
