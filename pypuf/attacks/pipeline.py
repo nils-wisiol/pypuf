@@ -4,20 +4,21 @@ Pipeline for Basic Attacks on (XOR) Arbiter PUFS
 
 from ..io import random_inputs, ChallengeResponseSet
 from ..simulation.delay import LTFArray
+from ..metrics.common import approx_similarity_data
+
 import torch
 from torch.optim import Adam
 from torch.nn import MSELoss
-from sklearn.metrics import accuracy_score
+
 from numpy.random import RandomState
 from tqdm import tqdm as tqdm_normal
 from tqdm.notebook import tqdm as tqdm_notebook
 from .models.base_model import BasicModel
-from numpy import array, ones
+import numpy as np
 
 from typing import Optional
 
-
-def create_test_and_train(input_size, train_size=10000, test_size=100, k=2, random_seed=1234, device='cpu'):
+def create_test_and_train(simulation_instance, input_size=64, train_size=10000, test_size=100, random_seed=1234, device='cpu'):
     '''
     Generate training and test data and convert to pytorch Tensors
 
@@ -29,11 +30,12 @@ def create_test_and_train(input_size, train_size=10000, test_size=100, k=2, rand
     :param device:
     :return:
     '''
-    instance = LTFArray(ones(shape=(k, input_size)), transform='id')
+
+
     X_train = random_inputs(n=input_size, N=train_size, seed=random_seed)
-    y_train = instance.eval(X_train)
+    y_train = simulation_instance.eval(X_train)
     X_test = random_inputs(n=input_size, N=test_size, seed=random_seed)
-    y_test = instance.eval(X_test)
+    y_test = simulation_instance.eval(X_test)
 
     X_train = torch.FloatTensor(X_train).to(device)
     y_train = torch.FloatTensor(y_train).to(device)
@@ -44,7 +46,7 @@ def create_test_and_train(input_size, train_size=10000, test_size=100, k=2, rand
     return X_train, y_train, X_test, y_test
 
 
-def train(model, X_train, y_train, criterion, optimizer, batch_size, epochs=10000, notebook=False):
+def train(model, X_train, y_train, criterion, optimizer, batch_size, num_epochs=10000, notebook=False):
     '''
     Train the model
 
@@ -64,7 +66,7 @@ def train(model, X_train, y_train, criterion, optimizer, batch_size, epochs=1000
 
     losses = []
 
-    for t in progress_bar(range(epochs)):
+    for t in progress_bar(range(num_epochs)):
         j = batch_size
         for i in range(0, len(X_train), batch_size):
             y_pred = model(X_train[i:j])
@@ -78,7 +80,9 @@ def train(model, X_train, y_train, criterion, optimizer, batch_size, epochs=1000
 
     return losses
 
+
 def pipeline(
+    simulation_instance: LTFArray,
     input_size: int = 64,
     k: int = 1,
     random_seed: int = 1234,
@@ -87,9 +91,13 @@ def pipeline(
     criterion: Optional[object] = None,
     optimizer: Optional[object] = None,
     batch_size: Optional[int] = None,
-    notebook: bool = False):
+    num_epochs: int = 1000,
+    train_size: int = 10000,
+    test_size: int = 1000,
+    notebook: bool = False
+):
 
-    '''
+    """
 
     :param input_size:
     :param k:
@@ -99,11 +107,12 @@ def pipeline(
     :param criterion:
     :param optimizer:
     :param batch_size:
+    :param num_epochs
     :param notebook:
     :return:
-    '''
+    """
 
-    X_train, y_train, X_test, y_test = create_test_and_train(input_size=input_size, k=k, random_seed=random_seed, device=device)
+    X_train, y_train, X_test, y_test = create_test_and_train(simulation_instance=simulation_instance, input_size=input_size, train_size=train_size, test_size=test_size, random_seed=random_seed, device=device)
 
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -115,19 +124,18 @@ def pipeline(
         criterion = MSELoss()
 
     if optimizer is None:
-        optimizer = Adam(model.parameters(), lr=0.00001)
+        optimizer = Adam(model.parameters(), lr=0.001)
 
     if batch_size is None:
         batch_size = len(X_train)
 
-    losses = train(model=model, X_train=X_train, y_train=y_train, criterion=criterion, optimizer=optimizer, batch_size=batch_size, notebook=notebook)
-
-    print(losses)
+    losses = train(model=model, X_train=X_train, y_train=y_train, criterion=criterion, optimizer=optimizer, batch_size=batch_size, num_epochs=num_epochs, notebook=notebook)
 
     predictions = []
     with torch.no_grad():
-       for x in X_test:
+        for x in X_test:
             predictions.append(model.predict(x))
+
+    accuracy = approx_similarity_data(np.array(predictions), y_test.numpy())
             
-            
-    print(accuracy_score(y_test.cpu().numpy(), predictions))
+    return model, losses, accuracy
