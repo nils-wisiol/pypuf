@@ -281,16 +281,17 @@ class GapChainAttackPenalty(GapChainAttack):
             weights = state[:, :self.n]
             corr = tf.abs(self._pearsonr(self.avoid_weights.T, tf.transpose(weights)))
 
-            # the correlation score is the sum of those
-            corr_score = tf.reduce_sum(corr, axis=0)
+            # we only care if the correlation exceeds a threshold value,
+            # as some correlation between the chains is natural
+            masked_corr = tf.cast(tf.greater(corr, self.AVOID_WEIGHTS_MASK_CORR), tf.double)
 
-            # penalty is 1 when corr score exceeds threshold
-            penalty = tf.cast(tf.greater(corr_score, self.AVOID_WEIGHTS_MASK_CORR), tf.double)
+            # the penalty is the sum of those
+            penalty = tf.reduce_sum(masked_corr, axis=0)
 
             # only log when we assume the caller is the CMA-ES
             # other calls happen when someone uses best_fitness(), in that case we don't want to record anything
             if state.shape[0] > 1:
-                self.current_penalty_corr = tf.reduce_sum(corr, axis=0).numpy()
+                self.current_penalty_corr = tf.reduce_sum(masked_corr, axis=0).numpy()
                 self.current_penalty = penalty.numpy()
 
             return fitness + penalty
