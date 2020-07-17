@@ -498,6 +498,8 @@ class XORArbiterPUF(NoisyLTFArray):
         Returns a ``Simulation`` instance an arbiter chain of this XOR Arbiter PUF.
         :param idx: Index of the desired arbiter chain in :math:`\{0, ..., k\}`
         """
+        if idx >= self.weight_array.shape[0]:
+            raise IndexError
         return LTFArray(
             weight_array=self.weight_array[idx:idx + 1, :-1],
             transform=self.transform,
