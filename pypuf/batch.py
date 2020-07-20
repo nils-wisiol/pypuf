@@ -3,7 +3,7 @@ import os
 import pickle
 from datetime import datetime, timedelta
 from hashlib import sha256
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from numpy.distutils import cpuinfo
@@ -17,14 +17,14 @@ except Exception:
 
 class StudyBase:
 
-    def __init__(self, results_file: str) -> None:
+    def __init__(self, results_file: Optional[str] = None) -> None:
         self._timer = {}
 
         self.results_file = results_file
         self.results = None
         self._load_results()
 
-        self.log_file = results_file + '.log.pickle'
+        self.log_file = results_file + '.log.pickle' if self.results_file else None
         self.log = None
         self.log_saved = datetime.fromtimestamp(0)
 
@@ -74,6 +74,8 @@ class StudyBase:
             logging.debug('Added result.')
 
     def _load_results(self) -> None:
+        if not self.results_file:
+            return
         logging.debug(f'loading results file {self.results_file}')
         try:
             self.results = pd.read_pickle(self.results_file)
@@ -81,11 +83,15 @@ class StudyBase:
             self.results = pd.DataFrame()
 
     def _save_results(self) -> None:
+        if not self.results_file:
+            return
         logging.debug(f'saving results file {self.results_file} ({len(self.results)} results)')
         self.results.to_pickle(self.results_file)
         self.results.to_csv(f'{self.results_file}.csv')
 
     def _save_log(self, force: bool = False) -> None:
+        if not self.log_file:
+            return
         if force or datetime.now() - self.log_saved > timedelta(minutes=10):
             with open(self.log_file, 'wb') as f:
                 pickle.dump((self._current_params, self.log), f)
