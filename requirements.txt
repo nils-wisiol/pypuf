@@ -4,7 +4,7 @@ flake8
 xdoctest
 sphinx
 sphinx_rtd_theme
-cma-es
-tensorflow
 scipy
 pandas
+cma-es
+tensorflow

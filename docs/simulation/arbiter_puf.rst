@@ -135,6 +135,6 @@ To simulate an (8,8) 64-bit Interpose PUF using relatively stable Arbiter PUF im
 >>> puf = InterposePUF(n=64, k_up=8, k_down=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([ 1, -1,  1], dtype=int8)
+array([ 1, -1, -1], dtype=int8)
 
 Note that the ``noisiness`` parameter applies to both upper and lower layer.
