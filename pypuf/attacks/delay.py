@@ -138,10 +138,12 @@ class GapChainAttack:
         x = tf.cast(model_reliabilities, tf.double)
         fitness = tf.abs(self._reliability_pearson(x) - tf.constant(1, dtype=tf.float64))
 
-        # record fitness and current responses
-        best = tf.argmin(fitness)
-        # self.fitness_history.append(fitness[best].numpy())  # TODO WRONG
-        self.current_responses = tf.sign(delay_diffs[best])
+        # record fitness and current responses, but only if we assume the caller is the CMA-ES
+        # other calls happen when someone uses best_fitness(), in that case we don't want to record anything
+        if state.shape[0] > 1:
+            best = tf.argmin(fitness)
+            self.current_fitness = fitness[best].numpy()
+            self.current_responses = tf.sign(delay_diffs[best])
 
         return fitness
 
@@ -200,8 +202,9 @@ class GapChainAttack:
             self._callback_generation = _cma.generation
 
             # record data
-            self.sigma_history.append(_cma.σ.numpy())
-            self.fitness_history.append(_cma.best_fitness())
+            if self.current_fitness:
+                self.sigma_history.append(_cma.σ.numpy())
+                self.fitness_history.append(_cma.best_fitness())
 
             # stop early
             early_stop_reasons = self.early_stop(_cma)
@@ -228,7 +231,7 @@ class GapChainAttack:
             else:
                 return True
         except EarlyStop as e:
-            self.current_result, self.current_fitness = self.cma.best_solution(), self.cma.best_fitness()
+            self.current_result = self.cma.best_solution()
             self.early_stop_reasons = e.reasons
             return False
 
