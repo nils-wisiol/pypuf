@@ -17,7 +17,7 @@ except Exception:
 
 class StudyBase:
 
-    def __init__(self, results_file: Optional[str] = None) -> None:
+    def __init__(self, results_file: Optional[str] = None, logging_callback: Optional[callable] = None) -> None:
         self._timer = {}
 
         self.results_file = results_file
@@ -27,6 +27,7 @@ class StudyBase:
         self.log_file = results_file + '.log.pickle' if self.results_file else None
         self.log = None
         self.log_saved = datetime.fromtimestamp(0)
+        self.logging_callback = logging_callback
 
         self._cached_parameter_matrix = self.parameter_matrix()
 
@@ -90,6 +91,8 @@ class StudyBase:
         self.results.to_csv(f'{self.results_file}.csv')
 
     def _save_log(self, force: bool = False) -> None:
+        if callable(self.logging_callback):
+            self.logging_callback()
         if not self.log_file:
             return
         if force or datetime.now() - self.log_saved > timedelta(minutes=10):
