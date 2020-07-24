@@ -103,8 +103,10 @@ class ChallengeReliabilitySet(ChallengeInformationSet):
         return cls(
             challenges=crp_set.challenges,
             reliabilities=np.average(crp_set.responses, axis=-1),
+            r=crp_set.responses.shape[2],
         )
 
-    def __init__(self, challenges: ndarray, reliabilities: ndarray) -> None:
+    def __init__(self, challenges: ndarray, reliabilities: ndarray, r: int) -> None:
         super().__init__(challenges, reliabilities)
         self.reliabilities = reliabilities
+        self.r = r
