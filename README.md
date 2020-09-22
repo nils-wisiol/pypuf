@@ -43,6 +43,7 @@ Testing, linting, licensing.
 1. Update version to `x.y.z` in `setup.py` and `docs/conf.py`
 1. Commit with message "Release Version vx.y.z": `git commit -p -m "Release Version v$RELEASE"`
 1. Tag commit using `git tag -as v$RELEASE -m "Release Version v$RELEASE"`
+1. If applicable, adjust `dev` and/or `stable` tags.
 1. Push
     1. branch: `git push`
     1. tag: `git push origin v$RELEASE`
