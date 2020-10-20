@@ -274,8 +274,11 @@ class LTFArray(Simulation):
         responses = empty(shape=(N,), dtype=challenges.dtype)
         for idx in range(int(ceil(N / block_size))):
             block = slice(idx * block_size, (idx + 1) * block_size)
-            responses[block] = sign(self.val(challenges[block]))
+            responses[block] = self.eval_block(challenges[block])
         return responses
+
+    def eval_block(self, challenges: ndarray) -> ndarray:
+        return sign(self.val(challenges))
 
     def val(self, challenges: ndarray) -> ndarray:
         """
