@@ -1,9 +1,9 @@
-from typing import Optional
+from typing import Optional, Tuple
 from typing import Union, Callable, List
 
 from numpy import prod, sign, sqrt, append, empty, ceil, \
     sum as np_sum, ones, zeros, reshape, einsum, int8, \
-    concatenate, ndarray, transpose, broadcast_to, swapaxes, array, copy
+    concatenate, ndarray, transpose, broadcast_to, swapaxes, array, copy, insert
 from numpy.random import default_rng, RandomState
 
 from .base import Simulation
@@ -509,6 +509,107 @@ class XORArbiterPUF(NoisyLTFArray):
             combiner=self.combiner,
             bias=self.weight_array[idx:idx + 1, -1],
         )
+
+
+class XORFeedForwardArbiterPUF(NoisyLTFArray):
+    """
+    XOR Feed-Forward Arbiter PUF. k Feed-Forward Arbiter PUFs (so-called chains) are evaluated in parallel, the
+    individual results are XORed and then returned.
+
+    .. note::
+        Noisy simulations of the XOR Feed-Forward Arbiter PUF do not support reproducible results.
+        Furthermore, in this implementation noise in the measurement of the feed-forward arbiter and noise in the
+        measurement of the Arbiter PUF arbiter are independent, which likely is not true for reality.
+        All simulations of the XOR Feed-Forward Arbiter PUF are somewhat inefficient.
+
+    Gassend, Lim, Clarke, van Dijk, Devadas: Identification and authenticationof integrated circuits. In: Concurrency
+    and Computation: Practice and Experience (2004). https://doi.org/10.1002/cpe.805
+    """
+
+    def __init__(self, n: int, k: int, ff: List[Tuple[int, int]], seed: int = None,
+                 transform: Union[Callable, str] = None, noisiness: float = 0) -> None:
+        if seed is None:
+            seed = 'default'
+        weight_seed = self.seed(f'xor arbiter puf {seed} weights')
+        noise_seed = self.seed(f'xor arbiter puf {seed} noise')
+        self.ff = ff
+        self.noisiness = noisiness
+        super().__init__(
+            weight_array=self.normal_weights(n=n + len(ff), k=k, seed=weight_seed),
+            transform=transform or XORArbiterPUF.transform_atf,
+            combiner=self.combiner_xor,
+            sigma_noise=self.sigma_noise_from_random_weights(
+                n=n + len(ff),
+                sigma_weight=1,
+                noisiness=noisiness,
+            ),
+            seed=noise_seed,
+        )
+
+    @property
+    def challenge_length(self) -> int:
+        return self.weight_array.shape[1] - 1 - len(self.ff)
+
+    n = challenge_length
+
+    def eval_block(self, challenges: ndarray) -> ndarray:
+        # we evaluate the chains separately as the feed-forward bits are chain-individual
+        (N, n) = challenges.shape
+        responses = empty(shape=(N, self.k))
+        for l in range(self.k):
+            # evaluate the feed-forward arbiters from left to right
+            # TODO I'm sure this can be done much more efficiently by avoiding to evaluate the part before arbiter_point
+            #  again in the next round
+            ff_challenges = challenges.copy()
+            for arbiter_point, feed_point in self.ff + [(-1, -1)]:
+                # (1) evaluate PUF from begin to arbiter_point
+                partial_puf = NoisyLTFArray(
+                    weight_array=self.weight_array[l:l + 1, :arbiter_point],
+                    transform=self.transform,
+                    combiner=self.combiner,
+                    sigma_noise=self.sigma_noise_from_random_weights(
+                        n=n + len(self.ff),
+                        sigma_weight=1,
+                        noisiness=self.noisiness,
+                    ),
+                    seed=default_rng().integers(2**32),  # TODO make noisy evaluation reproducible
+                    bias=self.weight_array[l, -1],
+                )
+
+                # check if we reached the last iteration
+                if arbiter_point == -1:
+                    # all challenges known, evaluate the chain
+                    # TODO this makes the final response noise independent of noise that was added ealier to the feed-
+                    #  forward arbiters, which may be problematic
+                    responses[:, l] = sign(partial_puf.ltf_eval(self.transform(ff_challenges, 1)))[:, 0]
+                    break
+
+                feed = sign(partial_puf.ltf_eval(self.transform(ff_challenges[:, :arbiter_point], 1)))
+
+                # (2) insert new challenge bit at feed_point
+                ff_challenges = insert(ff_challenges, feed_point, feed[:, 0], axis=1)
+
+        return self.combiner(responses)
+
+    def chain(self, idx: int) -> Simulation:
+        r"""
+        Returns a ``XORFeedForwardArbiterPUF`` instance containing just one chain of this ``XORFeedForwardArbiterPUF``.
+        :param idx: Index of the desired chain in :math:`\{0, ..., k\}`
+        """
+        if idx >= self.weight_array.shape[0]:
+            raise IndexError
+        chain = XORFeedForwardArbiterPUF(
+            n=self.n,
+            k=1,
+            ff=self.ff,
+            seed=0,  # weights are overwritten below
+            transform=self.transform,
+            noisiness=self.noisiness,
+        )
+        print('chain', chain.weight_array.shape)
+        print('self', self.weight_array.shape)
+        chain.weight_array[0] = self.weight_array[idx]
+        return chain
 
 
 class ArbiterPUF(XORArbiterPUF):
