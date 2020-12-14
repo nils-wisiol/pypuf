@@ -332,13 +332,9 @@ class LTFArray(Simulation):
             f'Sub-challenges given to ltf_eval had shape {sub_challenges.shape}, but shape (N, k, n) = ' \
             f'(N, {k}, {n}) was expected.'
 
-        if self.biased:
-            # Evaluate including bias
-            # TODO this generates a temporary copy of the challenge array (BAD!)
-            return einsum('ji,...ji->...j', self.weight_array, self.efba_bit(sub_challenges), optimize=True)
-        else:
-            # Evaluate without bias
-            return einsum('ji,...ji->...j', self.weight_array[:, :-1], sub_challenges, optimize=True)
+        unbiased = einsum('ji,...ji->...j', self.weight_array[:, :-1], sub_challenges, optimize=True)
+        bias = self.weight_array[:, -1]
+        return unbiased + bias
 
 
 class NoisyLTFArray(LTFArray):
