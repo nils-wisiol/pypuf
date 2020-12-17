@@ -102,7 +102,21 @@ across a SLURM cluster:
     #SBATCH --cpus-per-task=2
     #SBATCH --nodes=1
 
+    # Usually High Performance Clusters will need to load Python before it is available
     module load python/3.7.6_tf_2.1.0
-    cd ~/pypufv2/
+
+    # Navigate to your study file, if necessary
+    cd ~/my_study/
+
+    # Load your virtual environment where pypuf is installed
     source venv/bin/activate
-    python3 -m example_study ${SLURM_JOB_NAME}_${SLURM_ARRAY_TASK_ID} ${SLURM_ARRAY_TASK_ID} 40
+
+    # Limit the number of CPUs used by numpy and tensorflow
+    export TF_NUM_INTRAOP_THREADS=${SLURM_CPUS_PER_TASK}
+    export TF_NUM_INTEROP_THREADS=${SLURM_CPUS_PER_TASK}
+    export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+    export NUMEXPR_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+    export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+
+    # run the study
+    python3 -m example_study "${SLURM_JOB_NAME}" "${SLURM_ARRAY_TASK_ID}" 40
