@@ -133,6 +133,8 @@ class StudyBase:
     def _add_result(self, params: dict, result: dict) -> None:
         row = {}
         row.update({
+            'parameters': list(map(str, params.keys())),
+            'results': list(map(str, result.keys())),
             'experiment': self.__class__.__name__,
             'cpu': cpu,
             'timestamp': datetime.now(),
