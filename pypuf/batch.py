@@ -15,21 +15,69 @@ except Exception:
     cpu = None
 
 
+class ResultCollection:
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def add_result(self, parameter_hash: str, result: dict) -> None:
+        raise NotImplementedError
+
+    def known_results(self) -> List[str]:
+        raise NotImplementedError
+
+    def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
+        raise NotImplementedError
+
+
+class PickleResultCollection(ResultCollection):
+
+    def __init__(self, path: str) -> None:
+        super().__init__(path)
+        self.log_path = self.path + '.log.pickle'
+        self.log_saved = datetime.now()
+        try:
+            self.results = pd.read_pickle(self.path)
+        except FileNotFoundError:
+            self.results = pd.DataFrame()
+
+    def add_result(self, parameter_hash: str, result: dict) -> None:
+        self.results = self.results.append(result, ignore_index=True)
+        self._save_results()
+
+    def _save_results(self) -> None:
+        if not self.path:
+            return
+        logging.debug(f'saving results file {self.path} ({len(self.results)} results)')
+        self.results.to_pickle(f'{self.path}.pickle')
+        self.results.to_csv(f'{self.path}.csv')
+
+    def known_results(self) -> List[str]:
+        return list(self.results.get('param_hash', []))
+
+    def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
+        if not self.log_path:
+            return
+        if force or datetime.now() - self.log_saved > timedelta(minutes=10):
+            with open(self.log_path, 'wb') as f:
+                pickle.dump((params, log), f)
+                self.log_saved = datetime.now()
+
+
 class StudyBase:
 
-    def __init__(self, results_file: Optional[str] = None, logging_callback: Optional[callable] = None) -> None:
+    def __init__(self, results: Optional[ResultCollection] = None, logging_callback: Optional[callable] = None) -> None:
         self._timer = {}
 
-        self.results_file = results_file
-        self.results = None
-        self._load_results()
+        if isinstance(results, str):
+            results = PickleResultCollection(results)
+        self.results = results
 
-        self.log_file = results_file + '.log.pickle' if self.results_file else None
         self.log = None
-        self.log_saved = datetime.fromtimestamp(0)
         self.logging_callback = logging_callback
 
         self._cached_parameter_matrix = self.parameter_matrix()
+        self._current_params = None
 
         self.continue_on_error = False
 
@@ -56,6 +104,7 @@ class StudyBase:
             'cpu': cpu,
             'timestamp': datetime.now(),
             'param_hash': self._hash_parameters(params),
+            # TODO consider adding git state
         })
         for env_var in [
             'OMP_NUM_THREADS',
@@ -67,41 +116,16 @@ class StudyBase:
             row.update({env_var: os.environ.get(env_var, None)})
         row.update(params)
         row.update(result)
-        self.results = self.results.append(row, ignore_index=True)
-        self._save_results()
+        self.results.add_result(row['param_hash'], row)
         try:
             logging.debug(f'Added result: {self.primary_results(row)}')
         except NotImplementedError:
             logging.debug('Added result.')
 
-    def _load_results(self) -> None:
-        if not self.results_file:
-            return
-        logging.debug(f'loading results file {self.results_file}')
-        try:
-            self.results = pd.read_pickle(self.results_file)
-        except FileNotFoundError:
-            self.results = pd.DataFrame()
-
-    def _save_results(self) -> None:
-        if not self.results_file:
-            return
-        logging.debug(f'saving results file {self.results_file} ({len(self.results)} results)')
-        self.results.to_pickle(self.results_file)
-        self.results.to_csv(f'{self.results_file}.csv')
-
     def _save_log(self, force: bool = False) -> None:
         if callable(self.logging_callback):
             self.logging_callback()
-        if not self.log_file:
-            return
-        if force or datetime.now() - self.log_saved > timedelta(minutes=10):
-            with open(self.log_file, 'wb') as f:
-                pickle.dump((self._current_params, self.log), f)
-                self.log_saved = datetime.now()
-
-    def _known_parameter_hashes(self) -> List[str]:
-        return list(self.results.get('param_hash', []))
+        self.results.save_log(self.log, self._current_params, self._hash_parameters(self._current_params), force)
 
     def run(self, **kwargs: dict) -> dict:
         raise NotImplementedError
@@ -119,7 +143,7 @@ class StudyBase:
 
     def run_batch(self, batch: list) -> None:
         unfinished_parameters = [
-            params for params in batch if self._hash_parameters(params) not in self._known_parameter_hashes()
+            params for params in batch if self._hash_parameters(params) not in self.results.known_results()
         ]
 
         total = len(self._cached_parameter_matrix)
