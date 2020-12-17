@@ -1,6 +1,7 @@
 import logging
 import os
 import pickle
+import random
 from datetime import datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
@@ -166,9 +167,12 @@ class StudyBase:
         logging.debug(f'Running {self.__class__.__name__} for {params}')
         self._add_result(params, self.run(**params))
 
-    def run_block(self, index: int, total: int) -> None:
-        n = len(self._cached_parameter_matrix)
-        self.run_batch(self._cached_parameter_matrix[int(index / total * n):int((index + 1) / total * n)])
+    def run_block(self, index: int, total: int, randomize: bool = False) -> None:
+        parameter_matrix = self._cached_parameter_matrix
+        if randomize:
+            random.Random(42).shuffle(parameter_matrix)
+        n = len(parameter_matrix)
+        self.run_batch(parameter_matrix[int(index / total * n):int((index + 1) / total * n)])
 
     def run_all(self) -> None:
         self.run_batch(self._cached_parameter_matrix)
@@ -210,4 +214,5 @@ class StudyBase:
         study = cls(args[1])
         block_idx = int(args[2])
         block_total = int(args[3])
-        study.run_block(block_idx, block_total)
+        randomize = len(args) > 4
+        study.run_block(block_idx, block_total, randomize)
