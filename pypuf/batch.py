@@ -3,6 +3,7 @@ import os
 import pickle
 from datetime import datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
@@ -64,13 +65,44 @@ class PickleResultCollection(ResultCollection):
                 self.log_saved = datetime.now()
 
 
+class FilesystemResultCollection(ResultCollection):
+
+    EXTENSION = '.pickle'
+    LOG_EXTENSION = '.log'
+
+    def __init__(self, path: str) -> None:
+        super().__init__(path)
+        if not Path(path).exists():
+            Path(path).mkdir()
+        else:
+            if not Path(path).is_dir():
+                raise ValueError(f'Given storage path {Path(path).absolute()} must be '
+                                 f'either non-existent or a directory.')
+
+        self.log_saved = datetime.now()  # TODO Consider splitting throttling by parameter hash
+
+    def add_result(self, parameter_hash: str, result: dict) -> None:
+        with open(Path(self.path) / (parameter_hash + self.EXTENSION), 'wb') as f:
+            pickle.dump(result, f)
+
+    def known_results(self) -> List[str]:
+        pickles = list(filter(lambda x: x.endswith(self.EXTENSION), os.listdir(self.path)))
+        return [p.split('.')[0] for p in pickles]
+
+    def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
+        if force or datetime.now() - self.log_saved > timedelta(minutes=10):
+            with open(Path(self.path) / (parameter_hash + self.EXTENSION + self.LOG_EXTENSION), 'wb') as f:
+                pickle.dump((params, log), f)
+                self.log_saved = datetime.now()
+
+
 class StudyBase:
 
     def __init__(self, results: Optional[ResultCollection] = None, logging_callback: Optional[callable] = None) -> None:
         self._timer = {}
 
         if isinstance(results, str):
-            results = PickleResultCollection(results)
+            results = FilesystemResultCollection(results)
         self.results = results
 
         self.log = None
