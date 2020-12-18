@@ -86,8 +86,11 @@ class FilesystemResultCollection(ResultCollection):
         with open(Path(self.path) / (parameter_hash + self.EXTENSION), 'wb') as f:
             pickle.dump(result, f)
 
+    def _result_pickles(self) -> List[str]:
+        return list(filter(lambda x: x.endswith(self.EXTENSION), os.listdir(self.path)))
+
     def known_results(self) -> List[str]:
-        pickles = list(filter(lambda x: x.endswith(self.EXTENSION), os.listdir(self.path)))
+        pickles = self._result_pickles()
         return [p.split('.')[0] for p in pickles]
 
     def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
@@ -95,6 +98,14 @@ class FilesystemResultCollection(ResultCollection):
             with open(Path(self.path) / (parameter_hash + self.EXTENSION + self.LOG_EXTENSION), 'wb') as f:
                 pickle.dump((params, log), f)
                 self.log_saved = datetime.now()
+
+    def load_all(self) -> List[dict]:
+        pickles = self._result_pickles()
+        results = []
+        for p in pickles:
+            with open(Path(self.path) / p, 'rb') as f:
+                results.append(pickle.load(f))
+        return results
 
 
 class StudyBase:
