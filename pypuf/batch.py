@@ -19,8 +19,8 @@ except Exception:
 
 class ResultCollection:
 
-    def __init__(self, path: str) -> None:
-        self.path = path
+    def __init__(self) -> None:
+        pass
 
     def add_result(self, parameter_hash: str, result: dict) -> None:
         raise NotImplementedError
@@ -35,7 +35,8 @@ class ResultCollection:
 class PickleResultCollection(ResultCollection):
 
     def __init__(self, path: str) -> None:
-        super().__init__(path)
+        super().__init__()
+        self.path = path
         self.log_path = self.path + '.log.pickle'
         self.log_saved = datetime.now()
         try:
@@ -72,7 +73,8 @@ class FilesystemResultCollection(ResultCollection):
     LOG_EXTENSION = '.log'
 
     def __init__(self, path: str) -> None:
-        super().__init__(path)
+        super().__init__()
+        self.path = path
         if not Path(path).exists():
             Path(path).mkdir()
         else:
@@ -108,6 +110,26 @@ class FilesystemResultCollection(ResultCollection):
         return results
 
 
+class MemoryResultCollection(ResultCollection):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.results = {}
+        self.log = {}
+
+    def add_result(self, parameter_hash: str, result: dict) -> None:
+        self.results[parameter_hash] = result
+
+    def known_results(self) -> List[str]:
+        return list(map(str, self.results.keys()))
+
+    def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
+        self.log[parameter_hash] = (params, log)
+
+    def load_all(self) -> List[dict]:
+        return list(self.results.values())
+
+
 class StudyBase:
 
     def __init__(self, results: Optional[ResultCollection] = None, logging_callback: Optional[callable] = None) -> None:
@@ -115,6 +137,8 @@ class StudyBase:
 
         if isinstance(results, str):
             results = FilesystemResultCollection(results)
+        elif results is None:
+            results = MemoryResultCollection()
         self.results = results
 
         self.log = None
