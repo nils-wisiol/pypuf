@@ -132,7 +132,8 @@ class MemoryResultCollection(ResultCollection):
 
 class StudyBase:
 
-    def __init__(self, results: Optional[ResultCollection] = None, logging_callback: Optional[callable] = None) -> None:
+    def __init__(self, results: Optional[ResultCollection] = None, logging_callback: Optional[callable] = None,
+                 randomize_order: bool = True) -> None:
         self._timer = {}
 
         if isinstance(results, str):
@@ -145,6 +146,9 @@ class StudyBase:
         self.logging_callback = logging_callback
 
         self._cached_parameter_matrix = self.parameter_matrix()
+        self._randomized_order = randomize_order
+        if randomize_order:
+            random.Random(42).shuffle(self._cached_parameter_matrix)
         self._current_params = None
 
         self.continue_on_error = False
@@ -204,10 +208,8 @@ class StudyBase:
         logging.debug(f'Running {self.__class__.__name__} for {params}')
         self._add_result(params, self.run(**params))
 
-    def run_block(self, index: int, total: int, randomize: bool = False) -> None:
+    def run_block(self, index: int, total: int) -> None:
         parameter_matrix = self._cached_parameter_matrix
-        if randomize:
-            random.Random(42).shuffle(parameter_matrix)
         n = len(parameter_matrix)
         self.run_batch(parameter_matrix[int(index / total * n):int((index + 1) / total * n)])
 
@@ -248,8 +250,8 @@ class StudyBase:
                             level=logging.DEBUG,
                             datefmt='%Y-%m-%d %H:%M:%S')
 
-        study = cls(args[1])
+        randomize = len(args) > 4
+        study = cls(args[1], randomize_order=randomize)
         block_idx = int(args[2])
         block_total = int(args[3])
-        randomize = len(args) > 4
-        study.run_block(block_idx, block_total, randomize)
+        study.run_block(block_idx, block_total)
