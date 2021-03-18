@@ -31,7 +31,7 @@ To evaluate challenges, provide a `list` of challenges to the ``eval`` method.
 For example, to obtain a couple of Challenge-Response-Pairs of an Bistable Ring PUF:
 
 >>> from numpy.random import default_rng
->>> from pypuf.simulation.bistable import BistableRingPUF
+>>> from pypuf.simulation import BistableRingPUF
 >>> n = 64
 >>> weights = default_rng(1).normal(size=(n+1))  # instead, data should be derived from experimental setup
 >>> puf = BistableRingPUF(n=64, weights=weights)
@@ -51,7 +51,7 @@ instantiated and the parity of the individual responses is given as the final ou
 To simulate an 8-XOR 64-bit Bistable Ring PUF, use
 
 >>> from numpy.random import default_rng
->>> from pypuf.simulation.bistable import XORBistableRingPUF
+>>> from pypuf.simulation import XORBistableRingPUF
 >>> k, n = 8, 64
 >>> weights = default_rng(1).normal(size=(k, n+1))  # instead, data should be derived from experimental setup
 >>> puf = XORBistableRingPUF(n=64, k=8, weights=weights)

@@ -24,13 +24,13 @@ of a PUF is the average over all challenges,
 
 The definition is applied separately for each output bit.
 
-pypuf ships approximations of PUF reliability based on both an instance of :class:`pypuf.simulation.base.Simulation` and
+pypuf ships approximations of PUF reliability based on both an instance of :class:`pypuf.simulation.Simulation` and
 on response data given. In some PUFs, the reliability depends on the challenge given, i.e. in one instance, some
 challenges have hard-to-reproduce responses, while others have very stable response behavior. pypuf hence reports
 reliability information seperatly for each challenge. To obtain a general notion of reliability, results can be averaged
 along the first axis.
 
-.. automodule:: pypuf.metrics.common
+.. automodule:: pypuf.metrics
     :members: approx_reliability, approx_reliability_data
     :noindex:
 
@@ -47,7 +47,7 @@ Uniqueness is estimated on a per-challenge basis, as low uniqueness on a small n
 To obtain a general uniqueness measure for each response bit, average results along the first axis.
 
 
-.. automodule:: pypuf.metrics.common
+.. automodule:: pypuf.metrics
     :members: approx_uniqueness, approx_uniqueness_data
 
 
@@ -58,6 +58,6 @@ In the context of machine learning attacks on PUFs, it is often required to esti
 by a PUF model. pypuf provides a metric to estimate the similarity of two PUFs, given either as response data or
 simulation, which can be used to compute the accuracy of predcitions.
 
-.. automodule:: pypuf.metrics.common
+.. automodule:: pypuf.metrics
     :members: approx_accuracy, approx_similarity_data, approx_similarity
     :noindex:

@@ -44,7 +44,7 @@ class Simulation:
         Evaluates the Simulation ``r`` times on the list of :math:`N` ``challenges`` given and returns an array
         of shape (``r``, :math:`N`, ``self.response_length``) of all responses.
 
-        >>> from pypuf.simulation.delay import XORArbiterPUF
+        >>> from pypuf.simulation import XORArbiterPUF
         >>> from pypuf.io import random_inputs
         >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.02, seed=1)
         >>> responses = puf.r_eval(5, random_inputs(N=2, n=64, seed=2))
@@ -74,7 +74,7 @@ class Simulation:
         generator (PRNG). Usage scenario: create a descriptive seed and use it to initialize the PRNG.
 
         >>> from numpy.random import default_rng
-        >>> from pypuf.simulation.base import Simulation
+        >>> from pypuf.simulation import Simulation
         >>> seed = 'parameter seed for my PUF instance'
         >>> prng = default_rng(seed=Simulation.seed(seed))
         >>> parameters = prng.normal(size=(3, 4))
@@ -161,7 +161,7 @@ class LTFArray(Simulation):
 
     To create an ``LTFArray`` containing just one function, the majority vote function of four inputs, use
 
-    >>> from pypuf.simulation.base import LTFArray
+    >>> from pypuf.simulation import LTFArray
     >>> from numpy import array, ones
     >>> my_puf = LTFArray(ones(shape=(1, 4)), transform='id')
     >>> my_puf.eval(array([[1, 1, -1, 1]]))

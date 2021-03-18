@@ -55,7 +55,7 @@ To simulate an XOR Arbiter PUF with 64 bit challenge length and 2 arbiter chains
 
 First, create a new XOR Arbiter PUF instance with the given dimensions and a fixed seed for reproducibility.
 
->>> from pypuf.simulation.delay import XORArbiterPUF
+>>> from pypuf.simulation import XORArbiterPUF
 >>> puf = XORArbiterPUF(n=64, k=2, seed=1)
 
 Then generate a list of `N` random challenges of length 64 (again with a seed for reproducibility).

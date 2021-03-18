@@ -7,7 +7,7 @@ from numpy import sum as np_sum
 from numpy.random import RandomState
 import numpy as np
 
-from .simulation.base import Simulation
+from .simulation import Simulation
 
 BIT_TYPE = int8
 

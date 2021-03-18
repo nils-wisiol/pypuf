@@ -24,7 +24,7 @@ the challenge length ``n`` must be chosen and a ``seed`` for reproducible result
 To evaluate challenges, provide a `list` of challenges to the ``eval`` method.
 For example, to evaluate an Arbiter PUF on three randomly chosen challenges:
 
->>> from pypuf.simulation.delay import ArbiterPUF
+>>> from pypuf.simulation import ArbiterPUF
 >>> puf = ArbiterPUF(n=64, seed=1)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
@@ -37,7 +37,7 @@ instance. For details, please refer to the :doc:`noise model used in the additiv
 The noise level is specified as the `noisiness` parameter, ``.1`` is a realistic value; ``1.0`` will result in purely
 random responses. ``0.0`` will disable noise simulation, which is the default.
 
->>> from pypuf.simulation.delay import ArbiterPUF
+>>> from pypuf.simulation import ArbiterPUF
 >>> puf = ArbiterPUF(n=64, seed=1, noisiness=.2)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
@@ -61,7 +61,7 @@ of challenges, as measured by the attacker [Bec15]_.
 
 To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF implementations, use
 
->>> from pypuf.simulation.delay import XORArbiterPUF
+>>> from pypuf.simulation import XORArbiterPUF
 >>> puf = XORArbiterPUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
@@ -88,7 +88,7 @@ XOR of the individual response bits is returned.
 To simulate an 4-XOR 128-bit Feed Forward Arbiter PUF with an feed-forward arbiter after the 32nd stages which will
 determine the 68th challenge bit, use
 
->>> from pypuf.simulation.delay import XORFeedForwardArbiterPUF
+>>> from pypuf.simulation import XORFeedForwardArbiterPUF
 >>> puf = XORFeedForwardArbiterPUF(n=128, k=4, ff=[(32, 68)], seed=1)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=128, N=6, seed=2))
@@ -107,7 +107,7 @@ resilience [WBMS19]_.
 
 To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF implementations, use
 
->>> from pypuf.simulation.delay import LightweightSecurePUF
+>>> from pypuf.simulation import LightweightSecurePUF
 >>> puf = LightweightSecurePUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
@@ -129,7 +129,7 @@ no permutation has a fix point.
 
 To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF implementations, use
 
->>> from pypuf.simulation.delay import PermutationPUF
+>>> from pypuf.simulation import PermutationPUF
 >>> puf = PermutationPUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
@@ -154,7 +154,7 @@ Arbiter PUFs of similar size [WMPN19]_.
 
 To simulate an (8,8) 64-bit Interpose PUF using relatively stable Arbiter PUF implementations, use
 
->>> from pypuf.simulation.delay import InterposePUF
+>>> from pypuf.simulation import InterposePUF
 >>> puf = InterposePUF(n=64, k_up=8, k_down=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))

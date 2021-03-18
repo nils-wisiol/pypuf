@@ -11,13 +11,13 @@ interfaces are defined accordingly, see below.
 Adding Simulations
 ------------------
 
-Simulations should extend the base class ``simulation.base.Simulation`` and provide a instantiation function that
+Simulations should extend the base class ``simulation.Simulation`` and provide a instantiation function that
 takes a ``seed`` argument for reproducible results. Weak PUFs can be added by setting ``challenge_length`` to zero.
 
 
 API
 ---
 
-.. autoclass:: pypuf.simulation.base.Simulation
+.. autoclass:: pypuf.simulation.Simulation
     :member-order: bysource
     :members:

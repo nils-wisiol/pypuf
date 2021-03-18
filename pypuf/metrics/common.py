@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 
 from ..io import random_inputs, ChallengeResponseSet
-from ..simulation.base import Simulation
+from ..simulation import Simulation
 
 
 def approx_reliability_data(responses: np.ndarray) -> np.ndarray:
@@ -26,7 +26,7 @@ def approx_reliability_data(responses: np.ndarray) -> np.ndarray:
     To obtain a the reliability for each response bit, average along the first axis, to obtain the general reliability,
     average over all axes.
 
-    >>> from pypuf.metrics.common import approx_reliability_data
+    >>> from pypuf.metrics import approx_reliability_data
     >>> from numpy import average, array
     >>> responses = array([[[1, 1, -1]], [[1, 1, 1]], [[1, 1, 1]], [[1, 1, 1]]])
     >>> average(approx_reliability_data(responses), axis=0)
@@ -50,8 +50,8 @@ def approx_reliability(instance: Simulation, seed: int, N: int = 10000, r: int =
     reliability of this instance, average across all axes. Note that bad reliability on single response bits may be
     problematic.
 
-    >>> from pypuf.simulation.delay import XORArbiterPUF
-    >>> from pypuf.metrics.common import approx_reliability
+    >>> from pypuf.simulation import XORArbiterPUF
+    >>> from pypuf.metrics import approx_reliability
     >>> from numpy import average
     >>> puf = XORArbiterPUF(n=128, k=2, seed=1, noisiness=.2)
     >>> average(approx_reliability(puf, seed=2), axis=0)
@@ -89,7 +89,7 @@ def approx_uniqueness_data(responses: np.ndarray) -> np.ndarray:
     Returns an array of shape :math:`(m,)` with uniqueness values per response bit.
 
     >>> from numpy import random, array
-    >>> from pypuf.metrics.common import approx_uniqueness_data, approx_similarity_data
+    >>> from pypuf.metrics import approx_uniqueness_data, approx_similarity_data
     >>> prng = random.default_rng(seed=1)
     >>> # generate **different** random responses using numpy's pseudo-random generator
     >>> responses = array([2 * random.default_rng(seed).integers(0, 2, size=(1000, 3)) - 1 for seed in range(4)])
@@ -129,8 +129,8 @@ def approx_uniqueness(instances: List[Simulation], seed: int, N: int = 10000) ->
     may be problematic.
 
     >>> from numpy import average
-    >>> from pypuf.simulation.delay import XORArbiterPUF
-    >>> from pypuf.metrics.common import approx_uniqueness
+    >>> from pypuf.simulation import XORArbiterPUF
+    >>> from pypuf.metrics import approx_uniqueness
     >>> instances = [XORArbiterPUF(n=64, k=1, seed=seed) for seed in range(5)]
     >>> approx_uniqueness(instances, seed=31415, N=1000)
     array([0.9272])
@@ -159,7 +159,7 @@ def approx_similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np
 
     Returns an array of shape :math:`(m,)`.
 
-    >>> from pypuf.metrics.common import approx_similarity_data
+    >>> from pypuf.metrics import approx_similarity_data
     >>> from numpy import array
     >>> approx_similarity_data(array([[1, 1], [1, 1], [1, 1], [1, 1]]), array([[1, 1], [1, 1], [1, 1], [-1, 1]]))
     array([0.75, 1.  ])
@@ -196,9 +196,9 @@ def approx_accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> n
 
     Returns an array of shape :math:`(m,)`.
 
-    >>> from pypuf.simulation.delay import XORArbiterPUF
+    >>> from pypuf.simulation import XORArbiterPUF
     >>> from pypuf.io import ChallengeResponseSet
-    >>> from pypuf.metrics.common import approx_accuracy
+    >>> from pypuf.metrics import approx_accuracy
     >>> puf = XORArbiterPUF(n=128, k=4, noisiness=.1, seed=1)
     >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2)
     >>> approx_accuracy(puf, test_set)
@@ -227,8 +227,8 @@ def approx_similarity(instance1: Simulation, instance2: Simulation, seed: int, N
 
     Returns an array of shape :math:`(m,)`.
 
-    >>> from pypuf.simulation.delay import XORArbiterPUF
-    >>> from pypuf.metrics.common import approx_similarity
+    >>> from pypuf.simulation import XORArbiterPUF
+    >>> from pypuf.metrics import approx_similarity
     >>> approx_similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=1), seed=31415)  # same seed
     array([1.])
     >>> approx_similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=2), seed=31415)  # different seed
