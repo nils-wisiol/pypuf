@@ -1,2 +1,1 @@
-from .common import approx_reliability_data, approx_reliability, approx_uniqueness_data, approx_uniqueness, \
-    approx_similarity_data, approx_accuracy, approx_similarity
+from .common import reliability_data, reliability, uniqueness_data, uniqueness, similarity_data, accuracy, similarity

@@ -7,7 +7,7 @@ from ..io import random_inputs, ChallengeResponseSet
 from ..simulation import Simulation
 
 
-def approx_reliability_data(responses: np.ndarray) -> np.ndarray:
+def reliability_data(responses: np.ndarray) -> np.ndarray:
     r"""
     Computes the reliability of response data of a PUF instance.
 
@@ -26,16 +26,16 @@ def approx_reliability_data(responses: np.ndarray) -> np.ndarray:
     To obtain a the reliability for each response bit, average along the first axis, to obtain the general reliability,
     average over all axes.
 
-    >>> from pypuf.metrics import approx_reliability_data
+    >>> from pypuf.metrics import reliability_data
     >>> from numpy import average, array
     >>> responses = array([[[1, 1, -1]], [[1, 1, 1]], [[1, 1, 1]], [[1, 1, 1]]])
-    >>> average(approx_reliability_data(responses), axis=0)
+    >>> average(reliability_data(responses), axis=0)
     array([0.83333333])
     """
     return np.absolute(np.average(responses, axis=-1))
 
 
-def approx_reliability(instance: Simulation, seed: int, N: int = 10000, r: int = 17) -> np.ndarray:
+def reliability(instance: Simulation, seed: int, N: int = 10000, r: int = 17) -> np.ndarray:
     r"""
     For a given simulation, estimates simulated reliability.
 
@@ -43,7 +43,7 @@ def approx_reliability(instance: Simulation, seed: int, N: int = 10000, r: int =
     times, obtaining a response array of shape :math:`(N, m, r)`, where :math:`m` is the response length of the given
     simulation.
 
-    Then applies :func:`approx_reliability_data` to determine the reliability of each respones bit on each challenge.
+    Then applies :func:`reliability_data` to determine the reliability of each respones bit on each challenge.
 
     Returns a float-array of shape :math:`(N, m)`, giving the reliability of each response bit on each challenge.
     To obtain the general reliability for each response bit, average along the first axis. To obtain the total
@@ -51,17 +51,17 @@ def approx_reliability(instance: Simulation, seed: int, N: int = 10000, r: int =
     problematic.
 
     >>> from pypuf.simulation import XORArbiterPUF
-    >>> from pypuf.metrics import approx_reliability
+    >>> from pypuf.metrics import reliability
     >>> from numpy import average
     >>> puf = XORArbiterPUF(n=128, k=2, seed=1, noisiness=.2)
-    >>> average(approx_reliability(puf, seed=2), axis=0)
+    >>> average(reliability(puf, seed=2), axis=0)
     array([0.77729412])
     """
     inputs = random_inputs(n=instance.challenge_length, N=N, seed=seed)
-    return np.absolute(approx_reliability_data(instance.r_eval(r, inputs)))
+    return np.absolute(reliability_data(instance.r_eval(r, inputs)))
 
 
-def approx_uniqueness_data(responses: np.ndarray) -> np.ndarray:
+def uniqueness_data(responses: np.ndarray) -> np.ndarray:
     r"""
     Estimates the uniqueness of responses of a set of PUF instances per challenge.
 
@@ -89,15 +89,15 @@ def approx_uniqueness_data(responses: np.ndarray) -> np.ndarray:
     Returns an array of shape :math:`(m,)` with uniqueness values per response bit.
 
     >>> from numpy import random, array
-    >>> from pypuf.metrics import approx_uniqueness_data, approx_similarity_data
+    >>> from pypuf.metrics import uniqueness_data, similarity_data
     >>> prng = random.default_rng(seed=1)
     >>> # generate **different** random responses using numpy's pseudo-random generator
     >>> responses = array([2 * random.default_rng(seed).integers(0, 2, size=(1000, 3)) - 1 for seed in range(4)])
-    >>> approx_uniqueness_data(responses)
+    >>> uniqueness_data(responses)
     array([0.97333333, 0.979     , 0.971     ])
     >>> # generate **same** random responses using numpy's pseudo-random generator
     >>> responses = array([2 * random.default_rng(1).integers(0, 2, size=(1000, 1)) - 1 for seed in range(4)])
-    >>> approx_uniqueness_data(responses)
+    >>> uniqueness_data(responses)
     array([0.])
     """
     if len(responses.shape) == 2:
@@ -108,12 +108,12 @@ def approx_uniqueness_data(responses: np.ndarray) -> np.ndarray:
     l, _, m = responses.shape
     similarities = np.empty(shape=(l * (l - 1) // 2, m))
     for idx, (r1, r2) in enumerate(combinations(responses, 2)):
-        similarities[idx] = approx_similarity_data(r1, r2)
+        similarities[idx] = similarity_data(r1, r2)
     res = 1 - 2 * np.average(np.absolute(.5 - similarities), axis=0)
     return res
 
 
-def approx_uniqueness(instances: List[Simulation], seed: int, N: int = 10000) -> np.ndarray:
+def uniqueness(instances: List[Simulation], seed: int, N: int = 10000) -> np.ndarray:
     r"""
     Estimates the uniqueness of a list of given Simulations.
 
@@ -122,7 +122,7 @@ def approx_uniqueness(instances: List[Simulation], seed: int, N: int = 10000) ->
     :math:`l` is the number of simulations, and :math:`m` is the response length of the given simulations. (All
     given simulations must have same challenge and response lenght.)
 
-    Then applies :func:`approx_uniqueness_data` to determine the uniqueness of each response bit.
+    Then applies :func:`uniqueness_data` to determine the uniqueness of each response bit.
 
     Returns a float-array of shape :math:`(m,)`, giving the uniqueness of each output bit.
     To obtain total uniqueness, average along all axes, but be aware that low uniqueness on individual response bits
@@ -130,9 +130,9 @@ def approx_uniqueness(instances: List[Simulation], seed: int, N: int = 10000) ->
 
     >>> from numpy import average
     >>> from pypuf.simulation import XORArbiterPUF
-    >>> from pypuf.metrics import approx_uniqueness
+    >>> from pypuf.metrics import uniqueness
     >>> instances = [XORArbiterPUF(n=64, k=1, seed=seed) for seed in range(5)]
-    >>> approx_uniqueness(instances, seed=31415, N=1000)
+    >>> uniqueness(instances, seed=31415, N=1000)
     array([0.9272])
     """
     m = instances[0].response_length
@@ -140,10 +140,10 @@ def approx_uniqueness(instances: List[Simulation], seed: int, N: int = 10000) ->
     responses = np.empty(shape=(len(instances), N, m))
     for i, instance in enumerate(instances):
         responses[i] = instance.eval(challenges).reshape(N, m)  # TODO fixes incompatible LTFArray output format
-    return approx_uniqueness_data(responses)
+    return uniqueness_data(responses)
 
 
-def approx_similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np.ndarray:
+def similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np.ndarray:
     r"""
     Given two arrays of responses of shape :math:`(N, m)`, returns the relative frequency of equal responses
     in the arrays for each response bit, i.e. an approximation of
@@ -159,9 +159,9 @@ def approx_similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np
 
     Returns an array of shape :math:`(m,)`.
 
-    >>> from pypuf.metrics import approx_similarity_data
+    >>> from pypuf.metrics import similarity_data
     >>> from numpy import array
-    >>> approx_similarity_data(array([[1, 1], [1, 1], [1, 1], [1, 1]]), array([[1, 1], [1, 1], [1, 1], [-1, 1]]))
+    >>> similarity_data(array([[1, 1], [1, 1], [1, 1], [1, 1]]), array([[1, 1], [1, 1], [1, 1], [-1, 1]]))
     array([0.75, 1.  ])
     """
     # Check for response arrays with repetitions (shape (N, m, r))
@@ -181,7 +181,7 @@ def approx_similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np
     return 1 - np.average(np.absolute(responses1 - responses2), axis=0) / 2
 
 
-def approx_accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> np.ndarray:
+def accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> np.ndarray:
     r"""
     Given a simulation and a test set, returns the relative frequency of responses by the simulation that match
     responses recorded in the test set by response bit, i.e. an approximation of
@@ -198,21 +198,21 @@ def approx_accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> n
 
     >>> from pypuf.simulation import XORArbiterPUF
     >>> from pypuf.io import ChallengeResponseSet
-    >>> from pypuf.metrics import approx_accuracy
+    >>> from pypuf.metrics import accuracy
     >>> puf = XORArbiterPUF(n=128, k=4, noisiness=.1, seed=1)
     >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2)
-    >>> approx_accuracy(puf, test_set)
+    >>> accuracy(puf, test_set)
     array([0.823])
     >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.3, seed=2)
     >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2, r=5)
-    >>> approx_accuracy(puf, test_set)
+    >>> accuracy(puf, test_set)
     array([0.706])
     """
     sim_responses = simulation.eval(test_set.challenges)
-    return approx_similarity_data(sim_responses, test_set.responses)
+    return similarity_data(sim_responses, test_set.responses)
 
 
-def approx_similarity(instance1: Simulation, instance2: Simulation, seed: int, N: int = 1000) -> np.ndarray:
+def similarity(instance1: Simulation, instance2: Simulation, seed: int, N: int = 1000) -> np.ndarray:
     r"""
     Approximate the similarity in response behavior of two simulations with identical challenge and response length,
     i.e. an approximation of
@@ -228,14 +228,14 @@ def approx_similarity(instance1: Simulation, instance2: Simulation, seed: int, N
     Returns an array of shape :math:`(m,)`.
 
     >>> from pypuf.simulation import XORArbiterPUF
-    >>> from pypuf.metrics import approx_similarity
-    >>> approx_similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=1), seed=31415)  # same seed
+    >>> from pypuf.metrics import similarity
+    >>> similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=1), seed=31415)  # same seed
     array([1.])
-    >>> approx_similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=2), seed=31415)  # different seed
+    >>> similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=2), seed=31415)  # different seed
     array([0.515])
     """
     if instance1.challenge_length != instance2.challenge_length:
         raise ValueError(f'Cannot compare instances with different challenge spaces of dimension '
                          f'{instance1.challenge_length} and {instance2.challenge_length}, respectively.')
     inputs = random_inputs(n=instance1.challenge_length, N=N, seed=seed)
-    return approx_similarity_data(instance1.eval(inputs), instance2.eval(inputs))
+    return similarity_data(instance1.eval(inputs), instance2.eval(inputs))

@@ -31,7 +31,7 @@ reliability information seperatly for each challenge. To obtain a general notion
 along the first axis.
 
 .. automodule:: pypuf.metrics
-    :members: approx_reliability, approx_reliability_data
+    :members: reliability, reliability_data
     :noindex:
 
 
@@ -48,7 +48,7 @@ To obtain a general uniqueness measure for each response bit, average results al
 
 
 .. automodule:: pypuf.metrics
-    :members: approx_uniqueness, approx_uniqueness_data
+    :members: uniqueness, uniqueness_data
 
 
 Distance
@@ -59,5 +59,5 @@ by a PUF model. pypuf provides a metric to estimate the similarity of two PUFs, 
 simulation, which can be used to compute the accuracy of predcitions.
 
 .. automodule:: pypuf.metrics
-    :members: approx_accuracy, approx_similarity_data, approx_similarity
+    :members: accuracy, similarity_data, similarity
     :noindex:
