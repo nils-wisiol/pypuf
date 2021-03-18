@@ -32,7 +32,8 @@ Testing, linting, licensing.
 
 ### Update Documentation and Check Doc Tests
 
-1. install `sphinx-build`
+1. install `sphinx-build xdoctest`
+1. `xdoctest pypuf`
 1. `cd docs`
 1. `make clean`
 1. `make doctest && make html`
