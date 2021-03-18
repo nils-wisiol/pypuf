@@ -139,21 +139,25 @@ class XORArbiterPUF(NoisyLTFArray):
 
 class XORFeedForwardArbiterPUF(NoisyLTFArray):
     """
-    XOR Feed-Forward Arbiter PUF. k Feed-Forward Arbiter PUFs (so-called chains) are evaluated in parallel, the
-    individual results are XORed and then returned.
+    XOR Feed-Forward Arbiter PUF [GLCDD04]_. Simulation based on the additive delay model.
 
     .. note::
-        Noisy simulations of the XOR Feed-Forward Arbiter PUF do not support reproducible results.
-        Furthermore, in this implementation noise in the measurement of the feed-forward arbiter and noise in the
-        measurement of the Arbiter PUF arbiter are independent, which likely is not true for reality.
-        All simulations of the XOR Feed-Forward Arbiter PUF are somewhat inefficient.
-
-    Gassend, Lim, Clarke, van Dijk, Devadas: Identification and authenticationof integrated circuits. In: Concurrency
-    and Computation: Practice and Experience (2004). https://doi.org/10.1002/cpe.805
+        This implementation has limited functionality when run with noise.
+        For details, see code comments and to-dos.
     """
 
     def __init__(self, n: int, k: int, ff: List[Tuple[int, int]], seed: int = None,
                  transform: Union[Callable, str] = None, noisiness: float = 0) -> None:
+        """
+        Initialize an XOR Feed-Forward Arbiter PUF Simulation.
+        :param n: Number of challenge bits.
+        :param k: Number of Feed-Forward PUFs in this XOR Feed-Forward Arbiter PUF.
+        :param ff: List of forward connections in the Feed-Forward Arbiter PUFs. For each 2-tuple (i, j) in this list,
+            an arbiter element is simulated after the first i stages, with the result inserted as j-th challenge bit.
+        :param seed: Seed for random weight generation.
+        :param transform: Challenge transformation applied before evaluation.
+        :param noisiness: Noise-level of the simulation.
+        """
         if seed is None:
             seed = 'default'
         weight_seed = self.seed(f'xor arbiter puf {seed} weights')
@@ -205,7 +209,7 @@ class XORFeedForwardArbiterPUF(NoisyLTFArray):
                 # check if we reached the last iteration
                 if arbiter_point == -1:
                     # all challenges known, evaluate the chain
-                    # TODO this makes the final response noise independent of noise that was added ealier to the feed-
+                    # TODO this makes the final response noise independent of noise that was added earlier to the feed-
                     #  forward arbiters, which may be problematic
                     responses[:, l] = sign(partial_puf.ltf_eval(self.transform(ff_challenges, 1)))[:, 0]
                     break

@@ -71,6 +71,29 @@ array([-1,  1, -1], dtype=int8)
     The `noisiness` parameter in the XOR Arbiter PUF is directly referring to the noise of `each` Arbiter PUF in the
     simulation. This means that for equal `noisiness`, noise level will increase for higher `k`.
 
+Feed-Forward (XOR) Arbiter PUF
+------------------------------
+
+Feed-Forward Arbiter PUFs are an attempt to increase resistance to modeling attacks [GLCDD04]_ compared to traditional
+Arbiter PUFs. In an Feed-Forward XOR Arbiter PUF, many Feed-Forward Arbiter PUFs are evaluated in parallel, and the
+XOR of the individual response bits is returned.
+
+.. warning::
+    pypuf simulations of Feed-Forward Arbiter PUFs that take noise into account are currently limited:
+    First, pypuf does not support reproducible results for noisy simulations of the XOR Feed-Forward Arbiter PUF.
+    Second, the current implementation treats the measurement noise of the feed-forward arbiter and noise in the
+    measurement of the Arbiter PUF arbiter as independent random variables, which may not be true in reality.
+    All simulations of the XOR Feed-Forward Arbiter PUF are somewhat inefficient.
+
+To simulate an 4-XOR 128-bit Feed Forward Arbiter PUF with an feed-forward arbiter after the 32nd stages which will
+determine the 68th challenge bit, use
+
+>>> from pypuf.simulation.delay import XORFeedForwardArbiterPUF
+>>> puf = XORFeedForwardArbiterPUF(n=128, k=4, ff=[(32, 68)], seed=1)
+>>> from pypuf.io import random_inputs
+>>> puf.eval(random_inputs(n=128, N=6, seed=2))
+array([-1, -1, -1,  1,  1, -1], dtype=int8)
+
 Lightweight Secure PUF
 ----------------------
 

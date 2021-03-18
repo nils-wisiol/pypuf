@@ -14,6 +14,8 @@ Bibliography
     in Hardware-Oriented Security and Trust (HOST), 2013 IEEE International Symposium on 137–142 (IEEE, 2013).
 .. [GCvDD02] Gassend, B., Clarke, D., van Dijk, M. & Devadas, S. Silicon Physical Random Functions. in Proceedings of
     the 9th ACM Conference on Computer and Communications Security 148–160 (ACM, 2002). doi:10.1145/586110.586132.
+.. [GLCDD04] Gassend, B., Lim, D., Clarke, D., Dijk, M. van & Devadas, S. Identification and authentication of
+    integrated circuits. Concurrency and Computation: Practice and Experience 16, 1077–1098 (2004).
 .. [MKP08] Majzoobi, M., Koushanfar, F. & Potkonjak, M. Lightweight Secure PUFs. in Proceedings of the 2008 IEEE/ACM
     International Conference on Computer-Aided Design 670–673 (IEEE Press, 2008).
 .. [NSJM19] Nguyen, P. H. et al. The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks.

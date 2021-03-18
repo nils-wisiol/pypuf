@@ -8,10 +8,13 @@ studies with hardware.
 
 Included PUF Desings
 --------------------
-pypuf features simulations of :doc:`Arbiter PUF-based designs <arbiter_puf>` utilizing the
-:doc:`additive delay model <delay>`, including simulations of the Arbiter PUF [GCvDD02]_, XOR Arbiter PUF [SD07]_,
-Lightweight Secure PUF [MKP08]_, Permutation PUF [WBMS19]_, and Interpose PUF [NSJM19]_. It also supports simulations
-of :doc:`PUF designs based on bistable rings <bistable>` [CCLSR11]_ [XRHB15]_.
+pypuf currently features simulation of the following strong PUFs:
+
+1. :doc:`Arbiter PUF-based designs <arbiter_puf>` utilizing the
+   :doc:`additive delay model <delay>`, including simulations of the Arbiter PUF [GCvDD02]_, XOR Arbiter PUF [SD07]_,
+   Lightweight Secure PUF [MKP08]_, Permutation PUF [WBMS19]_, and Interpose PUF [NSJM19]_.
+2. :doc:`Feed-Forward Arbiter PUFs <arbiter_puf>` and XORs thereof [GLCDD04]_.
+3. :doc:`PUF designs based on bistable rings <bistable>` [CCLSR11]_ [XRHB15]_.
 
 Technicalities
 --------------
