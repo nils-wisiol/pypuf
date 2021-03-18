@@ -1,7 +1,7 @@
 # pypuf: Cryptanalysis of Physically Unclonable Functions
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3904267.svg)](https://doi.org/10.5281/zenodo.3904267)
-![](https://github.com/nils-wisiol/pypuf/workflows/Doc%20Tests/badge.svg?branch=v2)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3901410.svg)](https://doi.org/10.5281/zenodo.3901410)
+![](https://github.com/nils-wisiol/pypuf/workflows/Doc%20Tests/badge.svg?branch=main)
 [![pypi](https://img.shields.io/pypi/v/pypuf.svg)](https://pypi.python.org/pypi/pypuf)
 
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
@@ -54,16 +54,34 @@ Testing, linting, licensing.
 1. Set environment variables `GITHUB_TOKEN` to a GitHub token, `TWINE_USERNAME` and `TWINE_PASSWORD` to PyPi
     credentials.
 1. Publish using `publish nils-wisiol pypuf`
-1. At zenedo.org, make sure the author list and project title are correct
-1. Bump DOI in README (badge, citation section)
-1. Bump DOI in docs `index.rst` (image src and link)
-1. `git commit -p -m "docs: Bump DOI for v$RELEASE"`
+1. At zenodo.org, make sure the author list is up to date.
 
 ## Citation
 
-pypuf is published [via Zenodo](https://zenodo.org/record/3904267). Please cite this work as (update date and version
-as appropriate)
+To refer to pypuf, please use DOI `10.5281/zenodo.3901410`.
+pypuf is published [via Zenodo](https://zenodo.org/badge/latestdoi/87066421).
+Please cite this work as
 
-> Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay. (2020, June 23). pypuf: Cryptanalysis of Physically Unclonable Functions (Version v0.0.7). Zenodo. http://doi.org/10.5281/zenodo.3904267
+> Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay.
+> pypuf: Cryptanalysis of Physically Unclonable Functions (Version v2, March 2021). Zenodo.
+> https://doi.org/10.5281/zenodo.3901410
 
-or [download BibTeX directly from Zenodo](https://zenodo.org/record/3904267/export/hx).
+or use the following BibTeX:
+
+```
+@software{pypuf,
+  author       = {Nils Wisiol and
+                  Christoph Gräbnitz and
+                  Christopher Mühl and
+                  Benjamin Zengin and
+                  Tudor Soroceanu and
+                  Niklas Pirnay},
+  title        = {{pypuf: Cryptanalysis of Physically Unclonable
+                   Functions}},
+  year         = 2021,
+  publisher    = {Zenodo},
+  version      = {v2},
+  doi          = {10.5281/zenodo.3901410},
+  url          = {https://doi.org/10.5281/zenodo.3901410}
+}
+```
