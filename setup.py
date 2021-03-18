@@ -4,7 +4,7 @@ import setuptools
 
 setup(
     name='pypuf',
-    version='0.0.9',
+    version='2.0.0',
     packages=setuptools.find_packages(),
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
