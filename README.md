@@ -6,6 +6,11 @@
 
 pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable Functions.
 
+## Getting Started
+
+Please check out the [pypuf hello world](https://pypuf.readthedocs.io/en/latest/#getting-started) in the
+[documentation](https://pypuf.readthedocs.org).
+
 ## Studies and Results
 
 pypuf is used in the following projects:
@@ -21,40 +26,6 @@ pypuf is used in the following projects:
 
 Please check out the [archived version of pypuf v1](https://github.com/nils-wisiol/pypuf/tree/v1) to find the
 original code used in these projects.
-
-## Using pypuf
-
-To get started, please check out the [documentation](https://pypuf.readthedocs.org).
-
-## Contribute
-
-Testing, linting, licensing.
-
-### Update Documentation and Check Doc Tests
-
-1. install `sphinx-build xdoctest`
-1. `xdoctest pypuf`
-1. `cd docs`
-1. `make clean`
-1. `make doctest && make html`
-
-### Maintainer: Prepare New Release
-
-1. Make sure docs are testing and building without error (see above)
-1. Commit all changes
-1. Clean up `dist/` folder
-1. Set up new release version: `RELEASE=x.y.z`
-1. Update version to `x.y.z` in `setup.py` and `docs/conf.py`
-1. Commit with message "Release Version vx.y.z": `git commit -p -m "Release Version v$RELEASE"`
-1. Tag commit using `git tag -as v$RELEASE -m "Release Version v$RELEASE"`
-1. If applicable, adjust `dev` and/or `stable` tags.
-1. Push
-    1. branch: `git push`
-    1. tag: `git push origin v$RELEASE`
-1. Set environment variables `GITHUB_TOKEN` to a GitHub token, `TWINE_USERNAME` and `TWINE_PASSWORD` to PyPi
-    credentials.
-1. Publish using `publish nils-wisiol pypuf`
-1. At zenodo.org, make sure the author list is up to date.
 
 ## Citation
 
@@ -85,3 +56,33 @@ or use the following BibTeX:
   url          = {https://doi.org/10.5281/zenodo.3901410}
 }
 ```
+
+## Contribute
+
+Testing, linting, licensing.
+
+### Update Documentation and Check Doc Tests
+
+1. install `sphinx-build xdoctest`
+1. `xdoctest pypuf`
+1. `cd docs`
+1. `make clean`
+1. `make doctest && make html`
+
+### Maintainer: Prepare New Release
+
+1. Make sure docs are testing and building without error (see above)
+1. Commit all changes
+1. Clean up `dist/` folder
+1. Set up new release version: `RELEASE=x.y.z`
+1. Update version to `x.y.z` in `setup.py` and `docs/conf.py`
+1. Commit with message "Release Version vx.y.z": `git commit -p -m "Release Version v$RELEASE"`
+1. Tag commit using `git tag -as v$RELEASE -m "Release Version v$RELEASE"`
+1. If applicable, adjust `dev` and/or `stable` tags.
+1. Push
+    1. branch: `git push`
+    1. tag: `git push origin v$RELEASE`
+1. Set environment variables `GITHUB_TOKEN` to a GitHub token, `TWINE_USERNAME` and `TWINE_PASSWORD` to PyPi
+    credentials.
+1. Publish using `publish nils-wisiol pypuf`
+1. At zenodo.org, make sure the author list is up to date.
