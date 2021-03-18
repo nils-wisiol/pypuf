@@ -1,4 +1,5 @@
 [flake8]
+per-file-ignores = __init__.py:F401
 ignore =
     # E501: line longer than 79 chars
     E501,
