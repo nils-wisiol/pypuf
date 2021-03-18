@@ -18,6 +18,7 @@ pypuf is a toolbox for simulation, testing, and attacking Physically Unclonable 
    Overview <simulation/overview>
    simulation/arbiter_puf
    simulation/delay
+   simulation/bistable
    simulation/base
 
 .. toctree::

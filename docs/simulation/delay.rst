@@ -25,7 +25,6 @@ Modeling of Delay Values
 
 Implementation of the Additive Delay Model
 
-.. automodule:: pypuf.simulation.base
 .. autoclass:: pypuf.simulation.base.LTFArray
     :members: eval
 
