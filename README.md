@@ -19,6 +19,9 @@ pypuf is used in the following projects:
 - 2019, Wisiol et al.: [Why Attackers Lose: Design and Security Analysis of Arbitrarily Large XOR Arbiter PUFs](https://doi.org/10.1007/s13389-019-00204-8):
   Simulation of the stabiltiy of Majority Vote XOR Arbiter PUFs.
 
+Please check out the [archived version of pypuf v1](https://github.com/nils-wisiol/pypuf/tree/v1) to find the
+original code used in these projects.
+
 ## Using pypuf
 
 To get started, please check out the [documentation](https://pypuf.readthedocs.org).
