@@ -13,6 +13,8 @@ setup(
     maintainer='Nils Wisiol',
     maintainer_email='pypuf@nils-wisiol.de',
     install_requires=[
+        'memory_profiler',
         'numpy>=1.18',
+        'pandas',  # TODO remove after retiring batch.PickleResultCollection
     ],
 )

@@ -9,6 +9,7 @@ from typing import List, Optional
 
 import pandas as pd
 from numpy.distutils import cpuinfo
+from memory_profiler import memory_usage
 
 # noinspection PyBroadException
 try:
@@ -169,7 +170,7 @@ class StudyBase:
     def primary_results(self, results: dict) -> dict:
         raise NotImplementedError
 
-    def _add_result(self, params: dict, result: dict) -> None:
+    def _add_result(self, params: dict, result: dict, memory: list = None) -> None:
         row = {}
         row.update({
             'parameters': list(map(str, params.keys())),
@@ -178,6 +179,7 @@ class StudyBase:
             'cpu': cpu,
             'timestamp': datetime.now(),
             'param_hash': self._hash_parameters(params),
+            'memory': memory,
             # TODO consider adding git state
         })
         for env_var in [
@@ -206,7 +208,9 @@ class StudyBase:
 
     def run_single(self, params: dict) -> None:
         logging.debug(f'Running {self.__class__.__name__} for {params}')
-        self._add_result(params, self.run(**params))
+
+        memory, result = memory_usage((self.run, [], params), retval=True)
+        self._add_result(params, result, memory)
 
     def run_block(self, index: int, total: int) -> None:
         parameter_matrix = self._cached_parameter_matrix
