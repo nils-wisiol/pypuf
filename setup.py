@@ -13,6 +13,6 @@ setup(
     maintainer='Nils Wisiol',
     maintainer_email='pypuf@nils-wisiol.de',
     install_requires=[
-        'numpy~=1.18.5',
+        'numpy>=1.18',
     ],
 )
