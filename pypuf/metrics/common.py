@@ -178,7 +178,7 @@ def similarity_data(responses1: np.ndarray, responses2: np.ndarray) -> np.ndarra
     if len(responses2.shape) == 1:
         responses2 = responses2.reshape(-1, 1)
 
-    return 1 - np.average(np.absolute(responses1 - responses2), axis=0) / 2
+    return np.average(np.absolute(responses1 == responses2), axis=0)
 
 
 def accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> np.ndarray:
