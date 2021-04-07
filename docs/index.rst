@@ -28,6 +28,13 @@ Some functionality is only implemented in the
 
 .. toctree::
    :maxdepth: 2
+   :caption: Attacks
+   :hidden:
+
+   Overview <attacks/overview>
+
+.. toctree::
+   :maxdepth: 2
    :caption: Tools
    :hidden:
 
