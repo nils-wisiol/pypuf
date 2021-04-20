@@ -61,13 +61,15 @@ or use the following BibTeX:
 
 Testing, linting, licensing.
 
-### Update Documentation and Check Doc Tests
+### Run Tests
 
 1. install `sphinx-build xdoctest`
 1. `xdoctest pypuf`
 1. `cd docs`
 1. `make clean`
 1. `make doctest && make html`
+1. `cd` to project root
+1. `python3 -m pytest test`
 
 ### Maintainer: Prepare New Release
 
