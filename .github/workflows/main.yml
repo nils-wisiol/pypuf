@@ -27,6 +27,9 @@ jobs:
     - name: flake8 Linter
       run:  python3 -m flake8 pypuf
 
+    - name: Pytest
+      run: python3 -m pytest test
+
     - name: Python Doc Tests
       run: python3 -m xdoctest pypuf
 

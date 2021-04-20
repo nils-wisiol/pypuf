@@ -7,3 +7,4 @@ sphinx_rtd_theme
 scipy
 pandas
 memory_profiler
+pytest
