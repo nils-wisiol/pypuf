@@ -3,6 +3,7 @@ import pytest
 
 import pypuf.simulation
 import pypuf.metrics
+import pypuf.io
 
 
 @pytest.mark.parametrize('n', range(1, 12))
@@ -56,6 +57,14 @@ def test_ff_1_loop() -> None:
     # extended challenge [ 1 -1 -1  1  1]
     # transformed challenge [ 1  1 -1  1  1] => 102
     assert ff_puf.val(np.array([[1, -1, -1, 1]]))[0] == 102
+
+
+@pytest.mark.parametrize('n', [64, 1000])
+def test_ff_invalid_feed_point(n: int) -> None:
+    puf = pypuf.simulation.FeedForwardArbiterPUF(n=n, ff=[(1, n+1)], seed=1)
+    challenges = pypuf.io.random_inputs(n=n, N=1, seed=1)
+    with pytest.raises(IndexError):
+        puf.eval(challenges)
 
 
 def test_ff_2_loops_sequentially() -> None:
