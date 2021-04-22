@@ -18,12 +18,12 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = 'pypuf'
-copyright = '2020, Nils Wisiol'
+copyright = '2021, Nils Wisiol'
 author = 'Nils Wisiol'
 master_doc = 'index'
 
 # The full version, including alpha/beta/rc tags
-release = '2.1.0'
+release = '2.2.0'
 
 
 # -- General configuration ---------------------------------------------------
