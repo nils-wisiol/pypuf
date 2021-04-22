@@ -76,23 +76,26 @@ Feed-Forward (XOR) Arbiter PUF
 
 Feed-Forward Arbiter PUFs are an attempt to increase resistance to modeling attacks [GLCDD04]_ compared to traditional
 Arbiter PUFs. In an Feed-Forward XOR Arbiter PUF, many Feed-Forward Arbiter PUFs are evaluated in parallel, and the
-XOR of the individual response bits is returned.
+XOR of the individual response bits is returned. The feed-forward loops may be homogeneous, i.e. the same for all
+participating Arbiter PUFs, or inhomogeneous.
 
-.. warning::
-    pypuf simulations of Feed-Forward Arbiter PUFs that take noise into account are currently limited:
-    First, pypuf does not support reproducible results for noisy simulations of the XOR Feed-Forward Arbiter PUF.
-    Second, the current implementation treats the measurement noise of the feed-forward arbiter and noise in the
-    measurement of the Arbiter PUF arbiter as independent random variables, which may not be true in reality.
-    All simulations of the XOR Feed-Forward Arbiter PUF are somewhat inefficient.
+Even if using the noisy simulation, all involved arbiter elements are assumed to work entirely noise-free with infinite
+precision.
 
-To simulate an 4-XOR 128-bit Feed Forward Arbiter PUF with an feed-forward arbiter after the 32nd stages which will
-determine the 68th challenge bit, use
+To simulate an 4-XOR 128-bit Feed Forward Arbiter PUF in which each Feed-Forward Arbiter PUF will have a feed-forward
+loop after the 33nd stage that will determine the challenge bit to the 69th stage, use
 
 >>> from pypuf.simulation import XORFeedForwardArbiterPUF
 >>> puf = XORFeedForwardArbiterPUF(n=128, k=4, ff=[(32, 68)], seed=1)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=128, N=6, seed=2))
-array([-1, -1, -1,  1,  1, -1], dtype=int8)
+array([-1, -1,  1,  1, -1,  1])
+
+The full Feed-Forward Arbiter PUF simulation API is displayed below.
+
+.. automethod:: pypuf.simulation.FeedForwardArbiterPUF.__init__
+.. automethod:: pypuf.simulation.XORFeedForwardArbiterPUF.__init__
+
 
 Lightweight Secure PUF
 ----------------------
