@@ -1,7 +1,7 @@
 """
 Simulations of Physically Unclonable Functions (PUFs).
 """
-from typing import Optional
+from typing import Optional, List
 from typing import Union, Callable
 
 from numpy import prod, sign, sqrt, append, empty, ceil, \
@@ -454,3 +454,25 @@ class NoisyLTFArray(LTFArray):
         evaled_inputs = super().ltf_eval(sub_challenges)
         noise = self.random.normal(loc=0, scale=self.sigma_noise, size=(len(evaled_inputs), self.k))
         return evaled_inputs + noise
+
+
+class XORPUF(Simulation):
+    """Simulates the XOR of a number of given simulations."""
+
+    def __init__(self, simulations: List[Simulation]) -> None:
+        super().__init__()
+        self.simulations = simulations
+
+    @property
+    def challenge_length(self) -> int:
+        return self.simulations[0].challenge_length
+
+    @property
+    def response_length(self) -> int:
+        return self.simulations[0].response_length
+
+    def val(self, challenges: ndarray) -> ndarray:
+        return prod([s.val(challenges) for s in self.simulations], axis=0)
+
+    def eval(self, challenges: ndarray) -> ndarray:
+        return prod([s.eval(challenges) for s in self.simulations], axis=0)

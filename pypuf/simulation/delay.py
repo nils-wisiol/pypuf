@@ -1,11 +1,11 @@
 from typing import Tuple
 from typing import Union, Callable, List
 
-from numpy import sign, empty, sum as np_sum, concatenate, ndarray, transpose, broadcast_to, swapaxes, array, copy, \
-    insert
+import numpy as np
+from numpy import sign, sum as np_sum, concatenate, ndarray, transpose, broadcast_to, swapaxes, array, copy
 from numpy.random import default_rng, RandomState
 
-from .base import Simulation, NoisyLTFArray, LTFArray
+from .base import Simulation, NoisyLTFArray, LTFArray, XORPUF
 
 
 class SimulationMajorityLTFArray(NoisyLTFArray):
@@ -137,36 +137,42 @@ class XORArbiterPUF(NoisyLTFArray):
         )
 
 
-class XORFeedForwardArbiterPUF(NoisyLTFArray):
+class FeedForwardArbiterPUF(NoisyLTFArray):
     """
-    XOR Feed-Forward Arbiter PUF [GLCDD04]_. Simulation based on the additive delay model.
-
-    .. note::
-        This implementation has limited functionality when run with noise.
-        For details, see code comments and to-dos.
+    Feed-Forward Arbiter PUF [GLCDD04]_. Simulation based on the additive delay model.
     """
 
-    def __init__(self, n: int, k: int, ff: List[Tuple[int, int]], seed: int = None,
-                 transform: Union[Callable, str] = None, noisiness: float = 0) -> None:
+    def __init__(self, n: int, ff: List[Tuple[int, int]], seed: int = None,
+                 noisiness: float = 0) -> None:
         """
-        Initialize an XOR Feed-Forward Arbiter PUF Simulation.
+        Initialize a Feed-Forward Arbiter PUF Simulation.
+
         :param n: Number of challenge bits.
-        :param k: Number of Feed-Forward PUFs in this XOR Feed-Forward Arbiter PUF.
-        :param ff: List of forward connections in the Feed-Forward Arbiter PUFs. For each 2-tuple (i, j) in this list,
-            an arbiter element is simulated after the first i stages, with the result inserted as j-th challenge bit.
+
+        :param ff: List of forward connections in the Feed-Forward Arbiter PUFs. Forward connections are defined by
+            two-tuples :math:`(i,j)`, where :math:`i` defines the *arbiter position*, and :math:`j` defines the
+            *feed position* of the feed forward loop. For each feed forward loop given, an arbiter element is simulated
+            after the :math:`i`-th stage, with the result inserted as the challenge bit to the :math:`j`-th stage. Note
+            that the Feed-Forward Arbiter PUF has `n + len(ff)` stages. It is required that :math:`i < j`, and no feed
+            position may appear more than once per Arbiter PUF, however, it is allowed to use the arbiter position
+            multiple times.
+
         :param seed: Seed for random weight generation.
-        :param transform: Challenge transformation applied before evaluation.
+
         :param noisiness: Noise-level of the simulation.
+
         """
         if seed is None:
             seed = 'default'
-        weight_seed = self.seed(f'xor arbiter puf {seed} weights')
-        noise_seed = self.seed(f'xor arbiter puf {seed} noise')
+        weight_seed = self.seed(f'FeedForwardArbiterPUF {seed} weights')
+        noise_seed = self.seed(f'FeedForwardArbiterPUF {seed} noise')
+        self.noise_prng = default_rng(noise_seed)
         self.ff = ff
         self.noisiness = noisiness
+
         super().__init__(
-            weight_array=self.normal_weights(n=n + len(ff), k=k, seed=weight_seed),
-            transform=transform or XORArbiterPUF.transform_atf,
+            weight_array=self.normal_weights(n=n + len(ff), k=1, seed=weight_seed),
+            transform=XORArbiterPUF.transform_atf,
             combiner=self.combiner_xor,
             sigma_noise=self.sigma_noise_from_random_weights(
                 n=n + len(ff),
@@ -182,64 +188,100 @@ class XORFeedForwardArbiterPUF(NoisyLTFArray):
 
     n = challenge_length
 
-    def eval_block(self, challenges: ndarray) -> ndarray:
-        # we evaluate the chains separately as the feed-forward bits are chain-individual
+    def val(self, challenges: ndarray) -> ndarray:
         (N, n) = challenges.shape
-        responses = empty(shape=(N, self.k))
-        for l in range(self.k):
-            # evaluate the feed-forward arbiters from left to right
-            # TODO I'm sure this can be done much more efficiently by avoiding to evaluate the part before arbiter_point
-            #  again in the next round
-            ff_challenges = challenges.copy()
-            for arbiter_point, feed_point in self.ff + [(-1, -1)]:
-                # (1) evaluate PUF from begin to arbiter_point
-                partial_puf = NoisyLTFArray(
-                    weight_array=self.weight_array[l:l + 1, :arbiter_point],
-                    transform=self.transform,
-                    combiner=self.combiner,
-                    sigma_noise=self.sigma_noise_from_random_weights(
-                        n=n + len(self.ff),
-                        sigma_weight=1,
-                        noisiness=self.noisiness,
-                    ),
-                    seed=default_rng().integers(2**32),  # TODO make noisy evaluation reproducible
-                    bias=self.weight_array[l, -1],
-                )
+        ff = sorted(self.ff, key=lambda loop: loop[1])  # loops sorted by feed point
+        feed_points = {feed_point for _, feed_point in ff}  # set of all feed points
 
-                # check if we reached the last iteration
-                if arbiter_point == -1:
-                    # all challenges known, evaluate the chain
-                    # TODO this makes the final response noise independent of noise that was added earlier to the feed-
-                    #  forward arbiters, which may be problematic
-                    responses[:, l] = sign(partial_puf.ltf_eval(self.transform(ff_challenges, 1)))[:, 0]
-                    break
+        # prepare challenges with zeros for where the feed forward bits will go in
+        ff_challenges = np.zeros(shape=(N, self.n + len(ff)))
+        o = 0  # number of feed points before i-th stage
+        for i in range(self.n + len(ff)):
+            # set challenge bit but omit feed points (they will be filled below)
+            if i in feed_points:
+                o += 1
+            else:
+                ff_challenges[:, i] = challenges[:, i - o]
 
-                feed = sign(partial_puf.ltf_eval(self.transform(ff_challenges[:, :arbiter_point], 1)))
+        # compute delay difference at each arbiter point and fill the sign into the corresponding feed point
+        delay_difference = np.zeros(shape=(N,))
+        delay_difference_pos = 0
+        for arbiter_point, feed_point in ff + [(n + len(ff), None)]:
 
-                # (2) insert new challenge bit at feed_point
-                ff_challenges = insert(ff_challenges, feed_point, feed[:, 0], axis=1)
+            # construct LTF array for the section from delay_difference_pos to the next arbiter point
+            partial_puf = NoisyLTFArray(
+                weight_array=self.weight_array[:, delay_difference_pos:arbiter_point],
+                transform=self.transform,
+                combiner=self.combiner,
+                sigma_noise=self.sigma_noise_from_random_weights(
+                    n=(arbiter_point or n) - delay_difference_pos,
+                    sigma_weight=1,
+                    noisiness=self.noisiness,
+                ),
+                seed=self.noise_prng.integers(2**32),
+            )
 
-        return self.combiner(responses)
+            # select section of applied challenge
+            ff_challenges_section = ff_challenges[:, delay_difference_pos:arbiter_point]
+            assert 0 not in np.unique(ff_challenges_section)  # confirm all challenge bits are known
 
-    def chain(self, idx: int) -> Simulation:
-        r"""
-        Returns a ``XORFeedForwardArbiterPUF`` instance containing just one chain of this ``XORFeedForwardArbiterPUF``.
-        :param idx: Index of the desired chain in :math:`\{0, ..., k\}`
+            # add delay difference of this section to grand total
+            # The simulation is done using the **weights** of the Arbiter PUF, not the delays. This allows for
+            # fast computation.
+            delay_difference *= np.prod(ff_challenges_section, axis=1)
+            delay_difference += partial_puf.ltf_eval(self.transform(ff_challenges_section, 1))[:, 0]
+            delay_difference_pos = arbiter_point
+
+            # except for the last iteration, set the resulting feed-forward challenge bit
+            if feed_point:
+                ff_challenges[:, feed_point] = sign(delay_difference)
+
+        # note that we only take the sign in the eval method
+        return delay_difference
+
+
+class XORFeedForwardArbiterPUF(XORPUF):
+    """
+    XOR Feed-Forward Arbiter PUF [GLCDD04]_. Simulation based on the additive delay model.
+    """
+
+    def __init__(self, n: int, k: int, ff: Union[List[List[Tuple[int, int]]], List[Tuple[int, int]]], seed: int = None,
+                 noisiness: float = 0) -> None:
         """
-        if idx >= self.weight_array.shape[0]:
-            raise IndexError
-        chain = XORFeedForwardArbiterPUF(
-            n=self.n,
-            k=1,
-            ff=self.ff,
-            seed=0,  # weights are overwritten below
-            transform=self.transform,
-            noisiness=self.noisiness,
-        )
-        print('chain', chain.weight_array.shape)
-        print('self', self.weight_array.shape)
-        chain.weight_array[0] = self.weight_array[idx]
-        return chain
+        Initialize an XOR Feed-Forward Arbiter PUF Simulation.
+
+        :param n: Number of challenge bits.
+
+        :param k: Number of Feed-Forward PUFs in this XOR Feed-Forward Arbiter PUF.
+
+        :param ff: List of ``k`` lists of forward connections in the Feed-Forward Arbiter PUF. The :math:`l`-th Arbiter
+            PUF in the XOR Feed-Forward Arbiter PUF will use the :math:`l`-th list of forward connections. If a list of
+            tuples is given instead, it is used for all ``k`` Feed-Forward Arbiter PUFs. See
+            :meth:`pypuf.simulation.FeedForwardArbiterPUF.__init__` for how to define feed-forward connections.
+
+        :param seed: Seed for random weight generation.
+
+        :param noisiness: Noise-level of the simulation.
+        """
+        if seed is None:
+            seed = 'default'
+
+        if not ff:
+            ff = [[]]
+        if ff[0] == [] or isinstance(ff[0], tuple):
+            ff = [ff] * k
+
+        ff_pufs = [
+            FeedForwardArbiterPUF(
+                n=n,
+                ff=ff[l],
+                seed=self.seed(f"XORFeedForwardArbiterPUF {seed} {l}"),
+                noisiness=noisiness,
+            )
+            for l in range(k)
+        ]
+
+        super().__init__(ff_pufs)
 
 
 class ArbiterPUF(XORArbiterPUF):
