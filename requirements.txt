@@ -8,3 +8,4 @@ scipy
 pandas
 memory_profiler
 pytest
+tensorflow~=2.4.0

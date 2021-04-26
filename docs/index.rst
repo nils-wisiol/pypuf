@@ -32,6 +32,7 @@ Some functionality is only implemented in the
    :hidden:
 
    Overview <attacks/overview>
+   Logistic Regression <attacks/lr>
 
 .. toctree::
    :maxdepth: 2
