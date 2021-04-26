@@ -30,13 +30,15 @@ Bibliography
     bifurcation. in International Workshop on Radio Frequency Identification: Security and Privacy Issues 17–31
     (Springer, 2015).
 .. [WBMS19] Wisiol, N. et al. Breaking the Lightweight Secure PUF: Understanding the Relation of Input Transformations
-    and Machine Learning Resistance. https://eprint.iacr.org/2019/799 (2019).
+    and Machine Learning Resistance. in Smart Card Research and Advanced Applications (eds. Belaïd, S. & Güneysu, T.)
+    40–54 (Springer International Publishing, 2020). doi:10.1007/978-3-030-42068-0_3.
 .. [WM19] Wisiol, N. & Margraf, M. Why attackers lose: design and security analysis of arbitrarily large XOR arbiter
     PUFs. J Cryptogr Eng 9, 221–230 (2019).
-.. [WMPN19] Wisiol, N. et al. Splitting the Interpose PUF: A Novel Modeling Attack Strategy.
-    https://eprint.iacr.org/2019/1473 (2019).
-.. [WP20] Wisiol, N. & Pirnay, N. Short Paper: XOR Arbiter PUFs have Systematic Response Bias.
-    https://eprint.iacr.org/2019/1091 (2019).
+.. [WMPN19] Wisiol, N. et al. Splitting the Interpose PUF: A Novel Modeling Attack Strategy. IACR Transactions on
+    Cryptographic Hardware and Embedded Systems 97–120 (2020) doi:10.13154/tches.v2020.i3.97-120.
+.. [WP20] Wisiol, N. & Pirnay, N. Short Paper: XOR Arbiter PUFs Have Systematic Response Bias. in Financial
+    Cryptography and Data Security (eds. Bonneau, J. & Heninger, N.) 50–57 (Springer International Publishing, 2020).
+    doi:10.1007/978-3-030-51280-4_4.
 .. [XRHB15] Xu, X., Rührmair, U., Holcomb, D. E. & Burleson, W. Security Evaluation and Enhancement of Bistable Ring
     PUFs. in Radio Frequency Identification (eds. Mangard, S. & Schaumont, P.) 3–16 (Springer International Publishing,
     2015).
