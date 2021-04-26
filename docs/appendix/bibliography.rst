@@ -4,6 +4,11 @@ Bibliography
 ..
   Using Zotero "export bibliography" feature to clipboard, using Nature style. Index labels are created manually.
 
+.. [AZ17] Alkatheiri, M. S. & Zhuang, Y. Towards fast and accurate machine learning attacks of feed-forward arbiter
+    PUFs. in 2017 IEEE Conference on Dependable and Secure Computing 181–187 (2017). doi:10.1109/DESEC.2017.8073845.
+.. [AZA18] Aseeri, A. O., Zhuang, Y. & Alkatheiri, M. S. A Machine Learning-Based Security Vulnerability Study on XOR
+    PUFs for Resource-Constraint Internet of Things. in 2018 IEEE International Congress on Internet of Things (ICIOT)
+    49–56 (2018). doi:10.1109/ICIOT.2018.00014.
 .. [Bec15] Becker, G. T. The Gap Between Promise and Reality: On the Insecurity of XOR Arbiter PUFs. in Cryptographic
     Hardware and Embedded Systems -- CHES 2015 (eds. Güneysu, T. & Handschuh, H.) 535–555 (Springer Berlin Heidelberg,
     2015).
@@ -16,6 +21,8 @@ Bibliography
     the 9th ACM Conference on Computer and Communications Security 148–160 (ACM, 2002). doi:10.1145/586110.586132.
 .. [GLCDD04] Gassend, B., Lim, D., Clarke, D., Dijk, M. van & Devadas, S. Identification and authentication of
     integrated circuits. Concurrency and Computation: Practice and Experience 16, 1077–1098 (2004).
+.. [MTZAA20] Mursi, K. T., Thapaliya, B., Zhuang, Y., Aseeri, A. O. & Alkatheiri, M. S. A Fast Deep Learning Method for
+    Security Vulnerability Study of XOR PUFs. Electronics 9, 1715 (2020).
 .. [MKP08] Majzoobi, M., Koushanfar, F. & Potkonjak, M. Lightweight Secure PUFs. in Proceedings of the 2008 IEEE/ACM
     International Conference on Computer-Aided Design 670–673 (IEEE Press, 2008).
 .. [NSJM19] Nguyen, P. H. et al. The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks.
@@ -36,6 +43,8 @@ Bibliography
     PUFs. J Cryptogr Eng 9, 221–230 (2019).
 .. [WMPN19] Wisiol, N. et al. Splitting the Interpose PUF: A Novel Modeling Attack Strategy. IACR Transactions on
     Cryptographic Hardware and Embedded Systems 97–120 (2020) doi:10.13154/tches.v2020.i3.97-120.
+.. [WMSZ21] Wisiol, N., Mursi K. T., Seifert, J.-P., Zhuang, Y. Neural-Network-Based Modeling Attacks on XOR Arbiter
+    PUFs Revisited. In submission (2021).
 .. [WP20] Wisiol, N. & Pirnay, N. Short Paper: XOR Arbiter PUFs Have Systematic Response Bias. in Financial
     Cryptography and Data Security (eds. Bonneau, J. & Heninger, N.) 50–57 (Springer International Publishing, 2020).
     doi:10.1007/978-3-030-51280-4_4.

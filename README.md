@@ -15,6 +15,7 @@ Please check out the [pypuf hello world](https://pypuf.readthedocs.io/en/latest/
 
 pypuf is used in the following projects:
 
+- 2021, Wisiol et al.: Neural-Network-Based Modeling Attacks on XOR Arbiter PUFs Revisited
 - 2020, Wisiol et al.: [ Splitting the Interpose PUF: A Novel Modeling Attack Strategy](https://eprint.iacr.org/2019/1473):
   Modeling attacks on the Interpose PUF using Logistic Regression in a Divide-and-Conquer strategy.
 - 2020, Wisiol et al.: [Short Paper: XOR Arbiter PUFs have Systematic Response Bias](https://eprint.iacr.org/2019/1091):
@@ -46,7 +47,8 @@ or use the following BibTeX:
                   Christopher Mühl and
                   Benjamin Zengin and
                   Tudor Soroceanu and
-                  Niklas Pirnay},
+                  Niklas Pirnay and
+                  Khalid T. Mursi},
   title        = {{pypuf: Cryptanalysis of Physically Unclonable
                    Functions}},
   year         = 2021,
