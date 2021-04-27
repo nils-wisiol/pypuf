@@ -22,7 +22,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install Requirements
-      run: pip3 install -r requirements.txt
+      run: |
+        pip3 install -r requirements.txt
+        pip3 freeze
 
     - name: flake8 Linter
       run:  python3 -m flake8 pypuf
