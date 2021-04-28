@@ -34,7 +34,7 @@ To refer to pypuf, please use DOI `10.5281/zenodo.3901410`.
 pypuf is published [via Zenodo](https://zenodo.org/badge/latestdoi/87066421).
 Please cite this work as
 
-> Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, & Niklas Pirnay.
+> Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu, Niklas Pirnay, & Khalid T. Mursi.
 > pypuf: Cryptanalysis of Physically Unclonable Functions (Version v2, March 2021). Zenodo.
 > https://doi.org/10.5281/zenodo.3901410
 
