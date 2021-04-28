@@ -239,3 +239,47 @@ def similarity(instance1: Simulation, instance2: Simulation, seed: int, N: int =
                          f'{instance1.challenge_length} and {instance2.challenge_length}, respectively.')
     inputs = random_inputs(n=instance1.challenge_length, N=N, seed=seed)
     return similarity_data(instance1.eval(inputs), instance2.eval(inputs))
+
+
+def bias_data(responses: np.ndarray) -> np.ndarray:
+    r"""
+    Given an arrays of responses of shape :math:`(N, m)`, returns the :math:`m` bias values of the response bits,
+
+    .. math:: b_l = E_x \left[ f(x)_l \right],
+
+    where :math:`f` is the function given by ``responses`` and :math:`f(x)_l, 1 \leq l \leq m` is the :math:`l`-th
+    response bit.
+
+    If response length :math:`m` is greater than 1, the bias is given for each bit seperately. To obtain the
+    general bias, average the response.
+
+    Returns an array of shape :math:`(m,)`.
+    """
+    return np.average(responses, axis=0)
+
+
+def bias(instance: Simulation, seed: int, N: int = 1000) -> np.ndarray:
+    r"""
+    Approximates the bias of a given simulation by generating ``N`` random challenges using seed ``seed`` and computing
+    the bias for each of the :math:`m \geq 1` response bits given by the ``instance``,
+
+    .. math:: b_l = E_x \left[ f(x)_l \right],
+
+    where :math:`f` is the function computed by ``instance`` and :math:`f(x)_l, 1 \leq l \leq m` is the :math:`l`-th
+    response bit.
+
+    Arbiter PUF simulations in pypuf per additive delay model almost unbiased:
+
+    >>> from pypuf.simulation import ArbiterPUF
+    >>> from pypuf.metrics import bias
+    >>> bias(ArbiterPUF(n=128, seed=42), seed=1)
+    0.022
+
+    On the other hand, 2-XOR Arbiter PUFs can have relatively large bias [WP20]_.
+
+    >>> from pypuf.simulation import XORArbiterPUF
+    >>> bias(XORArbiterPUF(n=64, k=2, seed=2), seed=2)
+    -0.05
+    """
+    challenges = random_inputs(n=instance.challenge_length, N=N, seed=seed)
+    return bias_data(instance.eval(challenges))
