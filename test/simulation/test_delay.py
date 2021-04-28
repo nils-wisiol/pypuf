@@ -160,3 +160,12 @@ def test_ff_reproducible_noise() -> None:
         for _ in range(2)
     ]
     assert pypuf.metrics.similarity(pufs[0], pufs[1], seed=1) == 1
+
+
+def test_ff_many_loops() -> None:
+    puf = pypuf.simulation.XORFeedForwardArbiterPUF(
+        n=64, k=1, ff=[(2, 30), (8, 58), (25, 32), (48, 51)], seed=1,
+    )
+    assert set(np.unique(puf.eval(pypuf.io.random_inputs(n=puf.challenge_length, N=100, seed=1)))) == {-1, 1}
+    assert -.5 < pypuf.metrics.bias(puf, seed=1) < .5
+    assert pypuf.metrics.bias(puf, seed=1) != 0

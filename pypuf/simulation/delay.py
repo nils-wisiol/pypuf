@@ -190,7 +190,7 @@ class FeedForwardArbiterPUF(NoisyLTFArray):
 
     def val(self, challenges: ndarray) -> ndarray:
         (N, n) = challenges.shape
-        ff = sorted(self.ff, key=lambda loop: loop[1])  # loops sorted by feed point
+        ff = sorted(self.ff, key=lambda loop: loop[0])  # loops sorted by arbiter point
         feed_points = {feed_point for _, feed_point in ff}  # set of all feed points
 
         # prepare challenges with zeros for where the feed forward bits will go in
