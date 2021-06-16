@@ -31,7 +31,7 @@ need careful adjustment for each choice of security parameters in the PUF. Then 
 >>> attack.fit()  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
     Epoch 1/30
     ...
-    495/495 [==============================] - ... - loss: 0.0800 - accuracy: 0.9673 - val_loss: 0.0658 - val_accuracy: 0.9730
+    495/495 [==============================] - ... - loss: 0.0... - accuracy: 0.9... - val_loss: 0.0658 - val_accuracy: 0.9730
     <pypuf.attack.mlp2021.MLPAttack2021.Model object at 0x...>
 >>> model = attack.model
 

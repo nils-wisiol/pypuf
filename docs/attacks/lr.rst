@@ -26,7 +26,7 @@ need careful adjustment for each choice of security parameters in the PUF. Then 
 >>> attack.fit()  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
     Epoch 1/100
     ...
-    50/50 [==============================] - ... - loss: 0.4903 - accuracy: 0.9265 - val_loss: 0.4556 - val_accuracy: 0.9600
+    50/50 [==============================] - ... - loss: 0.4... - accuracy: 0.9... - val_loss: 0.4556 - val_accuracy: 0.9600
     <pypuf.simulation.base.LTFArray object at 0x...>
 >>> model = attack.model
 
