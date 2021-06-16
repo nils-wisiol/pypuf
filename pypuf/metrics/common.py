@@ -22,6 +22,18 @@ def reliability_data(responses: np.ndarray) -> np.ndarray:
     where :math:`\text{eval}(x)` is the response of the (noisy) PUF when evaluated on input :math:`x`, and the
     probability is taken over the noise in the evaluation process.
 
+    The approximation is derived from an approximation of :math:`E_\text{eval} \left[ \text{eval}(x) \right]`,
+    which is given by the mean of ``responses``,
+
+    .. math:: \Pr_\text{eval} \left[ \text{eval}(x) = \text{eval}(x) \right] =
+              \frac{1}{2} E_\text{eval} \left[ \text{eval}(x) \right]^2 + \frac{1}{2}.
+
+    The formula can be obtained by observing
+    :math:`\Pr_\text{eval} \left[ \text{eval}(x) = \text{eval}(x) \right] =
+    \Pr\left[\text{eval}(x)=1\right]^2 + \Pr\left[\text{eval}(x)=-1\right]^2` and
+    :math:`\Pr_\text{eval}\left[\text{eval}(x)=1\right] = \frac{1}{2}E_\text{eval}\left[\text{eval}(x)\right]
+    + \frac{1}{2}`.
+
     An array of shape :math:`(N,m)` is returned, estimating above probability for each challenge and each response bit.
     To obtain a the reliability for each response bit, average along the first axis, to obtain the general reliability,
     average over all axes.
@@ -30,9 +42,11 @@ def reliability_data(responses: np.ndarray) -> np.ndarray:
     >>> from numpy import average, array
     >>> responses = array([[[1, 1, -1]], [[1, 1, 1]], [[1, 1, 1]], [[1, 1, 1]]])
     >>> average(reliability_data(responses), axis=0)
-    array([0.83333333])
+    array([0.88888889])
     """
-    return np.absolute(np.average(responses, axis=-1))
+    m = np.average(responses, axis=-1)  # approximate E[eval(x)]
+    f1 = (m + 1) / 2  # P[eval(x) = 1] = 1/2 E[eval(x)] + 1/2
+    return f1**2 + (1 - f1)**2  # P[eval(x) = eval(x)] = P[eval(x) = 1]**2 + P[eval(x) = -1]**2
 
 
 def reliability(instance: Simulation, seed: int, N: int = 10000, r: int = 17) -> np.ndarray:
@@ -50,12 +64,28 @@ def reliability(instance: Simulation, seed: int, N: int = 10000, r: int = 17) ->
     reliability of this instance, average across all axes. Note that bad reliability on single response bits may be
     problematic.
 
-    >>> from pypuf.simulation import XORArbiterPUF
+    >>> from pypuf.simulation import ArbiterPUF, XORArbiterPUF
     >>> from pypuf.metrics import reliability
     >>> from numpy import average
     >>> puf = XORArbiterPUF(n=128, k=2, seed=1, noisiness=.2)
     >>> average(reliability(puf, seed=2), axis=0)
-    array([0.77729412])
+    array([0.84887197])
+
+    An example of an extremely noisy PUF:
+
+    >>> average(reliability(XORArbiterPUF(n=32, k=12, seed=1, noisiness=1), seed=2), axis=0)
+    array([0.52879308])
+
+
+    An example of a very reliable PUF:
+
+    >>> average(reliability(ArbiterPUF(n=32, seed=1, noisiness=.01), seed=2), axis=0)
+    array([0.99576886])
+
+    An example of a perfectly reliable PUF:
+
+    >>> average(reliability(ArbiterPUF(n=64, seed=1, noisiness=0), seed=2), axis=0)
+    array([1.])
     """
     inputs = random_inputs(n=instance.challenge_length, N=N, seed=seed)
     return np.absolute(reliability_data(instance.r_eval(r, inputs)))
