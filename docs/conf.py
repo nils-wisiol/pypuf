@@ -23,7 +23,7 @@ author = 'Nils Wisiol'
 master_doc = 'index'
 
 # The full version, including alpha/beta/rc tags
-release = '2.3.0'
+release = '2.3.1'
 
 
 # -- General configuration ---------------------------------------------------
