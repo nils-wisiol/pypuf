@@ -69,18 +69,18 @@ def reliability(instance: Simulation, seed: int, N: int = 10000, r: int = 17) ->
     >>> from numpy import average
     >>> puf = XORArbiterPUF(n=128, k=2, seed=1, noisiness=.2)
     >>> average(reliability(puf, seed=2), axis=0)
-    array([0.84887197])
+    array([0.84967612])
 
     An example of an extremely noisy PUF:
 
     >>> average(reliability(XORArbiterPUF(n=32, k=12, seed=1, noisiness=1), seed=2), axis=0)
-    array([0.52879308])
+    array([0.52975917])
 
 
     An example of a very reliable PUF:
 
     >>> average(reliability(ArbiterPUF(n=32, seed=1, noisiness=.01), seed=2), axis=0)
-    array([0.99576886])
+    array([0.99582561])
 
     An example of a perfectly reliable PUF:
 
@@ -163,7 +163,7 @@ def uniqueness(instances: List[Simulation], seed: int, N: int = 10000) -> np.nda
     >>> from pypuf.metrics import uniqueness
     >>> instances = [XORArbiterPUF(n=64, k=1, seed=seed) for seed in range(5)]
     >>> uniqueness(instances, seed=31415, N=1000)
-    array([0.9272])
+    array([0.924])
     """
     m = instances[0].response_length
     challenges = random_inputs(instances[0].challenge_length, N, seed)
@@ -232,11 +232,11 @@ def accuracy(simulation: Simulation, test_set: ChallengeResponseSet) -> np.ndarr
     >>> puf = XORArbiterPUF(n=128, k=4, noisiness=.1, seed=1)
     >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2)
     >>> accuracy(puf, test_set)
-    array([0.823])
+    array([0.843])
     >>> puf = XORArbiterPUF(n=64, k=4, noisiness=.3, seed=2)
     >>> test_set = ChallengeResponseSet.from_simulation(puf, N=1000, seed=2, r=5)
     >>> accuracy(puf, test_set)
-    array([0.706])
+    array([0.69])
     """
     sim_responses = simulation.eval(test_set.challenges)
     return similarity_data(sim_responses, test_set.responses)
@@ -262,7 +262,7 @@ def similarity(instance1: Simulation, instance2: Simulation, seed: int, N: int =
     >>> similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=1), seed=31415)  # same seed
     array([1.])
     >>> similarity(XORArbiterPUF(n=128, k=4, seed=1), XORArbiterPUF(n=128, k=4, seed=2), seed=31415)  # different seed
-    array([0.515])
+    array([0.516])
     """
     if instance1.challenge_length != instance2.challenge_length:
         raise ValueError(f'Cannot compare instances with different challenge spaces of dimension '
@@ -303,13 +303,13 @@ def bias(instance: Simulation, seed: int, N: int = 1000) -> np.ndarray:
     >>> from pypuf.simulation import ArbiterPUF
     >>> from pypuf.metrics import bias
     >>> bias(ArbiterPUF(n=128, seed=42), seed=1)
-    0.022
+    -0.004
 
     On the other hand, 2-XOR Arbiter PUFs can have relatively large bias [WP20]_.
 
     >>> from pypuf.simulation import XORArbiterPUF
     >>> bias(XORArbiterPUF(n=64, k=2, seed=2), seed=2)
-    -0.05
+    -0.086
     """
     challenges = random_inputs(n=instance.challenge_length, N=N, seed=seed)
     return bias_data(instance.eval(challenges))

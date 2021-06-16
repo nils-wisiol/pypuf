@@ -28,7 +28,7 @@ For example, to evaluate an Arbiter PUF on three randomly chosen challenges:
 >>> puf = ArbiterPUF(n=64, seed=1)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([-1,  1, -1], dtype=int8)
+array([ 1,  1, -1], dtype=int8)
 
 For noisy simulations, a noise level needs to be given. Basically, the higher the number, the more likely responses
 are to be disturbed by noise; however the influence of noise also depends on the challenge given and the concrete
@@ -65,7 +65,7 @@ To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF 
 >>> puf = XORArbiterPUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([-1,  1, -1], dtype=int8)
+array([-1, -1,  1], dtype=int8)
 
 .. note::
     The `noisiness` parameter in the XOR Arbiter PUF is directly referring to the noise of `each` Arbiter PUF in the
@@ -114,7 +114,7 @@ To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF 
 >>> puf = LightweightSecurePUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([ 1, -1, -1], dtype=int8)
+array([-1, -1, -1], dtype=int8)
 
 
 Permutation PUF
@@ -136,7 +136,7 @@ To simulate an 8-XOR 64-bit XOR Arbiter PUF using relatively stable Arbiter PUF 
 >>> puf = PermutationPUF(n=64, k=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([-1, -1, -1], dtype=int8)
+array([ 1, -1,  1], dtype=int8)
 
 
 Interpose PUF
@@ -161,6 +161,6 @@ To simulate an (8,8) 64-bit Interpose PUF using relatively stable Arbiter PUF im
 >>> puf = InterposePUF(n=64, k_up=8, k_down=8, seed=1, noisiness=.05)
 >>> from pypuf.io import random_inputs
 >>> puf.eval(random_inputs(n=64, N=3, seed=2))
-array([ 1, -1, -1], dtype=int8)
+array([-1,  1, -1], dtype=int8)
 
 Note that the ``noisiness`` parameter applies to both upper and lower layer.

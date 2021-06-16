@@ -108,10 +108,14 @@ class XORArbiterPUF(NoisyLTFArray):
                  noisiness: float = 0) -> None:
         if seed is None:
             seed = 'default'
-        weight_seed = self.seed(f'xor arbiter puf {seed} weights')
+        weight_rng = default_rng(self.seed(f'xor arbiter puf {seed} weights'))
         noise_seed = self.seed(f'xor arbiter puf {seed} noise')
         super().__init__(
-            weight_array=self.normal_weights(n=n, k=k, seed=weight_seed),
+            weight_array=np.concatenate((
+                weight_rng.normal(loc=0, scale=.5, size=(k, 1)),
+                weight_rng.normal(loc=0, scale=1, size=(k, n - 1)),
+            ), axis=1),
+            bias=weight_rng.normal(loc=0, scale=.5, size=(k,)),
             transform=transform or self.transform_atf,
             combiner=self.combiner_xor,
             sigma_noise=self.sigma_noise_from_random_weights(
@@ -172,6 +176,10 @@ class FeedForwardArbiterPUF(NoisyLTFArray):
 
         super().__init__(
             weight_array=self.normal_weights(n=n + len(ff), k=1, seed=weight_seed),
+            # TODO the weights used here are slightly inaccurate, but it's unclear to me how the model exhibited
+            #  in ia.cr/2021/555, Corollary 1 can be extended to cover FF PUFs. Given how marginal the difference
+            #  is, it is reasonable to assume that this won't make significant differences to the success of modeling
+            #  attacks.
             transform=XORArbiterPUF.transform_atf,
             combiner=self.combiner_xor,
             sigma_noise=self.sigma_noise_from_random_weights(

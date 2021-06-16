@@ -73,7 +73,7 @@ Then generate a list of `N` random challenges of length 64 (again with a seed fo
 Finally, evaluate the XOR Arbiter PUF on these challenges, it will yield 10 responses.
 
 >>> puf.eval(challenges)
-array([-1, -1, -1,  1,  1, -1,  1, -1,  1, -1], dtype=int8)
+array([-1, -1,  1,  1,  1,  1,  1,  1, -1, -1], dtype=int8)
 
 For a more detailed information on simulation of PUFs, continue with
 :doc:`the section on simulations <simulation/overview>`.
