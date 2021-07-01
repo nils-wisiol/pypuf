@@ -115,17 +115,25 @@ class LRAttack2021(OfflineAttack):
         # crps.responses[crps.responses == -1] = 1
 
         input_tensor = tf.keras.Input(shape=(n,))
-        prod = tf.keras.layers.Multiply()(
-            [
-                tf.keras.layers.Dense(
-                    units=1,
-                    kernel_initializer=tf.keras.initializers.RandomNormal(),
-                    bias_initializer=tf.keras.initializers.Zeros(),
-                    activation=tf.keras.activations.tanh,
-                )(input_tensor) for _ in range(k)
-            ]
-        )
-        output = tf.keras.layers.Activation('tanh')(prod)
+        if self.k > 1:
+            prod = tf.keras.layers.Multiply()(
+                [
+                    tf.keras.layers.Dense(
+                        units=1,
+                        kernel_initializer=tf.keras.initializers.RandomNormal(),
+                        bias_initializer=tf.keras.initializers.Zeros(),
+                        activation=tf.keras.activations.tanh,
+                    )(input_tensor) for _ in range(k)
+                ]
+            )
+            output = tf.keras.layers.Activation('tanh')(prod)
+        else:
+            output = tf.keras.layers.Dense(
+                units=1,
+                kernel_initializer=tf.keras.initializers.RandomNormal(),
+                bias_initializer=tf.keras.initializers.Zeros(),
+                activation=tf.keras.activations.tanh,
+            )(input_tensor)
 
         model = tf.keras.Model(inputs=[input_tensor], outputs=[output])
         model.compile(
