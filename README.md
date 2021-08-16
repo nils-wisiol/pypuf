@@ -13,7 +13,9 @@ Please check out the [pypuf hello world](https://pypuf.readthedocs.io/en/latest/
 
 ## Studies and Results
 
-pypuf is used in the following projects:
+pypuf is used in a number of PUF-related research projects.
+If you would like to add your project to the list, please open an issue or send an email.
+In reverse chronological order:
 
 - 2021, Wisiol: [Towards Attack Resilient Arbiter PUF-Based Strong PUFs](https://eprint.iacr.org/2021/1004):
   Design proposal for the [LP-PUF](https://github.com/nils-wisiol/LP-PUF), claimed to mitigate known modeling attacks
@@ -29,7 +31,7 @@ pypuf is used in the following projects:
   Simulation of the stabiltiy of Majority Vote XOR Arbiter PUFs.
 
 Please check out the [archived version of pypuf v1](https://github.com/nils-wisiol/pypuf/tree/v1) to find the
-original code used in these projects.
+original code used some of the older projects.
 
 ## Citation
 
