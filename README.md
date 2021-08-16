@@ -15,6 +15,9 @@ Please check out the [pypuf hello world](https://pypuf.readthedocs.io/en/latest/
 
 pypuf is used in the following projects:
 
+- 2021, Wisiol: [Towards Attack Resilient Arbiter PUF-Based Strong PUFs](https://eprint.iacr.org/2021/1004):
+  Design proposal for the [LP-PUF](https://github.com/nils-wisiol/LP-PUF), claimed to mitigate known modeling attacks
+  while having reliable responses.
 - 2021, Wisiol et al.: [Neural-Network-Based Modeling Attacks on XOR Arbiter PUFs Revisited](https://eprint.iacr.org/2021/555)
 - 2020, Wisiol et al.: [ Splitting the Interpose PUF: A Novel Modeling Attack Strategy](https://eprint.iacr.org/2019/1473):
   Modeling attacks on the Interpose PUF using Logistic Regression in a Divide-and-Conquer strategy.
