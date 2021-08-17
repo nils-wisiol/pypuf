@@ -38,6 +38,7 @@ Some functionality is only implemented in the
    Overview <attacks/overview>
    Logistic Regression <attacks/lr>
    Multilayer Perceptron <attacks/mlp>
+   LMN (PUFMeter) <attacks/lmn>
 
 .. toctree::
    :maxdepth: 2

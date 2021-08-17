@@ -23,6 +23,8 @@ Bibliography
     Physically Unclonable Functions to Machine Learning Attacks. IEEE Access 7, 122513–122521 (2019).
 .. [GLCDD04] Gassend, B., Lim, D., Clarke, D., Dijk, M. van & Devadas, S. Identification and authentication of
     integrated circuits. Concurrency and Computation: Practice and Experience 16, 1077–1098 (2004).
+.. [LMN93] Linial, N., Mansour, Y. & Nisan, N. Constant Depth Circuits, Fourier Transform, and Learnability. J. ACM 40,
+    607–620 (1993).
 .. [MTZAA20] Mursi, K. T., Thapaliya, B., Zhuang, Y., Aseeri, A. O. & Alkatheiri, M. S. A Fast Deep Learning Method for
     Security Vulnerability Study of XOR PUFs. Electronics 9, 1715 (2020).
 .. [MKP08] Majzoobi, M., Koushanfar, F. & Potkonjak, M. Lightweight Secure PUFs. in Proceedings of the 2008 IEEE/ACM
