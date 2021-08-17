@@ -24,7 +24,10 @@ Some functionality is only implemented in the
    :caption: Metrics
    :hidden:
 
-   Basics <metrics/basics>
+   metrics/bias
+   metrics/reliability
+   metrics/uniqueness
+   metrics/distance
 
 .. toctree::
    :maxdepth: 2
