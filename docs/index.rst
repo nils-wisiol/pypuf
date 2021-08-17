@@ -28,6 +28,7 @@ Some functionality is only implemented in the
    metrics/reliability
    metrics/uniqueness
    metrics/distance
+   Fourier-Analysis (PUFMeter) <metrics/fourier>
 
 .. toctree::
    :maxdepth: 2

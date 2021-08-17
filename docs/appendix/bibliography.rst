@@ -19,6 +19,8 @@ Bibliography
     in Hardware-Oriented Security and Trust (HOST), 2013 IEEE International Symposium on 137–142 (IEEE, 2013).
 .. [GCvDD02] Gassend, B., Clarke, D., van Dijk, M. & Devadas, S. Silicon Physical Random Functions. in Proceedings of
     the 9th ACM Conference on Computer and Communications Security 148–160 (ACM, 2002). doi:10.1145/586110.586132.
+.. [GFS19] Ganji, F., Forte, D. & Seifert, J.-P. PUFmeter a Property Testing Tool for Assessing the Robustness of
+    Physically Unclonable Functions to Machine Learning Attacks. IEEE Access 7, 122513–122521 (2019).
 .. [GLCDD04] Gassend, B., Lim, D., Clarke, D., Dijk, M. van & Devadas, S. Identification and authentication of
     integrated circuits. Concurrency and Computation: Practice and Experience 16, 1077–1098 (2004).
 .. [MTZAA20] Mursi, K. T., Thapaliya, B., Zhuang, Y., Aseeri, A. O. & Alkatheiri, M. S. A Fast Deep Learning Method for
@@ -27,6 +29,7 @@ Bibliography
     International Conference on Computer-Aided Design 670–673 (IEEE Press, 2008).
 .. [NSJM19] Nguyen, P. H. et al. The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks.
     IACR Transactions on Cryptographic Hardware and Embedded Systems 243–290 (2019) doi:10.13154/tches.v2019.i4.243-290.
+.. [ODon14] O’Donnell, R. Analysis of Boolean Functions. (Cambridge University Press, 2014).
 .. [RSSD10] Rührmair, U. et al. Modeling Attacks on Physical Unclonable Functions. in Proceedings of the 17th ACM
     Conference on Computer and Communications Security 237–249 (ACM, 2010). doi:10.1145/1866307.1866335.
 .. [SD07] Suh, G. E. & Devadas, S. Physical Unclonable Functions for Device Authentication and Secret Key Generation.
