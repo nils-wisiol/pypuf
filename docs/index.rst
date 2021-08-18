@@ -21,6 +21,13 @@ Some functionality is only implemented in the
 
 .. toctree::
    :maxdepth: 2
+   :caption: Data
+   :hidden:
+
+   data/overview
+
+.. toctree::
+   :maxdepth: 2
    :caption: Metrics
    :hidden:
 
