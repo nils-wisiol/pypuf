@@ -69,6 +69,14 @@ class ChallengeInformationSet:
     def block_subset(self, i: int, total: int) -> object:
         return self[int(i / total * self.N):int((i + 1) / total * self.N)]
 
+    def save(self, f: str) -> None:
+        np.savez(f, challenges=self.challenges, information=self.information)
+
+    @classmethod
+    def load(cls, f: str) -> object:
+        data = np.load(f)
+        return cls(data['challenges'], data['information'])
+
 
 class ChallengeResponseSet(ChallengeInformationSet):
 
