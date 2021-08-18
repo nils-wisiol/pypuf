@@ -15,7 +15,6 @@ setup(
     install_requires=[
         'memory_profiler',
         'numpy>=1.18',
-        'pandas',  # TODO remove after retiring batch.PickleResultCollection
         'tensorflow~=2.4.0',
         'more_itertools',
     ],

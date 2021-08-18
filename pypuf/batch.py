@@ -7,7 +7,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import List, Optional
 
-import pandas as pd
 from numpy.distutils import cpuinfo
 from memory_profiler import memory_usage
 
@@ -31,41 +30,6 @@ class ResultCollection:
 
     def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
         raise NotImplementedError
-
-
-class PickleResultCollection(ResultCollection):
-
-    def __init__(self, path: str) -> None:
-        super().__init__()
-        self.path = path
-        self.log_path = self.path + '.log.pickle'
-        self.log_saved = datetime.now()
-        try:
-            self.results = pd.read_pickle(self.path)
-        except FileNotFoundError:
-            self.results = pd.DataFrame()
-
-    def add_result(self, parameter_hash: str, result: dict) -> None:
-        self.results = self.results.append(result, ignore_index=True)
-        self._save_results()
-
-    def _save_results(self) -> None:
-        if not self.path:
-            return
-        logging.debug(f'saving results file {self.path} ({len(self.results)} results)')
-        self.results.to_pickle(f'{self.path}.pickle')
-        self.results.to_csv(f'{self.path}.csv')
-
-    def known_results(self) -> List[str]:
-        return list(self.results.get('param_hash', []))
-
-    def save_log(self, log: object, params: dict, parameter_hash: str, force: bool = False) -> None:
-        if not self.log_path:
-            return
-        if force or datetime.now() - self.log_saved > timedelta(minutes=10):
-            with open(self.log_path, 'wb') as f:
-                pickle.dump((params, log), f)
-                self.log_saved = datetime.now()
 
 
 class FilesystemResultCollection(ResultCollection):
