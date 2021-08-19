@@ -28,6 +28,29 @@ include URL and file size (if known):
 Included Data Sets
 ~~~~~~~~~~~~~~~~~~
 
+64-bit Interpose PUF [AM21]_
+````````````````````````````
+The Interpose PUF provided consists of one 64-bit Arbiter PUF in the top layer and five 65-bit Arbiter PUFs in the
+bottom layer. The challenges of ``pypuf.io.AM21.interpose_puf`` and ``pypuf.io.AM21.arbiter_puf_top`` are identical;
+the challenges to the bottom Arbiter PUFs correspond to the original challenges interposed with the responses of the
+top Arbiter PUF.
+
+The ``pypuf.io.AM21.interpose_puf`` CRP data is provided for convenience only, it can also be derived from the other
+data sets. Of course, also (1,x)-Interpose PUFs can be build for x < 5.
+
+======================================================  ===================  ==============  ======  ================  ===============  =====================
+pypuf Object                                            PUF Type             Implementation  Amount  Challenge Length  Response Length  Repeated Measurements
+======================================================  ===================  ==============  ======  ================  ===============  =====================
+``pypuf.io.AM21.arbiter_puf_top``                       Arbiter PUF          FPGA                1M                64                1                      1
+``pypuf.io.AM21.arbiter_puf_bottom_0``                  Arbiter PUF          FPGA                1M                65                1                      1
+``pypuf.io.AM21.arbiter_puf_bottom_1``                  Arbiter PUF          FPGA                1M                65                1                      1
+``pypuf.io.AM21.arbiter_puf_bottom_2``                  Arbiter PUF          FPGA                1M                65                1                      1
+``pypuf.io.AM21.arbiter_puf_bottom_3``                  Arbiter PUF          FPGA                1M                65                1                      1
+``pypuf.io.AM21.arbiter_puf_bottom_4``                  Arbiter PUF          FPGA                1M                65                1                      1
+``pypuf.io.AM21.interpose_puf``                         (1,5)-Interpose PUF  FPGA                1M                64                1                      1
+======================================================  ===================  ==============  ======  ================  ===============  =====================
+
+
 64-bit XOR Arbiter PUF [MTZAA20]_
 `````````````````````````````````
 

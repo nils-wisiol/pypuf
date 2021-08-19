@@ -4,6 +4,8 @@ Bibliography
 ..
   Using Zotero "export bibliography" feature to clipboard, using Nature style. Index labels are created manually.
 
+.. [AM21] Aghaie, A. & Moradi, A. Inconsistency of Simulation and Practice in Delay-based Strong PUFs. IACR ePrint
+    Archive.
 .. [AZ17] Alkatheiri, M. S. & Zhuang, Y. Towards fast and accurate machine learning attacks of feed-forward arbiter
     PUFs. in 2017 IEEE Conference on Dependable and Secure Computing 181–187 (2017). doi:10.1109/DESEC.2017.8073845.
 .. [AZA18] Aseeri, A. O., Zhuang, Y. & Alkatheiri, M. S. A Machine Learning-Based Security Vulnerability Study on XOR

@@ -225,3 +225,13 @@ class MTZAA20:
         "https://zenodo.org/record/5215875/files/MTZAA20_8XOR_64bit_LUT_2239B_attacking_5M.txt.npz?download=1")
     xor_arbiter_puf_9_xor = LazyCRPs(
         "https://zenodo.org/record/5215875/files/MTZAA20_9XOR_64bit_LUT_2239B_attacking_5M.txt.npz?download=1")
+
+
+class AM21:
+    arbiter_puf_bottom_0 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b0.npz?download=1")
+    arbiter_puf_bottom_1 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b1.npz?download=1")
+    arbiter_puf_bottom_2 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b2.npz?download=1")
+    arbiter_puf_bottom_3 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b3.npz?download=1")
+    arbiter_puf_bottom_4 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b4.npz?download=1")
+    arbiter_puf_top = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_top.npz?download=1")
+    interpose_puf = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_ipuf.npz?download=1")
