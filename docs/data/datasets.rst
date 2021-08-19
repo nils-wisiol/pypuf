@@ -25,9 +25,6 @@ include URL and file size (if known):
     Fetching CRPs (9.9MiB) from https://zenodo.org/record/5215875/files/MTZAA20_4XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1
 
 
-Included Data Sets
-~~~~~~~~~~~~~~~~~~
-
 64-bit Interpose PUF [AM21]_
 ````````````````````````````
 The Interpose PUF provided consists of one 64-bit Arbiter PUF in the top layer and five 65-bit Arbiter PUFs in the
