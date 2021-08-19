@@ -197,7 +197,7 @@ class LazyCRPs(ChallengeResponseSet):
             except (ValueError, urllib.error.HTTPError, urllib.error.URLError):
                 size = 'unknown size'
 
-            logger.warning(f"Fetching CRPs ({size}) from {self.url}")
+            logger.warning(f"Fetching CRPs ({size}) from {self.url} ...")
             self._fetched = True
             with NamedTemporaryFile() as f:
                 urllib.request.urlretrieve(self.url, f.name)
