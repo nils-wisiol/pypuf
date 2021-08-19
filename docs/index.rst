@@ -25,6 +25,7 @@ Some functionality is only implemented in the
    :hidden:
 
    data/overview
+   data/datasets
 
 .. toctree::
    :maxdepth: 2

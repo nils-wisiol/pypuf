@@ -1,4 +1,8 @@
+import logging
+import urllib.error
+import urllib.request
 from random import sample
+from tempfile import NamedTemporaryFile
 from typing import Union, Tuple
 
 import numpy as np
@@ -9,6 +13,8 @@ from numpy.random import RandomState
 from .simulation import Simulation
 
 BIT_TYPE = int8
+
+logger = logging.getLogger(__name__)
 
 
 def random_inputs(n: int, N: int, seed: int) -> ndarray:
@@ -88,8 +94,14 @@ class ChallengeInformationSet:
         """
         Loads CRPs from the given file ``f``.
         """
+        return cls(*cls._load(f))
+
+    @staticmethod
+    def _load(f: str) -> Tuple[ndarray, ndarray]:
         data = np.load(f)
-        return cls(data['challenges'], data['information'])
+        challenges = data['challenges']
+        information = data['information'] if 'information' in data else data['responses']
+        return challenges, information
 
     def __repr__(self) -> str:
         return f"<{len(self)} CRPs with challenge length {self.challenge_length}>"
@@ -153,3 +165,63 @@ class ChallengeReliabilitySet(ChallengeInformationSet):
     def __init__(self, challenges: ndarray, reliabilities: ndarray) -> None:
         super().__init__(challenges, reliabilities)
         self.reliabilities = reliabilities
+
+
+fetchable = object()
+
+
+class LazyCRPs(ChallengeResponseSet):
+    challenges = fetchable
+    responses = fetchable
+    N = fetchable
+
+    def __init__(self, url: str) -> None:
+        self.url = url
+        self._fetched = False
+
+    def __getattribute__(self, name: str) -> object:
+        attr = super().__getattribute__(name)
+        if attr is fetchable:
+            self.fetch()
+            return super().__getattribute__(name)
+        else:
+            return attr
+
+    def fetch(self) -> None:
+        try:
+            try:
+                size = int(urllib.request.urlopen(
+                    urllib.request.Request(url=self.url, method="HEAD")
+                ).headers.get('Content-Length'))
+                size = f"{size/1024**2:.1f}MiB"
+            except (ValueError, urllib.error.HTTPError, urllib.error.URLError):
+                size = 'unknown size'
+
+            logger.warning(f"Fetching CRPs ({size}) from {self.url}")
+            self._fetched = True
+            with NamedTemporaryFile() as f:
+                urllib.request.urlretrieve(self.url, f.name)
+                self.challenges, self.information = self._load(f.name)
+                self.responses = self.information
+                self.N = len(self.challenges)
+        except Exception as e:
+            self._fetched = False
+            raise e
+
+    def __repr__(self) -> str:
+        return super().__repr__() if self._fetched else f"<CRP Set available from {self.url}, not fetched yet>"
+
+
+class MTZAA20:
+    xor_arbiter_puf_4_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_4XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1")
+    xor_arbiter_puf_5_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_5XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1")
+    xor_arbiter_puf_6_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_6XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1")
+    xor_arbiter_puf_7_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_7XOR_64bit_LUT_2239B_attacking_5M.txt.npz?download=1")
+    xor_arbiter_puf_8_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_8XOR_64bit_LUT_2239B_attacking_5M.txt.npz?download=1")
+    xor_arbiter_puf_9_xor = LazyCRPs(
+        "https://zenodo.org/record/5215875/files/MTZAA20_9XOR_64bit_LUT_2239B_attacking_5M.txt.npz?download=1")
