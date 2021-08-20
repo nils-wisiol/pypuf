@@ -132,7 +132,9 @@ class ChallengeResponseSet(ChallengeInformationSet):
         :type responses: `numpy.ndarray`
         """
         super().__init__(challenges, responses)
-        if len(responses.shape) == 2:
+        if len(responses.shape) == 1:
+            responses = responses.reshape(responses.shape + (1, 1))
+        elif len(responses.shape) == 2:
             responses = responses.reshape(responses.shape + (1, ))
         self.responses = responses
 
