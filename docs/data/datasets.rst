@@ -18,9 +18,7 @@ The data is automatically fetched on first use, e.g. to compute the bias of the 
 array([[0.03495]])
 
 As CRP sets may have large size and significnat download time, pypuf logs a warning message when fetching CRPs, which
-include URL and file size (if known):
-
-.. code-block::
+include URL and file size (if known)::
 
     Fetching CRPs (9.9MiB) from https://zenodo.org/record/5215875/files/MTZAA20_4XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1
 
