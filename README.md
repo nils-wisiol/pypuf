@@ -67,6 +67,8 @@ or use the following BibTeX:
 ## Contribute
 
 Testing, linting, licensing.
+When first contributing, make sure to update the author lists in README.md (2x), index.rst of the docs (2x), and
+CITATION.cff (1x).
 
 ### Run Tests
 
@@ -80,6 +82,7 @@ Testing, linting, licensing.
 
 ### Maintainer: Prepare New Release
 
+1. Make sure author lists are up-to-date.
 1. Make sure docs are testing and building without error (see above)
 1. Commit all changes
 1. Clean up `dist/` folder

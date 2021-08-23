@@ -1,0 +1,23 @@
+cff-version: 1.1.0
+message: pypuf is published via Zenodo. To refer to pypuf, please use DOI 10.5281/zenodo.3901410.
+title: pypuf: Cryptanalysis of Physically Unclonable Functions
+doi: 10.5281/zenodo.3901410
+publisher: Zenodo
+url: https://doi.org/10.5281/zenodo.3901410
+authors:
+  - family-names: Wisiol
+    given-names: Nils
+    orcid: "https://orcid.org/https://orcid.org/0000-0003-2606-614X"
+  - family-names: Gräbnitz
+    given-names: Christoph
+  - family-names: Mühl
+    given-names: Christopher
+  - family-names: Zengin
+    given-names: Benjamin
+  - family-names: Soroceanu
+    given-names: Tudor
+  - family-names: Pirnay
+    given-names: Niklas
+  - family-names: Mursi
+    given-names: Khalid T.
+license: GPL 3.0
