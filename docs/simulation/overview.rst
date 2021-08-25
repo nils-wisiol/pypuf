@@ -15,6 +15,7 @@ pypuf currently features simulation of the following strong PUFs:
    Lightweight Secure PUF [MKP08]_, Permutation PUF [WBMS19]_, and Interpose PUF [NSJM19]_.
 2. :doc:`Feed-Forward Arbiter PUFs <arbiter_puf>` and XORs thereof [GLCDD04]_.
 3. :doc:`PUF designs based on bistable rings <bistable>` [CCLSR11]_ [XRHB15]_.
+4. :doc:`Integrated Optical PUFs <optical>` [RHUWDFJ13]_.
 
 Technicalities
 --------------

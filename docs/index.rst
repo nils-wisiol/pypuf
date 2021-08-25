@@ -17,6 +17,7 @@ Some functionality is only implemented in the
    simulation/arbiter_puf
    simulation/delay
    simulation/bistable
+   simulation/optical
    simulation/base
 
 .. toctree::
@@ -36,6 +37,7 @@ Some functionality is only implemented in the
    metrics/reliability
    metrics/uniqueness
    metrics/distance
+   metrics/correlation
    Fourier-Analysis (PUFMeter) <metrics/fourier>
 
 .. toctree::
@@ -47,6 +49,7 @@ Some functionality is only implemented in the
    Logistic Regression <attacks/lr>
    Multilayer Perceptron <attacks/mlp>
    LMN (PUFMeter) <attacks/lmn>
+   attacks/linear_regression
 
 .. toctree::
    :maxdepth: 2
@@ -105,8 +108,8 @@ pypuf is published `via Zenodo <https://zenodo.org/badge/latestdoi/87066421>`_.
 Please cite this work as
 
     Nils Wisiol, Christoph Gräbnitz, Christopher Mühl, Benjamin Zengin, Tudor Soroceanu,
-    Niklas Pirnay, & Khalid T. Mursi.
-    pypuf: Cryptanalysis of Physically Unclonable Functions (Version v2, March 2021). Zenodo.
+    Niklas Pirnay, Khalid T. Mursi, & Adomas Baliuka.
+    pypuf: Cryptanalysis of Physically Unclonable Functions (Version v2, August 2021). Zenodo.
     https://doi.org/10.5281/zenodo.3901410
 
 or use the following BibTeX::
@@ -118,7 +121,8 @@ or use the following BibTeX::
                       Benjamin Zengin and
                       Tudor Soroceanu and
                       Niklas Pirnay and
-                      Khalid T. Mursi},
+                      Khalid T. Mursi and
+                      Adomas Baliuka},
       title        = {{pypuf: Cryptanalysis of Physically Unclonable
                        Functions}},
       year         = 2021,

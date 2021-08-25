@@ -1,10 +1,18 @@
-from itertools import combinations
-from typing import List
+from typing import List, Optional, Callable
 
 import numpy as np
+import scipy as sp
+import scipy.stats
+from itertools import combinations
 
 from ..io import random_inputs, ChallengeResponseSet
 from ..simulation import Simulation
+
+ResponsePostprocessing = Optional[Callable[[np.ndarray], np.ndarray]]
+
+
+def postprocessing_noop(r: np.ndarray) -> np.ndarray:
+    return r
 
 
 def reliability_data(responses: np.ndarray) -> np.ndarray:
@@ -313,3 +321,51 @@ def bias(instance: Simulation, seed: int, N: int = 1000) -> np.ndarray:
     """
     challenges = random_inputs(n=instance.challenge_length, N=N, seed=seed)
     return bias_data(instance.eval(challenges))
+
+
+def correlation_data(responses1: np.ndarray, responses2: np.ndarray,
+                     postprocessing: ResponsePostprocessing = postprocessing_noop) -> np.ndarray:
+    """
+    Given two versions ``responses1`` and ``responses2`` of :math:`N` responses of :math:`m` pixels each, the :math:`m`
+    Pearson corrleations of the response pixels are returned.
+    If any ``postprocessing`` function is given, it is applied to both ``responses1`` and ``responses2`` before the
+    correlations are computed.
+
+    >>> import numpy as np
+    >>> import pypuf.metrics
+    >>> responses1 = np.array([[-1, -1, -1, 1], [1, 1, 1, -1]])
+    >>> responses2 = np.array([[-1, -1, -1, 1], [1, 1, 1, -1]])
+    >>> pypuf.metrics.correlation_data(responses1, responses2)
+    array([1., 1., 1., 1.], dtype=float32)
+    >>> responses1 = np.array([[-1], [-1], [1], [1]])
+    >>> responses2 = np.array([[1], [1], [-1], [-1]])
+    >>> pypuf.metrics.correlation_data(responses1, responses2)
+    array([-1.], dtype=float32)
+    """
+    r1, r2 = postprocessing(responses1), postprocessing(responses2)
+
+    # remove third axis if possible
+    if len(r1.shape) == 3 and r1.shape[-1] == 1:
+        r1 = r1.reshape(r1.shape[:-1])
+    if len(r2.shape) == 3 and r2.shape[-1] == 1:
+        r2 = r2.reshape(r2.shape[:-1])
+
+    assert r1.shape == r2.shape, f"Expected responses1 and responses2 have the same shape after postprocessing with " \
+                                 f"{postprocessing}, but got postprocessing(responses1).shape={r1.shape} and " \
+                                 f"postprocessing(responses2).shape={r2.shape}."
+    _, r = r1.shape
+    return np.fromiter(
+        (sp.stats.pearsonr(r1[:, i], r2[:, i])[0] for i in range(r)),
+        dtype=np.float32,
+        count=r,
+    )
+
+
+def correlation(simulation: Simulation, test_set: ChallengeResponseSet,
+                postprocessing: ResponsePostprocessing = postprocessing_noop) -> np.ndarray:
+    """
+    Evaluates the given ``simulation`` on the challenges defined in the ``test_set`` and computes the
+    :meth:`correlations <pypuf.metrics.correlation_data>` of the response pixels.
+    """
+    sim_responses = simulation.eval(test_set.challenges)
+    return correlation_data(sim_responses, test_set.responses, postprocessing)

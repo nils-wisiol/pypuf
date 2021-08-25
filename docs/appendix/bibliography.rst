@@ -36,6 +36,7 @@ Bibliography
 .. [NSJM19] Nguyen, P. H. et al. The Interpose PUF: Secure PUF Design against State-of-the-art Machine Learning Attacks.
     IACR Transactions on Cryptographic Hardware and Embedded Systems 243–290 (2019) doi:10.13154/tches.v2019.i4.243-290.
 .. [ODon14] O’Donnell, R. Analysis of Boolean Functions. (Cambridge University Press, 2014).
+.. [RHUWDFJ13] Rührmair, U. et al. Optical PUFs Reloaded. https://eprint.iacr.org/2013/215 (2013).
 .. [RSSD10] Rührmair, U. et al. Modeling Attacks on Physical Unclonable Functions. in Proceedings of the 17th ACM
     Conference on Computer and Communications Security 237–249 (ACM, 2010). doi:10.1145/1866307.1866335.
 .. [SD07] Suh, G. E. & Devadas, S. Physical Unclonable Functions for Device Authentication and Secret Key Generation.
