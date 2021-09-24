@@ -87,7 +87,7 @@ class ChallengeInformationSet:
         """
         Saves the CRPs to the given file ``f``.
         """
-        np.savez(f, challenges=self.challenges, information=self.information)
+        np.savez_compressed(f, challenges=self.challenges, information=self.information)
 
     @classmethod
     def load(cls, f: str) -> object:
