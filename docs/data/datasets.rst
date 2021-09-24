@@ -23,6 +23,25 @@ include URL and file size (if known)::
     Fetching CRPs (9.9MiB) from https://zenodo.org/record/5215875/files/MTZAA20_4XOR_64bit_LUT_2239B_attacking_1M.txt.npz?download=1
 
 
+Hybrid Boolean Network [CCPG21]_
+````````````````````````````````
+Hybrid Boolean Networks can be used as PUFs as described by Charlot et al. [CCPG21]_. In pypuf, there are CRPs included
+for 8 different PUF instances. Each instance is measured on the same set of 1002 challenges, where each challenge is
+measured 100 times. The measurement time is chosen as optimal (cf. discussion in the paper).
+
+=================================  ======================  ==============  ======  ================  ===============  =====================
+pypuf Object                       PUF Type                Implementation  Amount  Challenge Length  Response Length  Repeated Measurements
+=================================  ======================  ==============  ======  ================  ===============  =====================
+``pypuf.io.CCPG21.hbn_board_1``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_2``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_3``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_4``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_5``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_6``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_7``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+``pypuf.io.CCPG21.hbn_board_8``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+
+
 64-bit Interpose PUF [AM21]_
 ````````````````````````````
 The Interpose PUF provided consists of one 64-bit Arbiter PUF in the top layer and five 65-bit Arbiter PUFs in the

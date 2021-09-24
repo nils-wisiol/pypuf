@@ -17,6 +17,8 @@ Bibliography
 .. [CCLSR11] Chen, Q., Csaba, G., Lugli, P., Schlichtmann, U. & Ruhrmair, U. The Bistable Ring PUF: A new architecture
     for strong Physical Unclonable Functions. in 2011 IEEE International Symposium on Hardware-Oriented Security and
     Trust 134–141 (IEEE, 2011). doi:10.1109/HST.2011.5955011.
+.. [CCPG21] Charlot, N., Canaday, D., Pomerance, A. & Gauthier, D. J. Hybrid Boolean Networks as Physically Unclonable
+    Functions. IEEE Access 9, 44855–44867 (2021).
 .. [DV13] Delvaux, J. & Verbauwhede, I. Side channel modeling attacks on 65nm arbiter PUFs exploiting CMOS device noise.
     in Hardware-Oriented Security and Trust (HOST), 2013 IEEE International Symposium on 137–142 (IEEE, 2013).
 .. [GCvDD02] Gassend, B., Clarke, D., van Dijk, M. & Devadas, S. Silicon Physical Random Functions. in Proceedings of

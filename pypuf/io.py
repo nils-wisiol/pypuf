@@ -237,3 +237,14 @@ class AM21:
     arbiter_puf_bottom_4 = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_b4.npz?download=1")
     arbiter_puf_top = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_top.npz?download=1")
     interpose_puf = LazyCRPs("https://zenodo.org/record/5221305/files/AM21_ipuf.npz?download=1")
+
+
+class CCPG21:
+    hbn_board_1 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board1.npz?download=1")
+    hbn_board_2 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board2.npz?download=1")
+    hbn_board_3 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board3.npz?download=1")
+    hbn_board_4 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board4.npz?download=1")
+    hbn_board_5 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board5.npz?download=1")
+    hbn_board_6 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board6.npz?download=1")
+    hbn_board_7 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board7.npz?download=1")
+    hbn_board_8 = LazyCRPs("https://zenodo.org/record/5526722/files/CCPG21_board8.npz?download=1")
