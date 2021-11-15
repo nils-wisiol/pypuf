@@ -40,6 +40,7 @@ pypuf Object                       PUF Type                Implementation  Amoun
 ``pypuf.io.CCPG21.hbn_board_6``    Hybrid Boolean Network  FPGA              1002               256              256                    100
 ``pypuf.io.CCPG21.hbn_board_7``    Hybrid Boolean Network  FPGA              1002               256              256                    100
 ``pypuf.io.CCPG21.hbn_board_8``    Hybrid Boolean Network  FPGA              1002               256              256                    100
+=================================  ======================  ==============  ======  ================  ===============  =====================
 
 
 64-bit Interpose PUF [AM21]_
