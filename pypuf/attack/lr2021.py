@@ -66,6 +66,7 @@ class LRAttack2021(OfflineAttack):
         self.epochs = epochs
         self.stop_validation_accuracy = stop_validation_accuracy
         self._history = None
+        self._keras_model = None
 
     @property
     def history(self) -> Optional[dict]:
@@ -135,7 +136,7 @@ class LRAttack2021(OfflineAttack):
                 activation=tf.keras.activations.tanh,
             )(input_tensor)
 
-        model = tf.keras.Model(inputs=[input_tensor], outputs=[output])
+        self._keras_model = model = tf.keras.Model(inputs=[input_tensor], outputs=[output])
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=self.lr),
             loss=self.loss,
