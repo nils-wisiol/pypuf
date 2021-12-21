@@ -89,7 +89,7 @@ class LRAttack2021(OfflineAttack):
     def accuracy(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
         return tf.keras.metrics.binary_accuracy(.5 - .5 * y_true, .5 - .5 * y_pred)
 
-    def fit(self) -> Simulation:
+    def fit(self, verbose: bool = True) -> Simulation:
         """
         Using tensorflow, runs the attack as configured and returns the obtained model.
 
@@ -149,6 +149,7 @@ class LRAttack2021(OfflineAttack):
             epochs=self.epochs,
             validation_split=.01,
             callbacks=[self.AccuracyStop(self.stop_validation_accuracy)],
+            verbose=verbose,
         ).history
 
         self._model = self.keras_to_pypuf(model)
