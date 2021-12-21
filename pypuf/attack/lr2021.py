@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import tensorflow as tf
 
 from .base import OfflineAttack
 from ..io import ChallengeResponseSet
-from ..simulation import XORArbiterPUF
+from ..simulation import XORArbiterPUF, BeliPUF, TwoBitBeliPUF, OneBitBeliPUF
 from ..simulation.base import Simulation, LTFArray
 
 
@@ -175,3 +175,129 @@ class LRAttack2021(OfflineAttack):
             bias[l] = layer_weights[1]
 
         return LTFArray(weight_array=weights, bias=bias, transform=XORArbiterPUF.transform_atf)
+
+
+class BeliLR(LRAttack2021):
+
+    model_class = None
+
+    @staticmethod
+    def beli_output(output_delays: List[tf.Tensor]) -> List[tf.Tensor]:
+        raise NotImplementedError
+
+    def beli_model(self, input_tensor: tf.Tensor) -> List[tf.Tensor]:
+        internal_delays = tf.keras.layers.Dense(
+            units=1,
+            use_bias=False,
+            kernel_initializer=tf.keras.initializers.RandomNormal(mean=10, stddev=.05),
+            activation=None,
+        )
+        output_delays = [internal_delays(input_tensor[:, i]) for i in range(input_tensor.shape[1])]
+        return self.beli_output(output_delays)
+
+    def fit(self, verbose: bool = True) -> Simulation:
+        """
+        Using tensorflow, runs the attack as configured and returns the obtained model.
+
+        :param verbose: If true (the default), tensorflow will write progress information to stdout.
+        :return: Model of the Beli PUF under attack.
+        """
+        tf.random.set_seed(self.seed)
+
+        n = self.crps.challenge_length
+        k = self.k
+
+        input_tensor = tf.keras.Input(shape=(4, 4 * n))
+        beli_models = tf.transpose(
+            [self.beli_model(input_tensor) for _ in range(k)],  # by list comprehension, k-axis is axis 0
+            (2, 1, 0, 3)  # swap k-axis to axis 2 and keep sample axis at axis 0
+        )  # output dim: (sample, m, k, 1)
+        xor = tf.math.reduce_prod(beli_models, axis=2)  # xor along k-axis
+        outputs = tf.keras.layers.Activation(tf.keras.activations.tanh)(xor)
+
+        model = tf.keras.Model(inputs=input_tensor, outputs=outputs)
+        model.compile(
+            optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr),
+            loss=self.loss,
+            metrics=[self.accuracy],
+        )
+        self._keras_model = model
+
+        self._history = model.fit(
+            BeliPUF.features(self.crps.challenges),
+            self.crps.responses,
+            batch_size=self.bs,
+            epochs=self.epochs,
+            validation_split=self.validation_split,
+            callbacks=[self.AccuracyStop(self.stop_validation_accuracy)],
+            verbose=verbose,
+        ).history
+
+        self._model = self.keras_to_pypuf(model)
+        return self.model
+
+    def keras_to_pypuf(self, keras_model: tf.keras.Model) -> LTFArray:
+        """
+        Given a Keras model that resulted from the attack of the :meth:`fit` method, constructs an
+        :class:`pypuf.simulation.BeliPUF` that computes the same model.
+        """
+        delays = np.array([
+            layer.get_weights()[0].squeeze().reshape((8, -1))
+            for layer in keras_model.layers
+            if isinstance(layer, tf.keras.layers.Dense)]
+        )
+
+        k = delays.shape[0]
+        n = delays.shape[2] * 2
+
+        pypuf_model = self.model_class(n=n, k=k, seed=0)
+        pypuf_model.delays = delays
+
+        return pypuf_model
+
+
+class TwoBitBeliLR(BeliLR):
+    model_class = TwoBitBeliPUF
+
+    @staticmethod
+    def beli_output(output_delays: List[tf.Tensor]) -> List[tf.Tensor]:
+        r"""
+        Returns a continuous estimate of the two output bits.
+
+        Let :math:`d_i` be the delay on delay line :math:`i`.
+
+        For the first bit, :math:`\min\{d_2,d_3\} - \min\{d_0,d_1\}` is returned.
+        This expression is positive if and only if :math:`d_0` or :math:`d_1` is the fastest signal.
+        As first response bit is positive if delay :math:`d_0` or :math:`d_1` is fastest,
+        this expression is an approximation of the first response bit value.
+
+        A similar argument holds for the second response bit.
+        """
+        Min = tf.keras.layers.Minimum
+        d = output_delays
+        return [
+            Min()((d[2], d[3])) - Min()((d[0], d[1])),
+            Min()((d[1], d[3])) - Min()((d[0], d[2])),
+        ]
+
+
+class OneBitBeliLR(BeliLR):
+    model_class = OneBitBeliPUF
+
+    @staticmethod
+    def beli_output(output_delays: List[tf.Tensor]) -> List[tf.Tensor]:
+        r"""
+        Returns a continuous estimate of the output bit.
+
+        Let :math:`d_i` be the delay on delay line :math:`i`.
+
+        :math:`\min\{d_1,d_2\} - \min\{d_0,d_3\}` is returned.
+        This expression is positive if and only if :math:`d_0` or :math:`d_3` is the fastest signal.
+        As the response bit is positive if and only if the delay :math:`d_0` or :math:`d_3` is fastest,
+        this expression is an approximation of the response bit value.
+        """
+        Min = tf.keras.layers.Minimum
+        d = output_delays
+        return [
+            Min()((d[1], d[2])) - Min()((d[0], d[3])),
+        ]
