@@ -33,7 +33,7 @@ class LRAttack2021(OfflineAttack):
                 self.model.stop_training = True
 
     def __init__(self, crps: ChallengeResponseSet, seed: int, k: int, bs: int, lr: float, epochs: int,
-                 stop_validation_accuracy: float = .95) -> None:
+                 stop_validation_accuracy: float = .95, validation_set_size: float = .01) -> None:
         """
         Initialize an improved Logistic Regression attack using the given parameters.
 
@@ -56,6 +56,8 @@ class LRAttack2021(OfflineAttack):
         :param stop_validation_accuracy: Training is stopped when this validation accuracy is reached. Set to 1 to
             deactivate.
         :type stop_validation_accuracy: ``float``
+        :param validation_set_size: Proportion of CRPs to be used for validation, if <= 1, or else absolute number of
+            CRPs used to validation.
         """
         super().__init__(crps)
         self.crps = crps
@@ -67,6 +69,7 @@ class LRAttack2021(OfflineAttack):
         self.stop_validation_accuracy = stop_validation_accuracy
         self._history = None
         self._keras_model = None
+        self.validation_split = validation_set_size if validation_set_size <= 1 else validation_set_size / len(crps)
 
     @property
     def history(self) -> Optional[dict]:
@@ -147,7 +150,7 @@ class LRAttack2021(OfflineAttack):
             features, labels,
             batch_size=self.bs,
             epochs=self.epochs,
-            validation_split=.01,
+            validation_split=self.validation_split,
             callbacks=[self.AccuracyStop(self.stop_validation_accuracy)],
             verbose=verbose,
         ).history
