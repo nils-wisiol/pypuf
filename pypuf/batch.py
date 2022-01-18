@@ -161,6 +161,7 @@ class StudyBase:
             logging.debug(f'Added result: {self.primary_results(row)}')
         except NotImplementedError:
             logging.debug('Added result.')
+        return row
 
     def _save_log(self, force: bool = False) -> None:
         if callable(self.logging_callback):
@@ -174,7 +175,7 @@ class StudyBase:
         logging.debug(f'Running {self.__class__.__name__} for {params}')
 
         memory, result = memory_usage((self.run, [], params), retval=True)
-        self._add_result(params, result, memory)
+        return self._add_result(params, result, memory)
 
     def run_block(self, index: int, total: int) -> None:
         parameter_matrix = self._cached_parameter_matrix
