@@ -161,6 +161,7 @@ class StudyBase:
             logging.debug(f'Added result: {self.primary_results(row)}')
         except NotImplementedError:
             logging.debug('Added result.')
+        return row
 
     def _save_log(self, force: bool = False) -> None:
         if callable(self.logging_callback):
@@ -174,17 +175,17 @@ class StudyBase:
         logging.debug(f'Running {self.__class__.__name__} for {params}')
 
         memory, result = memory_usage((self.run, [], params), retval=True)
-        self._add_result(params, result, memory)
+        return self._add_result(params, result, memory)
 
     def run_block(self, index: int, total: int) -> None:
         parameter_matrix = self._cached_parameter_matrix
         n = len(parameter_matrix)
         self.run_batch(parameter_matrix[int(index / total * n):int((index + 1) / total * n)])
 
-    def run_all(self) -> None:
-        self.run_batch(self._cached_parameter_matrix)
+    def run_all(self, use_tqdm: bool = False) -> None:
+        self.run_batch(self._cached_parameter_matrix, use_tqdm=use_tqdm)
 
-    def run_batch(self, batch: list) -> None:
+    def run_batch(self, batch: list, use_tqdm: bool = False) -> None:
         unfinished_parameters = [
             params for params in batch if self._hash_parameters(params) not in self.results.known_results()
         ]
@@ -198,6 +199,9 @@ class StudyBase:
                       f'study total {total} jobs)')
 
         ran = 0
+        if use_tqdm:
+            from tqdm import tqdm
+            unfinished_parameters = tqdm(unfinished_parameters)
         for params in unfinished_parameters:
             logging.debug(f'Progress: {ran/unfinished:.1%} session, {(ran + finished)/len(batch):.1%} batch, '
                           f'{(ran + finished)/total:.1%} total')

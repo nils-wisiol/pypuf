@@ -16,6 +16,7 @@ Some functionality is only implemented in the
    Overview <simulation/overview>
    simulation/arbiter_puf
    simulation/delay
+   simulation/beli
    simulation/bistable
    simulation/optical
    simulation/base
@@ -47,6 +48,7 @@ Some functionality is only implemented in the
 
    Overview <attacks/overview>
    Logistic Regression <attacks/lr>
+   Beli PUF <attacks/beli>
    Multilayer Perceptron <attacks/mlp>
    LMN (PUFMeter) <attacks/lmn>
    attacks/linear_regression

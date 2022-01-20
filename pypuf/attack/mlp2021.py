@@ -144,7 +144,7 @@ class MLPAttack2021(OfflineAttack):
         """
         return self._history
 
-    def fit(self) -> Model:
+    def fit(self, verbose: bool = True) -> Model:
         """
         Using tensorflow, runs the attack as configured and returns the obtained model.
 
@@ -184,6 +184,7 @@ class MLPAttack2021(OfflineAttack):
             callbacks=[self.EarlyStopCallback(self.early_stop, self.patience)],
             shuffle=True,
             validation_split=0.01,
+            verbose=verbose,
         ).history
 
         # create pypuf model
