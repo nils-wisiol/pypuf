@@ -83,7 +83,7 @@ Even if using the noisy simulation, all involved arbiter elements are assumed to
 precision.
 
 To simulate an 4-XOR 128-bit Feed Forward Arbiter PUF in which each Feed-Forward Arbiter PUF will have a feed-forward
-loop after the 33nd stage that will determine the challenge bit to the 69th stage, use
+loop after the 32nd stage that will determine the challenge bit to the 69th stage, use
 
 >>> from pypuf.simulation import XORFeedForwardArbiterPUF
 >>> puf = XORFeedForwardArbiterPUF(n=128, k=4, ff=[(32, 68)], seed=1)
