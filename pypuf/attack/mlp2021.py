@@ -41,7 +41,7 @@ class MLPAttack2021(OfflineAttack):
 
         def eval(self, challenges: ndarray) -> ndarray:
             features = np.cumprod(np.fliplr(challenges), axis=1, dtype=np.int8)
-            return np.sign(self.keras_model.predict(features))
+            return 1 - 2 * np.round(self.keras_model.predict(features))
 
     class EarlyStopCallback(tf.keras.callbacks.Callback):
 
@@ -164,7 +164,7 @@ class MLPAttack2021(OfflineAttack):
         # TODO use pypuf's XORArbiterPUF.transform_atf to compute features
         # TODO consider in-situ computation of features
         features = np.cumprod(np.fliplr(self.crps.challenges), axis=1, dtype=np.int8)
-        labels = self.crps.responses
+        labels = (1 - self.crps.responses) // 2
 
         # build network
         model = tf.keras.Sequential()
@@ -172,9 +172,9 @@ class MLPAttack2021(OfflineAttack):
                                         input_dim=self.crps.challenge_length, kernel_initializer='random_normal'))
         for layer in self.net[1:]:
             model.add(tf.keras.layers.Dense(layer, activation=self.activation_hl))
-        model.add(tf.keras.layers.Dense(1, activation='tanh'))
+        model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
         opt = tf.keras.optimizers.Adam(learning_rate=self.lr)
-        model.compile(optimizer=opt, loss=self.loss, metrics=[self.accuracy])
+        model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
 
         # fit
         self._history = model.fit(
