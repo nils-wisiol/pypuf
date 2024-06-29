@@ -320,7 +320,7 @@ class LTFArray(Simulation):
             self.bias = bias if isinstance(bias, ndarray) else array(bias)
 
         # Append bias values to weight array
-        assert self.bias.shape == (self.k, 1),\
+        assert self.bias.shape == (self.k, 1), \
             'Expected bias to either have shape ({}, 1) or be a float, ' \
             'but got an array with shape {} and value {}.'.format(self.k, self.bias.shape, self.bias)
         self.weight_array = append(self.weight_array, self.bias, axis=1)
@@ -406,7 +406,7 @@ class LTFArray(Simulation):
         k, n = self.weight_array.shape
         n -= 1
 
-        assert sub_challenges.shape[1:] == (k, n),\
+        assert sub_challenges.shape[1:] == (k, n), \
             f'Sub-challenges given to ltf_eval had shape {sub_challenges.shape}, but shape (N, k, n) = ' \
             f'(N, {k}, {n}) was expected.'
 
