@@ -650,3 +650,213 @@ class InterposePUF(Simulation):
         )
         assert down_challenges.shape == (N, n + 1)
         return self.down.eval(down_challenges)
+
+
+class BeliPUF(Simulation):
+    """
+    Simulation of the Beli PUF, an MPDL PUF with four delay lines.
+    Similar to the Arbiter PUF simulation, this simulation is based on the addition of delays based
+    on the path the signal is taking. In contrast to the Arbiter PUF simulation, the simulation of
+    the Beli PUF is not optimized with respect to the number of parameters.
+
+    This class specifies the output of Beli PUF as the index of the delay line with the fastest signal,
+    given as an integer. This behavior is modified by child classes such as
+    :class:`TwoBitBeliPUF` and :class:`OneBitBeliPUF` to output Boolean values instead.
+    """
+
+    def __init__(self, n: int, k: int, seed: int, loc: float = 10, scale: float = .05) -> None:
+        """
+        Initialize a Beli PUF simulation.
+
+        :param n: Challenge length.
+        :type n: `int`
+        :param k: Number of Beli PUFs in this XOR Beli PUF. Use 1 for regular Beli PUF.
+        :type k: `int`
+        :param seed: Seed that determines the internal delays of the Beli PUF simulation.
+        :type seed: `int`
+        """
+        if n % 2 != 0:
+            raise ValueError(f"Challenges to Beli PUF need to have even length, but {n} was given.")
+        self.k, self.n = k, n
+        m = 2  # two multiplexers per stage
+
+        # The delays are stored in a (8, n // 2)-shaped matrix. delays[i, j] holds the delays for the j-th stage as
+        # follows:
+        # delays[0, j] is the top-top delay of the top stage
+        # delays[1, j] is the bottom-bottom delay of the top stage
+        # delays[2, j] is the bottom-top delay of the top stage
+        # delays[3, j] is the top-bottom delay of the top stage
+        # delays[4, j] is the top-top delay of the bottom stage
+        # delays[5, j] is the bottom-bottom delay of the bottom stage
+        # delays[6, j] is the bottom-top delay of the bottom stage
+        # delays[7, j] is the top-bottom delay of the bottom stage
+        self.delays = default_rng(self.seed(f"BeliPUF {seed}")).normal(
+            loc=loc,
+            scale=scale,
+            size=(
+                k,       # individual delays for each of the k Beli PUFs
+                m * 4,   # 4 delays per multiplexer
+                n // m,  # number of stages in Beli PUF
+            ),
+        )
+
+    @property
+    def challenge_length(self) -> int:
+        return self.n
+
+    def eval(self, challenges: array) -> array:
+        r"""
+        Evaluate Beli PUF on the given list of challenges and return the index of the delay line with the lowest delay.
+
+        :param challenges: Array of challenges with bit values in :math:`\{-1,1\}` of shape (#challenges, #bits).
+        :return: array of shape (N, k)
+        """
+        delays = self.val(challenges)
+        return np.argmin(delays, axis=2)
+
+    def val(self, challenges: array) -> array:
+        r"""
+        Computes the delay values for each of the four signals for each of the N given challenges.
+
+        .. note::
+            This method uses numpy "fancy" indexing and summation to compute delays.
+            The delays can also be computed from the feature vectors using a matrix product with
+            ``self.features(challenges) @ self.delays.flatten()``.
+
+        :param challenges: Array of challenges with bit values in :math:`\{-1,1\}` of shape (#challenges, #bits).
+        :return: Array of delays (floats) of shape (#challenges, k, 4).
+        """
+        N = challenges.shape[0]
+        k = self.k
+        delays = np.zeros(shape=(N, k, 4))
+        for l in range(self.k):
+            delays[:, l, :] = self.delays[l].flatten()[self.delay_indices(challenges)].sum(axis=2)
+        return delays
+
+    @classmethod
+    def delay_indices(cls, challenges: array) -> array:
+        _, n = challenges.shape
+        path = cls.signal_path(challenges)
+        delay_indices_offset = np.array([8 * i for i in range(n // 2)], dtype=int)
+        return delay_indices_offset + path
+
+    @staticmethod
+    def signal_path(challenges: array) -> array:
+        r"""
+        For each challenge given, for each of the four signals, computes the path the signal takes through the Beli PUF,
+        specified by the index of the relevant delay in ``self.delays.flatten()``.
+
+        :param challenges: Array of challenges with bit values in :math:`\{-1,1\}` of shape (#challenges, #bits).
+        :return: Array of signal paths of dimension (#challenges, #signals = 4, #stages) with each value indicating the
+            relevant delay in ``self.delays.flatten()``.
+        """
+        N, n = challenges.shape
+
+        # Step 1: track the position of each signal after each stage in `location`
+        #  1: top multiplexer, top output
+        # -1: top multiplexer, bottom output
+        #  2: bottom multiplexer, top output
+        # -2: bottom multiplexer, bottom output
+        location = np.zeros(shape=(N, 4, n + 1), dtype=np.int8)  # shape: (#challenges, #signals, 2 * #stages + 1)
+        location[:, :, n] = [1, -1, 2, -2]  # signal positions we start with
+        location[:, :, n] = [1, 2, -1, -2]  # TODO alt. signal positions we start with (matches FPGA data)
+
+        for i in reversed(range(1, n + 1, 2)):
+            # change signal locations according to Beli PUF fixed signal permutation
+            location[location[:, :, i + 1] == 1, i] = 1
+            location[location[:, :, i + 1] == -1, i] = 2
+            location[location[:, :, i + 1] == 2, i] = -1
+            location[location[:, :, i + 1] == -2, i] = -2
+
+            # change signal locations according to challenge given
+            # 1: top-top and bottom-bottom, -1: top-bottom and bottom-top
+            for j in range(4):  # challenge is applied for each of the four signals individually
+                top_multiplexer_idx = np.abs(location[:, j, i]) == 1  # select values for top multiplexer
+                location[top_multiplexer_idx, j, i - 1] = (
+                    location[top_multiplexer_idx, j, i] * challenges[top_multiplexer_idx, i - 1]  # apply challenge bit
+                )
+                bottom_multiplexer_idx = np.abs(location[:, j, i]) == 2  # select values for bottom multiplexer
+                location[bottom_multiplexer_idx, j, i - 1] = (
+                    location[bottom_multiplexer_idx, j, i] * challenges[bottom_multiplexer_idx, i]  # apply chal. bit
+                )
+
+        # compress locations to only keep locations resulting from multiplexer and fixed transform
+        location = location[:, :, ::2]
+
+        # Step 2: derive signal path from sequence of signal locations
+        path = np.zeros(shape=(N, 4, n // 2), dtype=np.int8) - 1
+        for i in range(0, n // 2):
+            # top multiplexer
+            path[(location[:, :, i] == 1) & (location[:, :, i + 1] == 1), i] = 0  # top-top
+            path[(location[:, :, i] == -1) & (location[:, :, i + 1] == 2), i] = 1  # bottom-bottom
+            path[(location[:, :, i] == -1) & (location[:, :, i + 1] == 1), i] = 2  # bottom-top
+            path[(location[:, :, i] == 1) & (location[:, :, i + 1] == 2), i] = 3  # top-bottom
+
+            # bottom multiplexer
+            path[(location[:, :, i] == 2) & (location[:, :, i + 1] == -1), i] = 4  # top-top
+            path[(location[:, :, i] == -2) & (location[:, :, i + 1] == -2), i] = 5  # bottom-bottom
+            path[(location[:, :, i] == -2) & (location[:, :, i + 1] == -1), i] = 6  # bottom-top
+            path[(location[:, :, i] == 2) & (location[:, :, i + 1] == -2), i] = 7  # top-bottom
+
+        return path
+
+    @classmethod
+    def features(cls, challenges: array) -> array:
+        r"""
+        For given challenges, computes the feature vectors for each signal.
+
+        :param challenges: Array of challenges with bit values in :math:`\{-1,1\}` of shape (#challenges, #bits).
+        :return: Array of feature vector over :math:`\{0,1\}` of shape (#challenges, 4, 4*#challenge bits).
+        """
+        N, n = challenges.shape
+        features = np.zeros((N, 4, 4 * n), dtype=np.uint8)
+        np.put_along_axis(features, cls.delay_indices(challenges), 1, axis=-1)
+        return features
+
+
+class TwoBitBeliPUF(BeliPUF):
+    """
+    Version of Beli PUF with two output bits. The output bits are defined as follows:
+
+    ==============================  =================  =================
+    Delay line with fastest signal           Output 0           Output 1
+    ==============================  =================  =================
+    0                                               1                  1
+    1                                               1                 -1
+    2                                              -1                  1
+    3                                              -1                 -1
+    ==============================  =================  =================
+    """
+
+    @property
+    def response_length(self) -> int:
+        return 2
+
+    def eval(self, challenges: array) -> array:
+        fastest_delay_line = super().eval(challenges)
+        return (1 - 2 * np.stack([fastest_delay_line // 2, fastest_delay_line % 2], axis=-1)).prod(axis=1)
+
+
+class OneBitBeliPUF(TwoBitBeliPUF):
+    """
+    Version of Beli PUF with only one output bit. The output bit is defined as follows:
+
+    ==============================  =================  =================  ======
+    Delay line with fastest signal  Internal Output 0  Internal Output 1  Output
+    ==============================  =================  =================  ======
+    0                                               1                  1       1
+    1                                               1                 -1      -1
+    2                                              -1                  1      -1
+    3                                              -1                 -1       1
+    ==============================  =================  =================  ======
+
+    This definition corresponds to the XOR of the two output bits of the :class:`TwoBitBeliPUF`.
+    """
+
+    @property
+    def response_length(self) -> int:
+        return 1
+
+    def eval(self, challenges: array) -> array:
+        two_bit_response = super().eval(challenges)
+        return np.prod(two_bit_response, axis=1)

@@ -6,6 +6,8 @@ Bibliography
 
 .. [AM21] Aghaie, A. & Moradi, A. Inconsistency of Simulation and Practice in Delay-based Strong PUFs. IACR
     Transactions on Cryptographic Hardware and Embedded Systems 520–551 (2021) doi:10.46586/tches.v2021.i3.520-551.
+.. [AMTW21] Aghaie, A. & Moradi, A. & Tobisch, J. & Wisiol, N. Generalization of Arbiter PUF -- New Constructions and
+    Novel Analyses. Unpublished (2021).
 .. [AZ17] Alkatheiri, M. S. & Zhuang, Y. Towards fast and accurate machine learning attacks of feed-forward arbiter
     PUFs. in 2017 IEEE Conference on Dependable and Secure Computing 181–187 (2017). doi:10.1109/DESEC.2017.8073845.
 .. [AZA18] Aseeri, A. O., Zhuang, Y. & Alkatheiri, M. S. A Machine Learning-Based Security Vulnerability Study on XOR

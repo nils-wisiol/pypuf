@@ -1,3 +1,5 @@
+import itertools
+
 import logging
 import urllib.error
 import urllib.request
@@ -17,7 +19,7 @@ BIT_TYPE = int8
 logger = logging.getLogger(__name__)
 
 
-def random_inputs(n: int, N: int, seed: int) -> ndarray:
+def random_inputs(n: int, N: int, seed: int, cap=True) -> ndarray:
     r"""
     Generates :math:`N` uniformly random challenges of length `n` and returns them as a `numpy.ndarray` of shape
     :math:`(N, n)`. The randomness is based on the provided ``seed``.
@@ -40,6 +42,17 @@ def random_inputs(n: int, N: int, seed: int) -> ndarray:
         True
 
     """
+    probability_last_draw_is_duplicate = 1 - (2**n - N + 1) / 2**n
+    if N >= 2**n:
+        if cap:
+            logger.warning(f"requested {N} challenges from a total of 2**{n} = {2**n} ({N/2**n:.3%}): "
+                           f"random_inputs will return all 2**{n} unique challenges")
+            return np.array(list(itertools.product((-1, 1), repeat=n)), dtype=BIT_TYPE)
+        logger.warning(f"requested {N} challenges from a total of 2**{n} = {2**n} ({N/2**n:.3%}): "
+                       f"random_inputs will return duplicate challenges with high probability")
+    elif probability_last_draw_is_duplicate > 10e-6:
+        logger.warning(f"requested {N} challenges from a total of 2**{n} = {2**n} ({N/2**n:.3%}): "
+                       f"random_inputs may contain duplicate samples")
     return 2 * RandomState(seed).randint(0, 2, (N, n), dtype=BIT_TYPE) - 1
 
 
