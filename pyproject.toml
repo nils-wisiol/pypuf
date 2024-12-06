@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "pypuf"
+version = "3.2.1"
+description = "A Python library for simulating physical unclonable functions (PUFs)."
+authors = ["Nils Wisiol <pypuf@nils-wisiol.de>"]
+license = "GNU General Public License Version 3"
+homepage = "https://github.com/nils-wisiol/pypuf"
+maintainers = ["Nils Wisiol <pypuf@nils-wisiol.de>"]
+
+[tool.poetry.dependencies]
+python = "^3.9, <3.12"
+memory_profiler = "*"
+numpy = ">=1.18"
+scipy = ">=1.5"
+tensorflow = "^2.18"
+more-itertools = "^9.0.0"
+
+[tool.poetry.dev-dependencies]
+flake8 = "*"
+xdoctest = "*"
+sphinx = "*"
+sphinx_rtd_theme = "*"
+pytest = "*"
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
