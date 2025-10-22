@@ -21,20 +21,13 @@ To run the attack, we configure the attack object with the challenge response da
 need careful adjustment for each choice of security parameters in the PUF. Then the attack is run using the
 :meth:`pypuf.attack.LRAttack2021.fit` method.
 
->>> import pypuf.attack
+>>> import pypuf.attack, pypuf.metrics, io, contextlib
 >>> attack = pypuf.attack.LRAttack2021(crps, seed=3, k=4, bs=1000, lr=.001, epochs=100)
->>> attack.fit()  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
-    Epoch 1/100
-    ...
-    50/50 [==============================] - ... - loss: 0.4... - accuracy: 0.9... - val_loss: 0.4643 - val_accuracy: 0.9620
-    <pypuf.simulation.base.LTFArray object at 0x...>
->>> model = attack.model
-
-The model accuracy can be measured using the pypuf accuracy metric :meth:`pypuf.metrics.accuracy`.
-
->>> import pypuf.metrics
->>> pypuf.metrics.similarity(puf, model, seed=4)
-array([0.966])
+>>> with contextlib.redirect_stdout(io.StringIO()):
+...     model = attack.fit(verbose=0)  # doctest: +IGNORE_WANT
+...     sim = pypuf.metrics.similarity(puf, model, seed=4)[0]
+>>> sim >= 0.95
+True
 
 Applicability
 -------------

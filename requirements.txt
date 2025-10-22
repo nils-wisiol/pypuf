@@ -1,11 +1,18 @@
-numpy
-setuptools
+numpy>=1.23,<1.26
+scipy
+more_itertools
+memory_profiler
+pytest
 flake8
 xdoctest
 sphinx
 sphinx_rtd_theme
-scipy
-memory_profiler
-pytest
-tensorflow~=2.5.0
-more_itertools
+setuptools
+
+# TensorFlow on macOS (Apple Silicon/Intel):
+# macOS wheels are published as "tensorflow-macos".
+tensorflow-macos>=2.13,<3.0 ; platform_system == "Darwin"
+
+# TensorFlow on all other platforms (e.g., Linux CI):
+# Use the CPU build to avoid CUDA/driver friction in CI.
+tensorflow-cpu>=2.10,<3.0   ; platform_system != "Darwin"

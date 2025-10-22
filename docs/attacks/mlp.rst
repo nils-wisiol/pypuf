@@ -23,23 +23,17 @@ To run the attack, we configure the attack object with the challenge response da
 need careful adjustment for each choice of security parameters in the PUF. Then the attack is run using the
 :meth:`pypuf.attack.MLPAttack2021.fit` method.
 
->>> import pypuf.attack
+>>> import pypuf.attack, pypuf.metrics, io, contextlib
 >>> attack = pypuf.attack.MLPAttack2021(
 ...     crps, seed=3, net=[2 ** 4, 2 ** 5, 2 ** 4],
 ...     epochs=30, lr=.001, bs=1000, early_stop=.08
 ... )
->>> attack.fit()  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
-    Epoch 1/30
-    ...
-    495/495 [==============================] - ... - loss: 0.0... - accuracy: 0.9... - val_loss: 0.0670 - val_accuracy: 0.9750
-    <pypuf.attack.mlp2021.MLPAttack2021.Model object at 0x...>
->>> model = attack.model
+>>> with contextlib.redirect_stdout(io.StringIO()):
+...     model = attack.fit(verbose=0)  # doctest: +IGNORE_WANT
+...     sim = pypuf.metrics.similarity(puf, model, seed=4)[0]
+>>> sim >= 0.95
+True
 
-The model accuracy can be measured using the pypuf accuracy metric :meth:`pypuf.metrics.accuracy`.
-
->>> import pypuf.metrics
->>> pypuf.metrics.similarity(puf, model, seed=4)
-array([0.97])
 
 Example Usage [AZA18]_
 ----------------------
@@ -58,9 +52,8 @@ memory management introduced by Aseeri et al.
 ...     epochs=30, lr=.001, bs=1000, early_stop=.08,
 ...     activation_hl='relu',
 ... )
->>> model = attack.fit()  # doctest:+ELLIPSIS +NORMALIZE_WHITESPACE
-    Epoch 1/30
-    ...
+>>> with contextlib.redirect_stdout(io.StringIO()):
+...     model = attack.fit(verbose=0)  # doctest: +IGNORE_WANT
 >>> pypuf.metrics.similarity(puf, model, seed=4)[0] > .9
 True
 
