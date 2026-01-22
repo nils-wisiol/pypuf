@@ -79,10 +79,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pypuf.simulation.bistable import XORBistableRingPUF
-from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF
+from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF, LightweightSecurePUF, PermutationPUF, InterposePUF
 
 # Global parameters (must be before any function definitions)
-n = 8
+n = 16
 k_xor = 4
 k_xorff = 3
 num_challenges = 10000
@@ -147,11 +147,14 @@ if __name__ == "__main__":
         selected_temps = [0, 5, 10, 15, 20, 25, 30, 35, 40]
         vdd_fine = np.round(np.arange(0.5, 3.01, 0.01), 2)
         all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
-            ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], **kw)),
-            ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], **kw)),
+            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], noisiness=kw.pop('noisiness', 0.05), **kw)),
             ("XORBistableRingPUF", lambda **kw: XORBistableRingPUF(n=n, k=k_xor, weights=np.random.normal(0,1,(k_xor,n+1)), **kw)),
+            ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("InterposePUF", lambda **kw: InterposePUF(n=n, k_down=k_xor, k_up=2, noisiness=kw.pop('noisiness', 0.05), **kw)),
         ]
         import csv
         num_reliability_crps = 100000
@@ -206,11 +209,14 @@ if __name__ == "__main__":
         sweep_vdds = [1.0, 1.35, 1.8, 2.5]
         sweep_temps = [round(x, 1) for x in np.arange(0, 100, 5)]
         all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
-            ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], **kw)),
-            ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], **kw)),
+            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], noisiness=kw.pop('noisiness', 0.05), **kw)),
             ("XORBistableRingPUF", lambda **kw: XORBistableRingPUF(n=n, k=k_xor, weights=np.random.normal(0,1,(k_xor,n+1)), **kw)),
+            ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("InterposePUF", lambda **kw: InterposePUF(n=n, k_down=k_xor, k_up=2, noisiness=kw.pop('noisiness', 0.05), **kw)),
         ]
         import csv
         num_reliability_crps = 100000
@@ -267,11 +273,14 @@ if __name__ == "__main__":
     selected_temps = [0, 5, 10, 15, 20, 25, 30, 35, 40]
     vdd_fine = np.round(np.arange(0.5, 3.01, 0.01), 2)
     all_pufs = [
-        ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-        ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
-        ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], **kw)),
-        ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], **kw)),
+        ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(2,5),(4,7)], noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(2,5)],[(4,7)],[(1,6)]], noisiness=kw.pop('noisiness', 0.05), **kw)),
         ("XORBistableRingPUF", lambda **kw: XORBistableRingPUF(n=n, k=k_xor, weights=np.random.normal(0,1,(k_xor,n+1)), **kw)),
+        ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("InterposePUF", lambda **kw: InterposePUF(n=n, k_down=k_xor, k_up=2, noisiness=kw.pop('noisiness', 0.05), **kw)),
     ]
 
     import csv

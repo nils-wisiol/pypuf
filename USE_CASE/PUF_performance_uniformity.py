@@ -79,15 +79,15 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pypuf.simulation.bistable import XORBistableRingPUF
-from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF
+from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF, LightweightSecurePUF, PermutationPUF, InterposePUF
 
 # Global parameters (must be before any function definitions)
-n = 8
+n = 16  # Increased to 16 for PermutationPUF compatibility (requires n >= 16)
 k_xor = 4
 k_xorff = 3
 num_challenges = 10000
 challenges = np.random.choice([-1, 1], size=(num_challenges, n))
-temperatures = np.arange(0, 101, 5)  # 0, 5, 10, ..., 100 (more steps)
+temperatures = np.arange(0, 151, 5)  # 0, 5, 10, ..., 150 (valid range)
 vdds = np.round(np.arange(0.5, 3.01, 0.01), 2)  # 0.5, 0.51, ..., 3.0
 
 # --- New: Multi-curve reliability plots for selected constant temperatures and vdds ---
@@ -137,18 +137,56 @@ def plot_reliability_vs_temp_for_vdds_from_results(results, puf_name, vdds, temp
 # --- Example usage: plot for selected T and Vdd values ---
 
 if __name__ == "__main__":
-    print("Select uniqueness analysis mode:")
-    print("1: Sweep Vdd from 0.5 to 3.0 at fixed temperatures 10, 50, 80 (old mode)")
-    print("2: Sweep temperature from 10.1 to 80.1 (step 5) at fixed Vdd 1, 1.8, 2.4 (new mode)")
-    mode = input("Enter 1 or 2: ").strip()
+    # Allow the user to choose which PUF(s) to analyze and which analysis to run
+    # Helper factory for XORBistableRingPUF: extract `seed` from kw before calling
+    def xor_bistable_factory(**kw):
+        seed = kw.pop('seed', 0)
+        weights = np.random.default_rng(seed).normal(size=(k_xor, n + 1))
+        return XORBistableRingPUF(n=n, k=k_xor, weights=weights, **kw)
+
+    available_pufs = [
+        ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("XORBistableRingPUF", xor_bistable_factory),
+        ("FeedForwardArbiterPUF", lambda **kw: FeedForwardArbiterPUF(n=n, ff=[(3, 7)], noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("XORFeedForwardArbiterPUF", lambda **kw: XORFeedForwardArbiterPUF(n=n, k=k_xorff, ff=[[(3,7)]], noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+        ("InterposePUF", lambda **kw: InterposePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+    ]
+
+    print("Available PUFs:")
+    for i, (name, _) in enumerate(available_pufs, start=1):
+        print(f"{i}: {name}")
+    print("A: All PUFs")
+    sel = input("Select PUF by number (comma-separated) or 'A' for all: ").strip()
+    if sel.lower() == 'a':
+        selected = [name for name, _ in available_pufs]
+    else:
+        indices = [s.strip() for s in sel.split(',') if s.strip()]
+        selected = []
+        for s in indices:
+            try:
+                idx = int(s) - 1
+                if 0 <= idx < len(available_pufs):
+                    selected.append(available_pufs[idx][0])
+            except Exception:
+                pass
+
+    print("Select analysis to run:")
+    print("1: Uniformity vs Vdd/Temperature sweeps (mode 1)")
+    print("2: Uniformity sweep over temperature (mode 2)")
+    print("3: Bias & Reliability analysis (evaluate_puf)")
+    mode = input("Enter 1, 2 or 3: ").strip()
+
+    # Helper: filter factories according to user's selection
+    def factories_for_selection(names):
+        return [(name, fac) for (name, fac) in available_pufs if name in names]
 
     if mode == "1":
         selected_temps = [10, 50, 80]
         vdd_fine = np.round(np.arange(0.5, 3.01, 0.01), 2)
-        all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
-        ]
+        all_pufs = factories_for_selection(selected)
         import csv
         num_uniqueness_crps = 100000
         num_pufs = 20
@@ -197,11 +235,8 @@ if __name__ == "__main__":
                     writer.writerow(row)
     elif mode == "2":
         sweep_vdds = [1.0, 1.8, 2.4]
-        sweep_temps = [round(x, 1) for x in np.arange(0, 250, 5)]
-        all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
-        ]
+        sweep_temps = [round(x, 1) for x in np.arange(0, 151, 5)]
+        all_pufs = factories_for_selection(selected)
         import csv
         num_uniqueness_crps = 100000
         num_pufs = 20
@@ -247,5 +282,13 @@ if __name__ == "__main__":
                 writer.writeheader()
                 for row in all_data:
                     writer.writerow(row)
+    elif mode == "3":
+        # Run bias & reliability evaluation for selected PUFs
+        all_pufs = factories_for_selection(selected)
+        for name, puf_factory in all_pufs:
+            print(f"Running bias/reliability evaluation for {name} ...")
+            results = evaluate_puf(puf_factory, name)
+            plot_puf_performance(results, name)
+        print("Done.")
     else:
         print("Invalid mode selected. Exiting.")

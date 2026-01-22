@@ -79,7 +79,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pypuf.simulation.bistable import XORBistableRingPUF
-from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF
+from pypuf.simulation.delay import XORArbiterPUF, FeedForwardArbiterPUF, XORFeedForwardArbiterPUF, ArbiterPUF, LightweightSecurePUF, PermutationPUF, InterposePUF
 
 # Global parameters (must be before any function definitions)
 n = 8
@@ -168,8 +168,10 @@ if __name__ == "__main__":
         selected_temps = [10, 50, 80]
         vdd_fine = np.round(np.arange(0, 3.01, 0.01), 2)
         all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
+            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
         ]
         import csv
         num_uniqueness_crps = 100000
@@ -220,8 +222,10 @@ if __name__ == "__main__":
         sweep_vdds = [1.0, 1.8, 2.4]
         sweep_temps = [round(x, 1) for x in np.arange(0, 150, 5)]
         all_pufs = [
-            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, **kw)),
-            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, **kw)),
+            ("ArbiterPUF", lambda **kw: ArbiterPUF(n=n, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("XORArbiterPUF", lambda **kw: XORArbiterPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("LightweightSecurePUF", lambda **kw: LightweightSecurePUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
+            ("PermutationPUF", lambda **kw: PermutationPUF(n=n, k=k_xor, noisiness=kw.pop('noisiness', 0.05), **kw)),
         ]
         import csv
         num_uniqueness_crps = 100000
