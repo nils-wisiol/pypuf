@@ -29,13 +29,46 @@ This file (`test_metrics_all_pufs.py`) provides comprehensive testing of pypuf m
 - **Sensitivity**: Should stay relatively constant across environments
 - **Usage**: `similarity(puf1, puf2, seed, N)` - compares two instances
 
-### 5. **Influence (Fourier Analysis)**
+### 5. **Reliability at Point**
+- **Definition**: Measures the stability of a single PUF instance against a pre-recorded reference response set (CRPs). This is useful for testing how environmental changes (like temperature or voltage) affect a PUF's reliability relative to a "golden" measurement.
+- **Ideal Value**: Close to 1.0 (100% match with the reference responses). A value of 1.0 at the nominal operating point is expected if the same seed is used.
+- **Sensitivity**: Designed to be sensitive to environmental variations. The value will decrease as operating conditions deviate from the nominal conditions used to generate the reference CRPs.
+- **Usage**: `reliability_at_point(puf_instance, reference_crps)`
+
+**Example:**
+```python
+from pypuf.simulation import ArbiterPUF
+from pypuf.io import ChallengeResponseSet
+from pypuf.metrics import reliability_at_point
+import numpy as np
+
+# 1. Define nominal conditions and challenges
+n_bits = 64
+challenges = np.random.choice([-1, 1], size=(1000, n_bits))
+nominal_temp = 25.0
+nominal_vdd = 1.2
+
+# 2. Create a reference CRP set under nominal conditions
+ref_puf = ArbiterPUF(n=n_bits, seed=1, temperature=nominal_temp, vdd=nominal_vdd)
+ref_crps = ChallengeResponseSet(challenges=challenges, responses=ref_puf.eval(challenges))
+
+# 3. Create a new PUF instance at a different operating point
+puf_at_point = ArbiterPUF(n=n_bits, seed=1, temperature=50.0, vdd=1.0)
+
+# 4. Calculate reliability at that point
+# The result is an array of per-bit reliabilities. We average them for a single score.
+reliability_score = np.mean(reliability_at_point(puf_at_point, ref_crps))
+
+print(f"Reliability at T=50.0C, Vdd=1.0V is: {reliability_score:.4f}")
+```
+
+### 6. **Influence (Fourier Analysis)**
 - **Definition**: How much changing a single input bit affects the output
 - **Ideal Value**: Around 0.5 per bit (equal effect from all bits)
 - **Sensitivity**: Structural property - shouldn't change with temperature/voltage
 - **Usage**: `influence(puf, bit_index, seed, N)` - tests one bit at a time
 
-### 6. **Total Influence**
+### 7. **Total Influence**
 - **Definition**: Sum of all bit influences (average sensitivity)
 - **Ideal Value**: Around n/2 where n is challenge length
 - **Sensitivity**: Structural property - independent of environment

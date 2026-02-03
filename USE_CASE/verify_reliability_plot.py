@@ -17,7 +17,7 @@ def main():
     n_bits = 64
     temp_fixed = 25.0
     vdd_nominal = 1.2
-    num_challenges = 1000
+    num_challenges = 100000
 
     # 2. Generate challenges
     challenges = np.random.choice([-1, 1], size=(num_challenges, n_bits))
@@ -53,7 +53,7 @@ def main():
     plt.xlabel('Vdd (V)')
     plt.ylabel('Reliability')
     plt.grid(True)
-    plt.ylim(0.9, 1.05)
+    plt.ylim(0.98, 1.01)
     
     # Save the plot to a file to be displayed
     plot_filename = 'voltage_sweep_test.png'
