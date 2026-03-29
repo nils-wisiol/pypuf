@@ -1,0 +1,6 @@
+PUF_Type,Attack_Type,Mean_Accuracy,Std_Accuracy,Min_Accuracy,Max_Accuracy,Num_Grid_Points
+Arbiter PUF,Logistic Regression,0.9506893939393938,0.022198478850341395,0.855,0.9695,330
+4-XOR Arbiter,Logistic regression Attack,0.9470060606060607,0.034133383103011235,0.8335,0.9855,330
+Feed-Forward Arbiter,Logistic regression Attack,0.8303424242424243,0.002473377068513549,0.8275,0.837,330
+Permutation PUF,Logistic regression Attack,0.4838257575757576,0.0056149775521303295,0.4715,0.5025,330
+Interpose PUF,Logistic regression Attack,0.7141348484848485,0.02076544691508237,0.6565,0.738,330

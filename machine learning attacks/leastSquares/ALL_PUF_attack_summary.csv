@@ -1,0 +1,6 @@
+PUF_Type,Attack_Type,Mean_Accuracy,Std_Accuracy,Min_Accuracy,Max_Accuracy,Num_Grid_Points
+Arbiter PUF,LMN Attack,0.6027030303030303,0.04107760198400896,0.5325,0.715,330
+4-XOR Arbiter,Least squares Regression,0.5019,0.0028949799810895167,0.4965,0.5075,330
+Feed-Forward Arbiter,Least squares Regression,0.8350121212121211,0.002326039366997639,0.832,0.841,330
+Permutation PUF,Least Squares Regression,0.48646515151515146,0.005529767720044781,0.474,0.501,330
+Interpose PUF,Least Squares Regression,0.5378348484848485,0.018624946552083108,0.5095,0.587,330
