@@ -1,0 +1,15 @@
+PUF Architecture,Stress Type,Min Reliability,At Temp (C),At Vdd (V),Filename
+ArbiterPUF,Temperature Stress (Constant Vdd),0.95535,95,2.5,ArbiterPUF_performance_data_sweep.csv
+ArbiterPUF,Voltage Stress (Constant T),0.86058,0,3.0,ArbiterPUF_performance_data.csv
+FeedForwardArbiterPUF,Temperature Stress (Constant Vdd),0.98022,95,2.5,FeedForwardArbiterPUF_performance_data_sweep.csv
+FeedForwardArbiterPUF,Voltage Stress (Constant T),0.93311,20,3.0,FeedForwardArbiterPUF_performance_data.csv
+InterposePUF,Temperature Stress (Constant Vdd),0.87067,95,2.5,InterposePUF_performance_data_sweep.csv
+InterposePUF,Voltage Stress (Constant T),0.68857,0,3.0,InterposePUF_performance_data.csv
+LightweightSecurePUF,Temperature Stress (Constant Vdd),0.92808,95,2.5,LightweightSecurePUF_performance_data_sweep.csv
+LightweightSecurePUF,Voltage Stress (Constant T),0.79669,0,3.0,LightweightSecurePUF_performance_data.csv
+PermutationPUF,Temperature Stress (Constant Vdd),0.92837,95,2.5,PermutationPUF_performance_data_sweep.csv
+PermutationPUF,Voltage Stress (Constant T),0.79745,0,3.0,PermutationPUF_performance_data.csv
+XORArbiterPUF,Temperature Stress (Constant Vdd),0.92649,95,2.5,XORArbiterPUF_performance_data_sweep.csv
+XORArbiterPUF,Voltage Stress (Constant T),0.79806,0,3.0,XORArbiterPUF_performance_data.csv
+XORFeedForwardArbiterPUF,Temperature Stress (Constant Vdd),0.96017,95,2.5,XORFeedForwardArbiterPUF_performance_data_sweep.csv
+XORFeedForwardArbiterPUF,Voltage Stress (Constant T),0.87264,20,3.0,XORFeedForwardArbiterPUF_performance_data.csv
