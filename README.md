@@ -103,4 +103,4 @@ Several notebooks now include inline example images so you can see representativ
 
 ## License and Acknowledgements
 
-This repository is based on the original `pypuf` library by Bernd Pfrommer and contributors. Review `pypuf/LICENSE.txt` for license details.
+This repository is based on the original `pypuf` library by Nils Wisiol and contributors. Review `pypuf/LICENSE.txt` for license details.
