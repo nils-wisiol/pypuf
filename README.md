@@ -1,50 +1,106 @@
 # pypuf-temp
 
-## Overview
+## Project Overview
 
-This project is based on the original [pypuf](https://github.com/berndpfrommer/pypuf) library, which provides Python implementations and simulation tools for various Physical Unclonable Functions (PUFs), including Arbiter PUFs, XOR Arbiter PUFs, Feed-Forward Arbiter PUFs, and Bistable Ring PUFs. The library is designed for research and educational purposes, enabling users to simulate, analyze, and evaluate the performance of PUF architectures under different environmental conditions.
+`pypuf-temp` is a research-ready fork of the original [pypuf](https://github.com/berndpfrommer/pypuf) library. It extends the core Python PUF simulation package with environmental sweep analysis, reliability metrics, and machine learning attack experiments for Arbiter, XOR, Feed-Forward, Interpose, Lightweight Secure, and Permutation PUF families.
 
-## Modifications and Enhancements
+The repository contains:
 
-This fork includes several enhancements and new example scripts for advanced PUF reliability analysis:
+- `pypuf/`: the core PUF package and simulation framework.
+- `USE_CASE/`: example scripts and notebooks for reliability, metric sweeps, and plot generation.
+- `machine learning attacks/`: end-to-end machine learning attack experiments and evaluation scripts.
+- `PHYSICAL_FACTORS_ANALYSIS.md`: design notes and analysis of temperature/voltage effects on PUF security.
 
-- **Fine-grained Environmental Sweeps:** Added scripts to sweep temperature and voltage with fine increments for detailed reliability analysis.
-- **Consistent Reliability Metrics:** Improved reliability calculation logic to ensure fair comparison across different PUF sizes and environmental conditions.
-- **Interactive and High-Resolution Plotting:** Example scripts now support both interactive plotting (for use in Spyder/Jupyter) and high-resolution image saving for publication-quality figures.
-- **Seed and Challenge Control:** Ensured reproducibility by fixing seeds and using consistent challenge sets for all sweeps.
-- **Batch Analysis:** Example scripts can analyze multiple PUF sizes (n) in a single run, producing comparative plots.
+## Repository Structure
 
-## Example Files in `USE_CASE` Folder
+- `pypuf/`: Python package for PUF simulation, CRP generation, attacks, and metrics.
+- `USE_CASE/`: analysis scripts, notebooks, and saved plots.
+- `machine learning attacks/`: experiments that reproduce MLP, logistic regression, LMN, and least-squares attacks on PUF families.
 
-The `USE_CASE` folder contains example scripts demonstrating advanced analysis and usage of the library:
+## Installation
 
-- **PUF_performance_reliability_architechtures.py**
-  - Analyzes reliability of ArbiterPUF for different numbers of challenge bits (n) under voltage and temperature sweeps.
-  - Supports interactive plotting for visual analysis and high-resolution saving for publication.
-  - Uses fixed seeds and consistent challenge sets for fair comparison.
+1. Create and activate a Python virtual environment.
 
-- **PUF_performance_reliability.py**
-  - Provides additional reliability and bias analysis for various PUF architectures (Arbiter, XOR, FeedForward, etc.).
-  - Includes both voltage and temperature sweep modes, with CSV export for further analysis.
-
-- **try.py / try.ipynb**
-  - Quick test scripts and notebooks for experimenting with PUF instantiation, evaluation, and plotting.
-
-## Usage
-
-1. Install dependencies from `requirements.txt`.
-2. Run example scripts from the `USE_CASE` folder:
    ```bash
-   python PUF_performance_reliability_architechtures.py
-   # or
-   python PUF_performance_reliability.py
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1  # PowerShell
+   # or .\.venv\Scripts\activate  # CMD
    ```
-3. For interactive analysis, open the scripts in Spyder or Jupyter and use the provided plotting functions.
 
-## Acknowledgements
+2. Install the required packages.
 
-Original library by Bernd Pfrommer and contributors. See `LICENSE.txt` for details.
+   ```bash
+   python -m pip install --upgrade pip
+   python -m pip install -r pypuf/requirements.txt
+   python -m pip install -e pypuf
+   ```
 
----
+3. Install Jupyter if you want to run notebooks interactively.
 
-For more details, see the original [pypuf documentation](https://github.com/berndpfrommer/pypuf) and the example scripts in the `USE_CASE` folder.
+   ```bash
+   python -m pip install jupyter
+   ```
+
+## Reproduce Machine Learning Attacks
+
+The machine learning attacks are implemented as scripts and notebooks.
+
+### Run the main attack sweep
+
+```bash
+python "machine learning attacks/run_experiment.py"
+```
+
+This script trains an `MLPAttack2021` model for each PUF type and sweeps over `m` and `alpha` parameters. It produces:
+
+- `*_m_alpha_accuracy.csv`
+- `*_m_alpha_heatmap.png`
+- `PUF_parameter_sensitivity_summary.csv`
+
+### Run the FeedForward interpose experiment
+
+```bash
+python "machine learning attacks/run_experiment_interpose.py"
+```
+
+This script trains and evaluates a `FeedForwardArbiterPUF` under parameter variation and saves:
+
+- `feedforward_m_alpha_accuracy.csv`
+
+### Recreate attack notebooks
+
+Open the following notebooks in Jupyter to reproduce interactive plots:
+
+- `machine learning attacks/mlp_attacks.ipynb`
+- `machine learning attacks/logistic_attacks.ipynb`
+- `machine learning attacks/leastSquares_regression_attacks.ipynb`
+- `machine learning attacks/LMN_attacks.ipynb`
+
+## Reproduce Reliability and Metric Plots
+
+The following example scripts generate the repository's metric visuals:
+
+- `python USE_CASE/plot_metrics_sweeps.py`
+- `python USE_CASE/verify_reliability_plot.py`
+- `python USE_CASE/manual_metrics/PUF_performance_reliability.py`
+- `python USE_CASE/manual_metrics/PUF_performance_reliability_architechtures.py`
+
+Generated plot folders include:
+
+- `USE_CASE/graphs_metrics/`
+- `USE_CASE/manual_metrics/graphs/`
+- `USE_CASE/manual_metrics/graphs_reliability/`
+
+## Notes on Reproducibility
+
+- The experiments use fixed seeds for PUF initialization and challenge generation.
+- The attack scripts use `MLPAttack2021` from `pypuf.attack` with consistent network architecture.
+- Environment variation is simulated through temperature and voltage sweeps.
+
+## Viewing Embedded Figures
+
+Several notebooks now include inline example images so you can see representative output directly when the notebook is viewed in GitHub or Jupyter.
+
+## License and Acknowledgements
+
+This repository is based on the original `pypuf` library by Bernd Pfrommer and contributors. Review `pypuf/LICENSE.txt` for license details.
